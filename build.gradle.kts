@@ -24,12 +24,17 @@ repositories {
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     // API 문서 (Swagger UI). springdoc 2.x = Spring Boot 3.x 지원
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0")
+    // JWT
+    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
     compileOnly("org.projectlombok:lombok")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
     runtimeOnly("com.mysql:mysql-connector-j")
     annotationProcessor("org.projectlombok:lombok")
     testImplementation("org.springframework.boot:spring-boot-starter-test")

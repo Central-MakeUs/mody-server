@@ -28,7 +28,7 @@ class GlobalExceptionHandler {
         log.warn("Validation failed: {}", errors)
         return ResponseEntity
             .badRequest()
-            .body(ApiResponse.failure(ErrorStatus.BAD_REQUEST.code, "입력값이 올바르지 않습니다.", errors))
+            .body(ApiResponse.failure(ErrorStatus.VALIDATION_FAILED, errors))
     }
 
     @ExceptionHandler(IllegalArgumentException::class)

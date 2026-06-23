@@ -1,5 +1,7 @@
 # 테스트 전용 설정. 인메모리 H2(MySQL 호환 모드)를 사용해 DB 없이 테스트한다.
 spring:
+  application:
+    name: mody-test
   datasource:
     url: jdbc:h2:mem:mody;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
@@ -11,3 +13,9 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
+    open-in-view: false
+
+token:
+  access-secret: test-jwt-secret-key-must-be-at-least-32-bytes
+  access-token-expiration-time: 3600000
+  refresh-token-expiration-time: 1209600000
