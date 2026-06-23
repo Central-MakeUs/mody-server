@@ -1,0 +1,51 @@
+name: CD with Gradle
+
+# 배포 인프라(Secrets, 서버) 준비 전까지 수동 트리거만 사용한다.
+# 준비되면 아래 push 트리거로 전환 (TBD: main 머지 → 자동 배포).
+on:
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Make application-prod.yml
+        run: |
+          mkdir -p src/main/resources
+          echo "${{ secrets.PROPERTIES }}" > src/main/resources/application-prod.yml
+
+      - name: Build with Gradle
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean build -x test
+
+      - name: Docker build & push to Docker Hub
+        run: |
+          docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          docker build -f Dockerfile -t ${{ secrets.DOCKER_REPO }} .
+          docker push ${{ secrets.DOCKER_REPO }}
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ubuntu
+          key: ${{ secrets.KEY }}
+          script: |
+            sudo docker pull ${{ secrets.DOCKER_REPO }}
+            sudo docker-compose up -d
+            sudo docker image prune -f
