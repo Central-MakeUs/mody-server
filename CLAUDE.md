@@ -18,7 +18,7 @@ mody — Central-MakeUs(CMC) 백엔드. Kotlin / Spring Boot 기반 API 서버. 
 - **API 문서**: springdoc-openapi 2.7.0 (`springdoc-openapi-starter-webmvc-ui`) — Swagger UI
 - **린트**: ktlint 1.5.0 + detekt 1.23.8
 - **Lombok**: build.gradle에 포함됨 (compileOnly + annotationProcessor)
-- **빌드**: Gradle (Groovy DSL — `build.gradle`)
+- **빌드**: Gradle (Kotlin DSL — `build.gradle.kts`)
 - **테스트**: JUnit 5 (`kotlin-test-junit5`)
 
 ## 빌드 / 실행 / 테스트
