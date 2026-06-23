@@ -12,7 +12,7 @@
 
 ## 1. 목적 / 배경
 - 배포 후 서버 생존 여부를 확인할 헬스 체크 엔드포인트가 필요하다 (CI/배포 스크립트 health check 용도).
-- 동시에 이후 모든 API가 사용할 **공통 응답 포맷**과 **전역 예외 처리** 기반을 마련한다. spot-kotlin의 `common/api` 코드를 가져와 mody에 맞게 포팅한다.
+- 동시에 이후 모든 API가 사용할 **공통 응답 포맷**과 **전역 예외 처리** 기반을 마련한다.
 
 ## 2. 범위
 ### In scope
@@ -22,7 +22,7 @@
 - 헬스 체크 엔드포인트: `GET /health`.
 
 ### Out of scope
-- 도메인별 에러 코드 (spot의 MEMBER/STUDY/POST 등은 가져오지 않음 — mody 도메인 정의 시 추가).
+- 도메인별 에러 코드 (mody 도메인 정의 시 추가).
 - DB/외부 의존성 상태 점검 (liveness만).
 - 인증/인가.
 
@@ -63,4 +63,4 @@
 - [ ] GitHub Issue 번호 발급 및 연결.
 
 ## 10. 참고
-- 출처: spot-kotlin `common/src/main/kotlin/kr/spot/common/api/**`.
+- 공통 응답은 `isSuccess`, `code`, `message`, `result` 구조를 따른다.

@@ -106,5 +106,5 @@
 - [ ] 로컬 개발에서 MySQL 없이 `/health`를 띄울 별도 profile을 둘지.
 
 ## 10. 참고
-- 출처: `spot-kotlin/common/src/main/kotlin/kr/spot/common/api/**`.
-- 출처: `spot-kotlin/common/src/main/kotlin/kr/spot/common/domain/BaseEntity.kt`.
+- 공통 API 응답은 컨트롤러별 임의 JSON 대신 `ApiResponse<T>`로 통일한다.
+- 엔티티 감사 필드는 JPA Auditing으로 자동 기록한다.

@@ -12,7 +12,7 @@
 
 ## 1. 목적 / 배경
 - 이후 로그인/인증 기능에서 재사용할 JWT access/refresh 토큰 발급 및 검증 기반이 필요하다.
-- `spot`의 JWT 토큰 제공자 패턴을 mody의 단일 모듈 Kotlin/Spring Boot 구조에 맞게 축소 포팅한다.
+- access/refresh token을 같은 포트로 발급하고 검증하는 구조를 mody의 단일 모듈 Kotlin/Spring Boot 구조에 맞게 준비한다.
 
 ## 2. 범위
 ### In scope
@@ -104,5 +104,5 @@ interface TokenProvider {
 - [ ] 인증 사용자 주입 방식(`@CurrentMember` 등) 도입 여부.
 
 ## 10. 참고
-- 출처: `spot/modules/auth/src/main/java/kr/spot/infrastructure/jwt/JwtTokenProvider.java`.
-- 출처: `spot-kotlin/common/src/main/kotlin/kr/spot/common/api/status/ErrorStatus.kt`.
+- JJWT 0.11.5의 HS256 서명과 parser 기반 검증을 사용한다.
+- JWT 예외는 `GeneralException(ErrorStatus.XXX)`로 변환한다.
