@@ -8,3 +8,4 @@
 | --- | --- | --- | --- |
 | [LLD-0001](LLD-0001-health-check.md) | 헬스 체크 API + 공통 응답/예외 처리 | Approved | _(미발급)_ |
 | [LLD-0002](LLD-0002-jwt-token-foundation.md) | JWT 토큰 기반 로직 | Approved | _(미발급)_ |
+| [LLD-0003](LLD-0003-common-foundation.md) | 공통 응답/예외 및 엔티티 기반 | Approved | _(미발급)_ |
