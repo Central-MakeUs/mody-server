@@ -1,0 +1,40 @@
+name: "Mody Issue"
+description: "mody-server 작업 이슈를 생성합니다."
+title: "[Type] "
+labels: []
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: "작업 유형"
+      options:
+        - "feature"
+        - "bug"
+        - "refactor"
+        - "docs"
+        - "thinking"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "배경과 목표"
+      description: "왜 필요한 작업인지, 무엇을 달성해야 하는지 적어주세요."
+    validations:
+      required: true
+
+  - type: textarea
+    id: tasks
+    attributes:
+      label: "작업 범위"
+      value: |
+        - [ ]
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: "참고 / 결정 필요"
+      description: "관련 ADR/LLD, API/DB/설정 변경, 미결정 사항을 적어주세요."
