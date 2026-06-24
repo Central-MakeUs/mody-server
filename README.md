@@ -1,17 +1,15 @@
 # 친구들과 함께하는 다이어트 습관, 모디 mody
 
 모디(mody)는 친구들과 함께 다이어트 습관을 만들고 지속할 수 있도록 돕는 서비스입니다.
-이 저장소는 모디의 Kotlin/Spring Boot 기반 백엔드 API 서버입니다.
+이 저장소는 모디의 Java/Spring Boot 기반 백엔드 API 서버입니다.
 
 ## Tech Stack
 
-- Kotlin 2.0.21
 - Java 21
 - Spring Boot 3.4.1
 - Spring Data JPA / MySQL
 - JUnit 5
-- ktlint / detekt
-- Gradle Kotlin DSL
+- Gradle
 
 ## Getting Started
 
@@ -33,9 +31,7 @@ DB_PASSWORD=...
 ## Verification
 
 ```bash
-./gradlew ktlintCheck
-./gradlew detekt
-./gradlew test
+./gradlew build
 ```
 
 ## Documentation

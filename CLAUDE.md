@@ -4,22 +4,20 @@
 
 ## 프로젝트 개요
 
-mody — Central-MakeUs(CMC) 백엔드. Kotlin / Spring Boot 기반 API 서버. 패키지 루트는 `cmc.mody`. 현재 단일 모듈.
+mody — Central-MakeUs(CMC) 백엔드. Java / Spring Boot 기반 API 서버. 패키지 루트는 `cmc.mody`. 현재 단일 모듈.
 
 ## 기술 스택 (build.gradle 기준 사실)
 
-> 안정 스택으로 확정 (ADR-0002). Spring Boot 4 + 안정 detekt 공존 불가라 spot-kotlin과 동일한 검증된 3.x 스택을 사용한다.
+> 안정 스택으로 확정 (ADR-0002). Spring Boot 3.4.x + Java 21 조합을 사용한다.
 
-- **Kotlin**: 2.0.21
 - **Java**: 21 (toolchain)
 - **Spring Boot**: 3.4.1
 - **영속성**: Spring Data JPA / Hibernate, MySQL (`mysql-connector-j`)
-- **직렬화**: Jackson 2 (`com.fasterxml.jackson.module:jackson-module-kotlin`)
+- **직렬화**: Jackson 2
 - **API 문서**: springdoc-openapi 2.7.0 (`springdoc-openapi-starter-webmvc-ui`) — Swagger UI
-- **린트**: ktlint 1.5.0 + detekt 1.23.8
 - **Lombok**: build.gradle에 포함됨 (compileOnly + annotationProcessor)
-- **빌드**: Gradle (Kotlin DSL — `build.gradle.kts`)
-- **테스트**: JUnit 5 (`kotlin-test-junit5`)
+- **빌드**: Gradle (`build.gradle.kts`)
+- **테스트**: JUnit 5
 
 ## 빌드 / 실행 / 테스트
 
@@ -33,7 +31,7 @@ mody — Central-MakeUs(CMC) 백엔드. Kotlin / Spring Boot 기반 API 서버. 
 ## 디렉토리 구조
 
 ```
-src/main/kotlin/cmc/mody/         애플리케이션 코드
+src/main/java/cmc/mody/           애플리케이션 코드
 src/main/resources/application.yaml
 docs/adr/                         ADR (Architecture Decision Records)
 docs/lld/                         LLD (Low-Level Design) — PR 오라클
@@ -67,17 +65,16 @@ LLD (무엇을/어떻게)      ─┘
 - **커밋**: Conventional Commits, 타입 영문 / 본문 한글. (`.claude/skills/commit`)
 - **PR**: `.claude/skills/pr` 스킬로 생성, 본문은 LLD 기반.
 
-## 코드 스타일 / 린트 (spot-kotlin과 동일)
+## 코드 스타일
 
 - 4-space 들여쓰기, 최대 120자, UTF-8, LF, 파일 끝 newline 필수.
-- **ktlint**(`ktlint_official`)가 소스 오브 트루스, **detekt**가 보조 (`config/detekt/detekt.yml`).
-- `./gradlew ktlintCheck` / `ktlintFormat` / `detekt`.
-- `.editorconfig`, `config/detekt/detekt.yml`은 spot-kotlin에서 가져와 설정 완료.
+- Java 21 문법을 사용한다. record는 DTO처럼 불변 데이터 전달에 적합할 때 사용한다.
+- `./gradlew build`로 컴파일과 테스트를 함께 검증한다.
 
-## 도메인 / 엔티티 패턴 (spot-kotlin과 동일)
+## 도메인 / 엔티티 패턴
 
-- private 생성자 + companion object 팩토리(`of(...)`), 팩토리에서 검증 수행.
-- 가변 속성은 `var ... private set`, 진짜 불변은 `val`.
+- protected 기본 생성자 + static factory(`of(...)`, `create(...)`)를 기본 패턴으로 고려한다.
+- 엔티티 상태 변경은 의미 있는 메서드로 캡슐화한다.
 - soft delete: `@SQLDelete` + `@SQLRestriction`.
 - 공통 감사 필드는 `BaseEntity` 상속.
 
@@ -89,7 +86,7 @@ LLD (무엇을/어떻게)      ─┘
 
 ## CI/CD (GitHub Actions)
 
-- GitHub Actions 사용. spot의 `.github/workflows`(build → Docker → ssh deploy) 패턴을 참고한다.
+- GitHub Actions 사용. PR에서는 `./gradlew build`를 실행한다.
 - TBD에 맞춰 트리거는 **main 기준**: PR → 테스트, main 머지 → build + 자동 배포.
 - 인프라 상세는 아래 미확정.
 

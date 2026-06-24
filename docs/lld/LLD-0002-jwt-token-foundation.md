@@ -12,7 +12,7 @@
 
 ## 1. 목적 / 배경
 - 이후 로그인/인증 기능에서 재사용할 JWT access/refresh 토큰 발급 및 검증 기반이 필요하다.
-- access/refresh token을 같은 포트로 발급하고 검증하는 구조를 mody의 단일 모듈 Kotlin/Spring Boot 구조에 맞게 준비한다.
+- access/refresh token을 같은 포트로 발급하고 검증하는 구조를 mody의 단일 모듈 Java/Spring Boot 구조에 맞게 준비한다.
 
 ## 2. 범위
 ### In scope
@@ -35,11 +35,11 @@
 ## 3. 인터페이스 / API
 외부 HTTP API는 추가하지 않는다. 내부 포트는 다음과 같다.
 
-```kotlin
+```java
 interface TokenProvider {
-    fun createToken(memberId: Long): TokenDto
-    fun validateToken(token: String)
-    fun getMemberIdByToken(token: String): Long
+    TokenDto createToken(Long memberId);
+    void validateToken(String token);
+    Long getMemberIdByToken(String token);
 }
 ```
 
@@ -86,7 +86,7 @@ interface TokenProvider {
 - [x] access/refresh 만료 토큰이 `EXPIRED_JWT`로 매핑된다.
 - [x] access/refresh 서명 불일치 토큰이 `UNSUPPORTED_JWT`로 매핑된다.
 - [x] blank token이 `EMPTY_JWT`로 매핑된다.
-- [x] `./gradlew ktlintCheck`, `./gradlew detekt`, `./gradlew test`가 통과한다.
+- [x] `./gradlew build`가 통과한다.
 
 ## 8. 영향 범위 / 마이그레이션
 - 신규 패키지 `cmc.mody.auth`가 추가된다.

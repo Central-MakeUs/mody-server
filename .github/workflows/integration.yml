@@ -18,10 +18,7 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Lint (ktlint + detekt)
+      - name: Build and test
         run: |
           chmod +x ./gradlew
-          ./gradlew ktlintCheck detekt
-
-      - name: Run tests
-        run: ./gradlew test
+          ./gradlew build

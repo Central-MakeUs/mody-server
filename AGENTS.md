@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-This is a single-module Kotlin/Spring Boot backend. Application code lives under `src/main/kotlin/cmc/mody`, with `ModyApplication.kt` as the entry point. Current packages include `health` for the health API and `common/api` for shared response and exception types. Runtime configuration is in `src/main/resources/application.yaml`; test configuration is in `src/test/resources/application.yaml`. Tests live under `src/test/kotlin` and should mirror the production package structure. Architecture notes and templates are in `docs/adr`, `docs/lld`, and `docs/templates`.
+This is a single-module Java/Spring Boot backend. Application code lives under `src/main/java/cmc/mody`, with `ModyApplication.java` as the entry point. Current packages include `health` for the health API and `common/api` for shared response and exception types. Runtime configuration is in `src/main/resources/application.yaml`; test configuration is in `src/test/resources/application.yaml`. Tests live under `src/test/java` and should mirror the production package structure. Architecture notes and templates are in `docs/adr`, `docs/lld`, and `docs/templates`.
 
 ## Build, Test, and Development Commands
 
@@ -10,13 +10,11 @@ This is a single-module Kotlin/Spring Boot backend. Application code lives under
 - `./gradlew test`: run the JUnit 5 test suite.
 - `./gradlew test --tests "cmc.mody.SomeTest"`: run one test class or pattern.
 - `./gradlew bootRun`: start the service locally on the configured Spring port.
-- `./gradlew ktlintCheck` / `./gradlew ktlintFormat`: check or apply Kotlin formatting.
-- `./gradlew detekt`: run static analysis using `config/detekt/detekt.yml`.
 - `docker-compose up -d`: run MySQL and the app image when required environment variables are set.
 
 ## Coding Style & Naming Conventions
 
-Use Kotlin 2.0.21, Java 21, and Spring Boot 3.4.1 conventions. Keep the root package `cmc.mody`; organize new code by feature package where practical. Follow 4-space indentation, UTF-8, LF endings, final newlines, and a 120-character line limit. Prefer clear Kotlin names: classes in `PascalCase`, functions and properties in `camelCase`, and enum entries in uppercase style. Use `ApiResponse` and existing status types for API responses.
+Use Java 21 and Spring Boot 3.4.1 conventions. Keep the root package `cmc.mody`; organize new code by feature package where practical. Follow 4-space indentation, UTF-8, LF endings, final newlines, and a 120-character line limit. Prefer clear Java names: classes and records in `PascalCase`, methods and fields in `camelCase`, and enum entries in uppercase style. Use `ApiResponse` and existing status types for API responses.
 
 ## Testing Guidelines
 

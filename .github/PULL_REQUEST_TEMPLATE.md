@@ -8,7 +8,7 @@
 
 ## 테스트
 
-> ex) `./gradlew ktlintCheck detekt test`
+> ex) `./gradlew build`
 
 ## 확인 필요
 
