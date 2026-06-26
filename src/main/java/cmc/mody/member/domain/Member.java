@@ -1,0 +1,42 @@
+package cmc.mody.member.domain;
+
+import cmc.mody.common.domain.BaseEntity;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Table;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Entity
+@Table(name = "member")
+public class Member extends BaseEntity {
+    @Column(nullable = false, length = 14)
+    private String nickname;
+
+    @Column(nullable = false)
+    private LocalDate birthDate;
+
+    @Column(precision = 5, scale = 2)
+    private BigDecimal targetWeightKg;
+
+    @Column(name = "profile_image_key", length = 500)
+    private String profileImageKey;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private HealthConnectionStatus healthConnectionStatus = HealthConnectionStatus.DISCONNECTED;
+
+    public Member(Long id, String nickname, LocalDate birthDate, BigDecimal targetWeightKg) {
+        super(id);
+        this.nickname = nickname;
+        this.birthDate = birthDate;
+        this.targetWeightKg = targetWeightKg;
+    }
+}
