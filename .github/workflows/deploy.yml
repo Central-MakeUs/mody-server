@@ -45,5 +45,5 @@ jobs:
           key: ${{ secrets.KEY }}
           script: |
             docker pull ${{ secrets.DOCKER_REPO }}
-            docker-compose up -d
+            docker compose up -d
             docker image prune -f
