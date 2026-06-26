@@ -11,3 +11,8 @@ token:
   access-secret: ${JWT_ACCESS_SECRET:mody-local-jwt-secret-key-must-be-at-least-32-bytes}
   access-token-expiration-time: ${JWT_ACCESS_TOKEN_EXPIRATION_TIME:3600000}
   refresh-token-expiration-time: ${JWT_REFRESH_TOKEN_EXPIRATION_TIME:1209600000}
+
+springdoc:
+  swagger-ui:
+    url: /docs/openapi3.json
+    disable-swagger-default-url: true
