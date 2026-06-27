@@ -50,7 +50,7 @@ tasks.withType<Test> {
 }
 
 configure<OpenApi3Extension> {
-    setServer("http://localhost:8080")
+    setServer("https://dev-mody.store")
     title = "mody API"
     description = "친구들과 함께하는 다이어트 습관, 모디 mody 백엔드 API 명세"
     version = "v1"
