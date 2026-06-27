@@ -19,24 +19,24 @@ id:
 oauth:
   kakao:
     authorization-uri: ${KAKAO_AUTHORIZATION_URI:https://kauth.kakao.com/oauth/authorize}
-    token-uri: ${KAKAO_TOKEN_URI:https://kauth.kakao.com/oauth/token}
-    user-info-uri: ${KAKAO_USER_INFO_URI:https://kapi.kakao.com/v2/user/me}
+    auth-base-uri: ${KAKAO_AUTH_BASE_URI:https://kauth.kakao.com}
+    api-base-uri: ${KAKAO_API_BASE_URI:https://kapi.kakao.com}
     client-id: ${KAKAO_CLIENT_ID:}
     client-secret: ${KAKAO_CLIENT_SECRET:}
     redirect-uri: ${KAKAO_REDIRECT_URI:}
     scope: ${KAKAO_SCOPE:}
   google:
     authorization-uri: ${GOOGLE_AUTHORIZATION_URI:https://accounts.google.com/o/oauth2/v2/auth}
-    token-uri: ${GOOGLE_TOKEN_URI:https://oauth2.googleapis.com/token}
-    user-info-uri: ${GOOGLE_USER_INFO_URI:https://www.googleapis.com/oauth2/v2/userinfo}
+    auth-base-uri: ${GOOGLE_AUTH_BASE_URI:https://oauth2.googleapis.com}
+    api-base-uri: ${GOOGLE_API_BASE_URI:https://www.googleapis.com}
     client-id: ${GOOGLE_CLIENT_ID:}
     client-secret: ${GOOGLE_CLIENT_SECRET:}
     redirect-uri: ${GOOGLE_REDIRECT_URI:}
     scope: ${GOOGLE_SCOPE:profile,email}
   apple:
     authorization-uri: ${APPLE_AUTHORIZATION_URI:https://appleid.apple.com/auth/authorize}
-    token-uri: ${APPLE_TOKEN_URI:https://appleid.apple.com/auth/token}
-    user-info-uri: ${APPLE_USER_INFO_URI:}
+    auth-base-uri: ${APPLE_AUTH_BASE_URI:https://appleid.apple.com}
+    api-base-uri: ${APPLE_API_BASE_URI:}
     client-id: ${APPLE_CLIENT_ID:}
     client-secret: ${APPLE_CLIENT_SECRET:}
     redirect-uri: ${APPLE_REDIRECT_URI:}
