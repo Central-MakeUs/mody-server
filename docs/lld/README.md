@@ -11,3 +11,4 @@
 | [LLD-0003](LLD-0003-common-foundation.md) | 공통 응답/예외 및 엔티티 기반 | Approved | _(미발급)_ |
 | [LLD-0004](LLD-0004-erd-entity-foundation.md) | ERD 및 엔티티 초안 | Draft | #1 |
 | [LLD-0005](LLD-0005-oauth-social-login.md) | OAuth 소셜 로그인 | Draft | _(미발급)_ |
+| [LLD-0006](LLD-0006-id-generator-foundation.md) | ID 생성기 기반 | Draft | #19 |
