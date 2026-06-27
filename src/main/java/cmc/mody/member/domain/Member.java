@@ -17,10 +17,12 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "member")
 public class Member extends BaseEntity {
-    @Column(nullable = false, length = 14)
+    public static final int MAX_NICKNAME_LENGTH = 14;
+
+    @Column(nullable = false, length = MAX_NICKNAME_LENGTH)
     private String nickname;
 
-    @Column(nullable = false)
+    @Column
     private LocalDate birthDate;
 
     @Column(precision = 5, scale = 2)
@@ -38,5 +40,20 @@ public class Member extends BaseEntity {
         this.nickname = nickname;
         this.birthDate = birthDate;
         this.targetWeightKg = targetWeightKg;
+    }
+
+    private Member(
+        Long id,
+        String nickname,
+        LocalDate birthDate,
+        BigDecimal targetWeightKg,
+        String profileImageKey
+    ) {
+        this(id, nickname, birthDate, targetWeightKg);
+        this.profileImageKey = profileImageKey;
+    }
+
+    public static Member oauthMember(Long id, String nickname, String profileImageUrl) {
+        return new Member(id, nickname, null, null, profileImageUrl);
     }
 }

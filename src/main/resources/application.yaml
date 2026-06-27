@@ -16,6 +16,32 @@ id:
   epoch-second: ${ID_EPOCH_SECOND:1767225600}
   node-id: ${ID_NODE_ID:1}
 
+oauth:
+  kakao:
+    authorization-uri: ${KAKAO_AUTHORIZATION_URI:https://kauth.kakao.com/oauth/authorize}
+    auth-base-uri: ${KAKAO_AUTH_BASE_URI:https://kauth.kakao.com}
+    api-base-uri: ${KAKAO_API_BASE_URI:https://kapi.kakao.com}
+    client-id: ${KAKAO_CLIENT_ID:}
+    client-secret: ${KAKAO_CLIENT_SECRET:}
+    redirect-uri: ${KAKAO_REDIRECT_URI:}
+    scope: ${KAKAO_SCOPE:}
+  google:
+    authorization-uri: ${GOOGLE_AUTHORIZATION_URI:https://accounts.google.com/o/oauth2/v2/auth}
+    auth-base-uri: ${GOOGLE_AUTH_BASE_URI:https://oauth2.googleapis.com}
+    api-base-uri: ${GOOGLE_API_BASE_URI:https://www.googleapis.com}
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+    redirect-uri: ${GOOGLE_REDIRECT_URI:}
+    scope: ${GOOGLE_SCOPE:profile,email}
+  apple:
+    authorization-uri: ${APPLE_AUTHORIZATION_URI:https://appleid.apple.com/auth/authorize}
+    auth-base-uri: ${APPLE_AUTH_BASE_URI:https://appleid.apple.com}
+    api-base-uri: ${APPLE_API_BASE_URI:}
+    client-id: ${APPLE_CLIENT_ID:}
+    client-secret: ${APPLE_CLIENT_SECRET:}
+    redirect-uri: ${APPLE_REDIRECT_URI:}
+    scope: ${APPLE_SCOPE:email,name}
+
 springdoc:
   swagger-ui:
     url: /docs/openapi3.json
