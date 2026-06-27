@@ -19,3 +19,7 @@ token:
   access-secret: test-jwt-secret-key-must-be-at-least-32-bytes
   access-token-expiration-time: 3600000
   refresh-token-expiration-time: 1209600000
+
+id:
+  epoch-second: 1767225600
+  node-id: 1
