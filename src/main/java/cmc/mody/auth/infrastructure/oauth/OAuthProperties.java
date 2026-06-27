@@ -7,8 +7,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class OAuthProperties {
     private Provider kakao = new Provider(
         "https://kauth.kakao.com/oauth/authorize",
-        "https://kauth.kakao.com/oauth/token",
-        "https://kapi.kakao.com/v2/user/me",
+        "https://kauth.kakao.com",
+        "https://kapi.kakao.com",
         "",
         "",
         "",
@@ -16,8 +16,8 @@ public class OAuthProperties {
     );
     private Provider google = new Provider(
         "https://accounts.google.com/o/oauth2/v2/auth",
-        "https://oauth2.googleapis.com/token",
-        "https://www.googleapis.com/oauth2/v2/userinfo",
+        "https://oauth2.googleapis.com",
+        "https://www.googleapis.com",
         "",
         "",
         "",
@@ -25,7 +25,7 @@ public class OAuthProperties {
     );
     private Provider apple = new Provider(
         "https://appleid.apple.com/auth/authorize",
-        "https://appleid.apple.com/auth/token",
+        "https://appleid.apple.com",
         "",
         "",
         "",
@@ -59,8 +59,8 @@ public class OAuthProperties {
 
     public record Provider(
         String authorizationUri,
-        String tokenUri,
-        String userInfoUri,
+        String authBaseUri,
+        String apiBaseUri,
         String clientId,
         String clientSecret,
         String redirectUri,

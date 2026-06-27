@@ -1,17 +1,27 @@
 package cmc.mody.auth.infrastructure.oauth;
 
+import cmc.mody.auth.infrastructure.oauth.client.GoogleApiFeignClient;
+import cmc.mody.auth.infrastructure.oauth.client.GoogleAuthFeignClient;
 import cmc.mody.auth.infrastructure.oauth.dto.GoogleOAuthTokenResponse;
 import cmc.mody.auth.infrastructure.oauth.dto.GoogleUserResponse;
-import java.util.Map;
+import cmc.mody.common.api.status.ErrorStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
 
 @Component
 public class GoogleOAuthClient extends OAuthProviderClient {
+    private static final String GRANT_TYPE_AUTHORIZATION_CODE = "authorization_code";
+
+    private final GoogleAuthFeignClient googleAuthFeignClient;
+    private final GoogleApiFeignClient googleApiFeignClient;
     private final OAuthProperties.Provider properties;
 
-    public GoogleOAuthClient(RestClient.Builder restClientBuilder, OAuthProperties properties) {
-        super(restClientBuilder);
+    public GoogleOAuthClient(
+        GoogleAuthFeignClient googleAuthFeignClient,
+        GoogleApiFeignClient googleApiFeignClient,
+        OAuthProperties properties
+    ) {
+        this.googleAuthFeignClient = googleAuthFeignClient;
+        this.googleApiFeignClient = googleApiFeignClient;
         this.properties = properties.getGoogle();
     }
 
@@ -20,11 +30,23 @@ public class GoogleOAuthClient extends OAuthProviderClient {
     }
 
     public GoogleOAuthTokenResponse requestAccessToken(String code) {
-        return exchangeAuthorizationCode(properties, Map.of("code", code), GoogleOAuthTokenResponse.class);
+        return executeFeign(
+            () -> googleAuthFeignClient.requestAccessToken(
+                code,
+                properties.clientId(),
+                properties.clientSecret(),
+                properties.redirectUri(),
+                GRANT_TYPE_AUTHORIZATION_CODE
+            ),
+            ErrorStatus.INVALID_OAUTH_TOKEN
+        );
     }
 
     public GoogleUserResponse requestUserInfo(String accessToken) {
         validateToken(accessToken);
-        return getUserInfo(properties.userInfoUri(), accessToken, GoogleUserResponse.class);
+        return executeFeign(
+            () -> googleApiFeignClient.requestUserInfo(bearer(accessToken)),
+            ErrorStatus.OAUTH_PROFILE_REQUEST_FAILED
+        );
     }
 }

@@ -26,6 +26,7 @@
 
 - 소셜 로그인 provider enum: `KAKAO`, `APPLE`, `GOOGLE`.
 - provider별 OAuth 전략: provider token 또는 authorization code로 외부 프로필을 조회한다.
+- provider HTTP client는 Spring Cloud OpenFeign 기반으로 구현한다.
 - 전략 선택 팩토리: 등록된 전략을 `LoginType` 기준으로 조회한다.
 - OAuth 프로필 표준 DTO: `loginType`, `providerUserId`, `email`, `nickname`, `profileImageUrl`.
 - 회원 보장 흐름: 소셜 계정이 있으면 기존 회원을 반환한다.
@@ -157,7 +158,7 @@ interface OAuthMemberService {
 
 ## 8. 영향 범위 / 마이그레이션
 
-- `auth` 패키지에 OAuth service, strategy, infrastructure client가 추가된다.
+- `auth` 패키지에 OAuth service, strategy, OpenFeign 기반 infrastructure client가 추가된다.
 - `member` 패키지에 소셜 계정 기반 회원 생성/조회 repository가 추가된다.
 - `refresh_token` 엔티티와 repository가 추가된다.
 - `application.yaml`에 provider별 OAuth endpoint/client 설정이 추가된다.
