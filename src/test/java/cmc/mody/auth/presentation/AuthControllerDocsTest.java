@@ -3,10 +3,14 @@ package cmc.mody.auth.presentation;
 import static cmc.mody.docs.ApiDocumentUtils.commonResponseFields;
 import static com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.document;
 import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
+import static org.mockito.BDDMockito.given;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cmc.mody.auth.application.oauth.OAuthService;
+import cmc.mody.auth.presentation.dto.TokenDto;
+import cmc.mody.member.domain.LoginType;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +18,7 @@ import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDoc
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.payload.JsonFieldType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(AuthController.class)
@@ -22,8 +27,14 @@ class AuthControllerDocsTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockitoBean
+    private OAuthService oAuthService;
+
     @Test
     void socialLogin() throws Exception {
+        given(oAuthService.loginByProviderToken(LoginType.KAKAO, "provider-token"))
+            .willReturn(TokenDto.of(1L, "access-token", "refresh-token", true));
+
         mockMvc.perform(post("/api/v1/auth/social-login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -44,7 +55,7 @@ class AuthControllerDocsTest {
                             .description("로그인 타입: KAKAO, APPLE, GOOGLE"),
                         fieldWithPath("providerAccessToken")
                             .type(JsonFieldType.STRING)
-                            .description("소셜 provider access token")
+                            .description("소셜 provider 토큰. 카카오/구글은 access token, 애플은 id token")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.id").type(JsonFieldType.NUMBER).description("회원 id"),
