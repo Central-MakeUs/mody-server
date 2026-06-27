@@ -39,15 +39,20 @@ class AuthControllerDocsTest {
                     .summary("소셜 로그인")
                     .description("소셜 provider 토큰으로 로그인하고 서비스 JWT를 발급한다.")
                     .requestFields(
-                        fieldWithPath("loginType").type(JsonFieldType.STRING).description("로그인 타입: KAKAO, APPLE, GOOGLE"),
-                        fieldWithPath("providerAccessToken").type(JsonFieldType.STRING).description("소셜 provider access token")
+                        fieldWithPath("loginType")
+                            .type(JsonFieldType.STRING)
+                            .description("로그인 타입: KAKAO, APPLE, GOOGLE"),
+                        fieldWithPath("providerAccessToken")
+                            .type(JsonFieldType.STRING)
+                            .description("소셜 provider access token")
                     )
                     .responseFields(commonResponseFields(
-                        fieldWithPath("result.memberId").type(JsonFieldType.NUMBER).description("회원 id"),
-                        fieldWithPath("result.newMember").type(JsonFieldType.BOOLEAN).description("신규 회원 여부"),
+                        fieldWithPath("result.id").type(JsonFieldType.NUMBER).description("회원 id"),
                         fieldWithPath("result.accessToken").type(JsonFieldType.STRING).description("access token"),
                         fieldWithPath("result.refreshToken").type(JsonFieldType.STRING).description("refresh token"),
-                        fieldWithPath("result.requiredSteps").type(JsonFieldType.ARRAY).description("추가 온보딩 필요 단계")
+                        fieldWithPath("result.isNewMember")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("신규 회원 여부")
                     ))
                     .build())
             ));
@@ -68,7 +73,9 @@ class AuthControllerDocsTest {
                     .tag("Auth")
                     .summary("토큰 재발급")
                     .description("refresh token으로 access token과 refresh token을 재발급한다.")
-                    .requestFields(fieldWithPath("refreshToken").type(JsonFieldType.STRING).description("refresh token"))
+                    .requestFields(
+                        fieldWithPath("refreshToken").type(JsonFieldType.STRING).description("refresh token")
+                    )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.accessToken").type(JsonFieldType.STRING).description("새 access token"),
                         fieldWithPath("result.refreshToken").type(JsonFieldType.STRING).description("새 refresh token")

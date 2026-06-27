@@ -1,7 +1,6 @@
 package cmc.mody.auth.presentation;
 
 import cmc.mody.common.api.ApiResponse;
-import java.util.List;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,10 +13,9 @@ public class AuthController {
     public ApiResponse<SocialLoginResponse> socialLogin(@RequestBody SocialLoginRequest request) {
         return ApiResponse.ok(new SocialLoginResponse(
             1L,
-            true,
             "access-token",
             "refresh-token",
-            List.of("PROFILE_REQUIRED", "GROUP_REQUIRED")
+            true
         ));
     }
 
@@ -38,11 +36,10 @@ public class AuthController {
     }
 
     public record SocialLoginResponse(
-        Long memberId,
-        boolean newMember,
+        Long id,
         String accessToken,
         String refreshToken,
-        List<String> requiredSteps
+        boolean isNewMember
     ) {
     }
 
