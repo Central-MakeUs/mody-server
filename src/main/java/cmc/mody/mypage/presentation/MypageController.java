@@ -50,7 +50,13 @@ public class MypageController {
 
     @GetMapping("/notification-settings")
     public ApiResponse<NotificationSettingResponse> getNotificationSettings() {
-        return ApiResponse.ok(new NotificationSettingResponse(true, true, true, List.of("08:00", "12:00", "18:00"), "20:00"));
+        return ApiResponse.ok(new NotificationSettingResponse(
+            true,
+            true,
+            true,
+            defaultMealSchedules(),
+            "20:00"
+        ));
     }
 
     @PatchMapping("/notification-settings")
@@ -59,7 +65,7 @@ public class MypageController {
             request.mealReminderEnabled(),
             request.commentNotificationEnabled(),
             request.challengeNotificationEnabled(),
-            request.mealReminderTimes(),
+            request.mealSchedules(),
             request.exerciseReminderTime()
         ));
     }
@@ -71,7 +77,15 @@ public class MypageController {
 
     @PutMapping("/meal-times")
     public ApiResponse<MealTimeResponse> updateMealTimes(@RequestBody MealTimeRequest request) {
-        return ApiResponse.ok(new MealTimeResponse(request.mealReminderTimes()));
+        return ApiResponse.ok(new MealTimeResponse(request.mealSchedules()));
+    }
+
+    private List<MealScheduleItem> defaultMealSchedules() {
+        return List.of(
+            new MealScheduleItem("BREAKFAST", "08:00", false),
+            new MealScheduleItem("LUNCH", null, true),
+            new MealScheduleItem("DINNER", "18:00", false)
+        );
     }
 
     @GetMapping("/groups/{groupId}/members")
@@ -114,7 +128,7 @@ public class MypageController {
         boolean mealReminderEnabled,
         boolean commentNotificationEnabled,
         boolean challengeNotificationEnabled,
-        List<String> mealReminderTimes,
+        List<MealScheduleItem> mealSchedules,
         String exerciseReminderTime
     ) {
     }
@@ -123,7 +137,7 @@ public class MypageController {
         boolean mealReminderEnabled,
         boolean commentNotificationEnabled,
         boolean challengeNotificationEnabled,
-        List<String> mealReminderTimes,
+        List<MealScheduleItem> mealSchedules,
         String exerciseReminderTime
     ) {
     }
@@ -134,13 +148,16 @@ public class MypageController {
     public record ExerciseScheduleResponse(List<ExerciseScheduleItem> schedules) {
     }
 
-    public record ExerciseScheduleItem(String dayOfWeek, String dayTime, String eveningTime) {
+    public record ExerciseScheduleItem(String dayOfWeek, String time) {
     }
 
-    public record MealTimeRequest(List<String> mealReminderTimes) {
+    public record MealScheduleItem(String mealType, String time, boolean skipped) {
     }
 
-    public record MealTimeResponse(List<String> mealReminderTimes) {
+    public record MealTimeRequest(List<MealScheduleItem> mealSchedules) {
+    }
+
+    public record MealTimeResponse(List<MealScheduleItem> mealSchedules) {
     }
 
     public record GroupMemberListResponse(List<GroupMemberResponse> members) {

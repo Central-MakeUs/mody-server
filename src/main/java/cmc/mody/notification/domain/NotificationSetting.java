@@ -48,4 +48,23 @@ public class NotificationSetting extends BaseEntity {
         super(id);
         this.memberId = memberId;
     }
+
+    public NotificationSetting(
+        Long id,
+        Long memberId,
+        boolean mealReminderEnabled,
+        LocalTime breakfastTime,
+        LocalTime lunchTime,
+        LocalTime dinnerTime,
+        boolean exerciseReminderEnabled,
+        LocalTime exerciseTime
+    ) {
+        this(id, memberId);
+        this.mealReminderEnabled = mealReminderEnabled;
+        this.breakfastTime = breakfastTime;
+        this.lunchTime = lunchTime;
+        this.dinnerTime = dinnerTime;
+        this.exerciseReminderEnabled = exerciseReminderEnabled;
+        this.exerciseTime = exerciseTime;
+    }
 }

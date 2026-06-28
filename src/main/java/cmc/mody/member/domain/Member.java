@@ -56,4 +56,14 @@ public class Member extends BaseEntity {
     public static Member oauthMember(Long id, String nickname, String profileImageUrl) {
         return new Member(id, nickname, null, null, profileImageUrl);
     }
+
+    public void completeProfile(String nickname, LocalDate birthDate, BigDecimal targetWeightKg) {
+        this.nickname = nickname;
+        this.birthDate = birthDate;
+        this.targetWeightKg = targetWeightKg;
+    }
+
+    public boolean isPersonalInfoCompleted() {
+        return birthDate != null && targetWeightKg != null;
+    }
 }

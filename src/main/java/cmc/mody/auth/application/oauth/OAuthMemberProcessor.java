@@ -55,8 +55,8 @@ public class OAuthMemberProcessor {
 
     private boolean isPersonalInfoCompleted(Long memberId) {
         Member member = memberRepository.findById(memberId)
-            .orElseThrow(() -> new GeneralException(ErrorStatus.NOT_FOUND));
-        return member.getBirthDate() != null && member.getTargetWeightKg() != null;
+            .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        return member.isPersonalInfoCompleted();
     }
 
     private String resolveNickname(OAuthProfile profile, Long memberId) {

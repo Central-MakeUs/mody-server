@@ -1,4 +1,9 @@
 import com.epages.restdocs.apispec.gradle.OpenApi3Extension
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import groovy.lang.Closure
+import io.swagger.v3.oas.models.servers.Server
+import org.gradle.kotlin.dsl.closureOf
 
 plugins {
     java
@@ -57,7 +62,17 @@ tasks.withType<Test> {
 }
 
 configure<OpenApi3Extension> {
-    setServer("https://dev-mody.store")
+    @Suppress("UNCHECKED_CAST")
+    setServers(listOf<Closure<Server>>(
+        closureOf<Server> {
+            url = "https://dev-mody.store"
+            description = "Dev server"
+        } as Closure<Server>,
+        closureOf<Server> {
+            url = "http://localhost:8080"
+            description = "Local server"
+        } as Closure<Server>
+    ))
     title = "mody API"
     description = "친구들과 함께하는 다이어트 습관, 모디 mody 백엔드 API 명세"
     version = "v1"
@@ -70,8 +85,34 @@ afterEvaluate {
     }
 }
 
-val copyOpenApiSpec by tasks.registering(Copy::class) {
+val applyOpenApiSecurity by tasks.registering {
     dependsOn("openapi3")
+    outputs.upToDateWhen { false }
+
+    doLast {
+        val specFile = layout.buildDirectory.file("api-spec/openapi3.json").get().asFile
+        @Suppress("UNCHECKED_CAST")
+        val spec = JsonSlurper().parse(specFile) as MutableMap<String, Any?>
+        @Suppress("UNCHECKED_CAST")
+        val components = spec.getOrPut("components") { linkedMapOf<String, Any?>() } as MutableMap<String, Any?>
+        @Suppress("UNCHECKED_CAST")
+        val securitySchemes = components.getOrPut("securitySchemes") {
+            linkedMapOf<String, Any?>()
+        } as MutableMap<String, Any?>
+
+        securitySchemes["bearerAuth"] = linkedMapOf(
+            "type" to "http",
+            "scheme" to "bearer",
+            "bearerFormat" to "JWT"
+        )
+        spec["security"] = listOf(mapOf("bearerAuth" to emptyList<String>()))
+
+        specFile.writeText(JsonOutput.prettyPrint(JsonOutput.toJson(spec)))
+    }
+}
+
+val copyOpenApiSpec by tasks.registering(Copy::class) {
+    dependsOn(applyOpenApiSecurity)
     from(layout.buildDirectory.file("api-spec/openapi3.json"))
     into(layout.buildDirectory.dir("resources/main/static/docs"))
 }

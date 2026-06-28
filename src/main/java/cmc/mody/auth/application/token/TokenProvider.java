@@ -8,4 +8,6 @@ public interface TokenProvider {
     void validateToken(String token);
 
     Long getMemberIdByToken(String token);
+
+    Long getMemberIdByAccessToken(String token);
 }
