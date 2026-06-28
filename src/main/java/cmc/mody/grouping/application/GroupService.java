@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class GroupService {
     private static final int MAX_GROUP_COUNT = 4;
+    private static final int MAX_GROUP_MEMBER_COUNT = 12;
     private static final int GROUP_CODE_LENGTH = 6;
     private static final int MAX_GROUP_CODE_GENERATION_ATTEMPTS = 20;
     private static final char[] GROUP_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".toCharArray();
@@ -65,6 +66,7 @@ public class GroupService {
             throw new GeneralException(ErrorStatus.GROUP_ALREADY_JOINED);
         }
         validateJoinable(memberId);
+        validateGroupCapacity(group.getId());
 
         groupMemberRepository.save(newGroupMember(member, group.getId()));
         int memberCount = (int) groupMemberRepository.countByGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
@@ -121,6 +123,16 @@ public class GroupService {
         );
         if (joinedGroupCount >= MAX_GROUP_COUNT) {
             throw new GeneralException(ErrorStatus.GROUP_LIMIT_EXCEEDED);
+        }
+    }
+
+    private void validateGroupCapacity(Long groupId) {
+        long memberCount = groupMemberRepository.countByGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            groupId,
+            GroupMemberStatus.JOINED
+        );
+        if (memberCount >= MAX_GROUP_MEMBER_COUNT) {
+            throw new GeneralException(ErrorStatus.GROUP_CAPACITY_EXCEEDED);
         }
     }
 

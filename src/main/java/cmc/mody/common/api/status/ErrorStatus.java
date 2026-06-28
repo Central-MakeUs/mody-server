@@ -27,6 +27,7 @@ public enum ErrorStatus implements BaseCode {
     GROUP_LIMIT_EXCEEDED(409, "GROUP304", "참여 가능한 그룹 수를 초과했습니다."),
     GROUP_ALREADY_JOINED(409, "GROUP305", "이미 참여 중인 그룹입니다."),
     GROUP_MEMBER_NOT_FOUND(404, "GROUP306", "그룹 참여 정보를 찾을 수 없습니다."),
+    GROUP_CAPACITY_EXCEEDED(409, "GROUP307", "그룹 최대 인원을 초과했습니다."),
     NOT_FOUND(404, "COMMON404", "리소스를 찾을 수 없습니다.");
 
     private final int httpStatus;

@@ -143,6 +143,28 @@ class GroupServiceTest {
     }
 
     @Test
+    @DisplayName("그룹 참여 인원이 12명이면 새 회원은 참여할 수 없다.")
+    void joinGroupCapacityExceeded() {
+        GroupService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(modyGroupRepository.findByCodeAndDeletedAtIsNull("ABC123"))
+            .willReturn(Optional.of(new ModyGroup(10L, "ABC123", "모디 그룹")));
+        given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            1L,
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(false);
+        given(groupMemberRepository.countByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
+            .willReturn(1L);
+        given(groupMemberRepository.countByGroupIdAndGroupMemberStatusAndDeletedAtIsNull(10L, GroupMemberStatus.JOINED))
+            .willReturn(12L);
+
+        assertThatThrownBy(() -> service.joinGroup(1L, new GroupJoinCommand("ABC123")))
+            .isInstanceOfSatisfying(GeneralException.class, exception ->
+                assertThat(exception.getStatus()).isEqualTo(ErrorStatus.GROUP_CAPACITY_EXCEEDED));
+    }
+
+    @Test
     @DisplayName("그룹 나가기는 참여 정보를 논리 삭제한다.")
     void leaveGroup() {
         GroupService service = service();

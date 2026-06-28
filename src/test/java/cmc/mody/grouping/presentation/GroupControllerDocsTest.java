@@ -62,6 +62,7 @@ class GroupControllerDocsTest {
         - GROUP304: 참여 가능 그룹 수 초과
         - GROUP305: 이미 참여 중인 그룹
         - GROUP306: 그룹 참여 정보 없음
+        - GROUP307: 그룹 최대 인원 초과
         """;
 
     @Autowired
@@ -341,6 +342,32 @@ class GroupControllerDocsTest {
                     """))
             .andExpect(status().isConflict())
             .andDo(document("group-join-already-joined",
+                resource(ResourceSnippetParameters.builder()
+                    .tag("Group")
+                    .summary("그룹 참여")
+                    .description(GROUP_DESCRIPTION)
+                    .responseFields(commonResponseFields())
+                    .build())
+            ));
+    }
+
+    @Test
+    void joinGroupCapacityExceeded() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_CAPACITY_EXCEEDED))
+            .given(groupService)
+            .joinGroup(eq(1L), any(GroupJoinCommand.class));
+
+        mockMvc.perform(post("/api/v1/groups/join")
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "code": "ABC123"
+                    }
+                    """))
+            .andExpect(status().isConflict())
+            .andDo(document("group-join-capacity-exceeded",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Group")
                     .summary("그룹 참여")
