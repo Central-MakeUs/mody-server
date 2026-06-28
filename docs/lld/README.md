@@ -13,3 +13,4 @@
 | [LLD-0005](LLD-0005-oauth-social-login.md) | OAuth 소셜 로그인 | Draft | #18 |
 | [LLD-0006](LLD-0006-id-generator-foundation.md) | ID 생성기 기반 | Draft | #19 |
 | [LLD-0007](LLD-0007-application-profile-configuration.md) | 환경별 애플리케이션 설정 분기 | Draft | #22 |
+| [LLD-0009](LLD-0009-mypage-member-weight-api.md) | 마이페이지 회원 정보 및 체중 기록 API | Draft | #32 |

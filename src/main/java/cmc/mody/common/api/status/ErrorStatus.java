@@ -21,6 +21,8 @@ public enum ErrorStatus implements BaseCode {
     MEMBER_SIGNUP_VALIDATION_FAILED(400, "MEMBER301", "회원 가입 입력값이 올바르지 않습니다."),
     MEMBER_NOT_FOUND(404, "MEMBER302", "회원을 찾을 수 없습니다."),
     MEMBER_PROFILE_ALREADY_COMPLETED(409, "MEMBER303", "이미 개인 정보 입력이 완료된 회원입니다."),
+    MYPAGE_VALIDATION_FAILED(400, "MYPAGE301", "마이페이지 입력값이 올바르지 않습니다."),
+    MYPAGE_SOCIAL_ACCOUNT_NOT_FOUND(404, "MYPAGE302", "소셜 계정 정보를 찾을 수 없습니다."),
     NOT_FOUND(404, "COMMON404", "리소스를 찾을 수 없습니다.");
 
     private final int httpStatus;

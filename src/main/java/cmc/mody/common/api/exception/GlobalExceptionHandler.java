@@ -37,6 +37,9 @@ public class GlobalExceptionHandler {
         if ("/api/v1/onboarding/profile".equals(request.getRequestURI())) {
             return ErrorStatus.MEMBER_SIGNUP_VALIDATION_FAILED;
         }
+        if (request.getRequestURI().startsWith("/api/v1/mypage")) {
+            return ErrorStatus.MYPAGE_VALIDATION_FAILED;
+        }
         return ErrorStatus.VALIDATION_FAILED;
     }
 

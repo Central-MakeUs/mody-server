@@ -63,6 +63,11 @@ public class Member extends BaseEntity {
         this.targetWeightKg = targetWeightKg;
     }
 
+    public void updateProfile(String nickname, LocalDate birthDate) {
+        this.nickname = nickname;
+        this.birthDate = birthDate;
+    }
+
     public boolean isPersonalInfoCompleted() {
         return birthDate != null && targetWeightKg != null;
     }
