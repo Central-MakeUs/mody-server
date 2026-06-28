@@ -30,7 +30,11 @@ import cmc.mody.grouping.application.GroupService.GroupMemberResult;
 import cmc.mody.grouping.application.GroupService.GroupSummaryResult;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import java.util.List;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -38,9 +42,11 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.restdocs.mockmvc.RestDocumentationResultHandler;
 import org.springframework.restdocs.payload.JsonFieldType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @WebMvcTest(GroupController.class)
 @AutoConfigureRestDocs
@@ -274,6 +280,60 @@ class GroupControllerDocsTest {
     }
 
     @Test
+    void createGroupCodeGenerationFailed() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_CODE_GENERATION_FAILED))
+            .given(groupService)
+            .createGroup(eq(1L), any(GroupCreateCommand.class));
+
+        mockMvc.perform(post("/api/v1/groups")
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "name": "모디 그룹"
+                    }
+                    """))
+            .andExpect(status().isConflict())
+            .andDo(documentError("group-create-code-generation-failed", "그룹 생성"));
+    }
+
+    @Test
+    void createGroupLimitExceeded() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_LIMIT_EXCEEDED))
+            .given(groupService)
+            .createGroup(eq(1L), any(GroupCreateCommand.class));
+
+        mockMvc.perform(post("/api/v1/groups")
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "name": "모디 그룹"
+                    }
+                    """))
+            .andExpect(status().isConflict())
+            .andDo(documentError("group-create-limit-exceeded", "그룹 생성"));
+    }
+
+    @Test
+    void joinGroupValidationError() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(post("/api/v1/groups/join")
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "code": "ABC"
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andDo(documentError("group-join-validation-error", "그룹 참여"));
+    }
+
+    @Test
     void joinGroupNotFound() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.GROUP_NOT_FOUND))
@@ -378,6 +438,58 @@ class GroupControllerDocsTest {
     }
 
     @Test
+    void generateGroupCodeGenerationFailed() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_CODE_GENERATION_FAILED))
+            .given(groupService)
+            .generateCode(1L);
+
+        mockMvc.perform(get("/api/v1/groups/code")
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isConflict())
+            .andDo(documentError("group-code-generate-generation-failed", "랜덤 그룹 코드 생성"));
+    }
+
+    @Test
+    void getMyGroupsGroupNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_NOT_FOUND))
+            .given(groupService)
+            .getMyGroups(1L);
+
+        mockMvc.perform(get("/api/v1/groups")
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("group-list-group-not-found", "내 그룹 목록"));
+    }
+
+    @Test
+    void getGroupMembersGroupNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_NOT_FOUND))
+            .given(groupService)
+            .getGroupMembers(1L, 10L);
+
+        mockMvc.perform(get("/api/v1/groups/{groupId}/members", 10L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("group-member-list-group-not-found", "그룹 내 인원 조회"));
+    }
+
+    @Test
+    void getGroupMembersMemberNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND))
+            .given(groupService)
+            .getGroupMembers(1L, 10L);
+
+        mockMvc.perform(get("/api/v1/groups/{groupId}/members", 10L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("group-member-list-member-not-found", "그룹 내 인원 조회"));
+    }
+
+    @Test
     void leaveGroupMemberNotFound() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND))
@@ -395,5 +507,164 @@ class GroupControllerDocsTest {
                     .responseFields(commonResponseFields())
                     .build())
             ));
+    }
+
+    @ParameterizedTest(name = "{0} Authorization 헤더 없음")
+    @MethodSource("authenticatedGroupEndpoints")
+    void authenticatedApisWithoutAuthorization(GroupEndpoint endpoint) throws Exception {
+        mockMvc.perform(endpoint.request().get())
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError(endpoint.documentPrefix() + "-auth-missing", endpoint.summary()));
+    }
+
+    @ParameterizedTest(name = "{0} 빈 Bearer 토큰")
+    @MethodSource("authenticatedGroupEndpoints")
+    void authenticatedApisWithEmptyToken(GroupEndpoint endpoint) throws Exception {
+        mockMvc.perform(endpoint.request().get()
+                .header("Authorization", "Bearer "))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError(endpoint.documentPrefix() + "-auth-empty-token", endpoint.summary()));
+    }
+
+    @ParameterizedTest(name = "{0} 잘못된 Authorization 헤더")
+    @MethodSource("authenticatedGroupEndpoints")
+    void authenticatedApisWithInvalidAuthorizationHeader(GroupEndpoint endpoint) throws Exception {
+        mockMvc.perform(endpoint.request().get()
+                .header("Authorization", "access-token"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError(endpoint.documentPrefix() + "-auth-invalid-header", endpoint.summary()));
+    }
+
+    @ParameterizedTest(name = "{0} 만료된 JWT")
+    @MethodSource("authenticatedGroupEndpoints")
+    void authenticatedApisWithExpiredToken(GroupEndpoint endpoint) throws Exception {
+        willThrow(new GeneralException(ErrorStatus.EXPIRED_JWT))
+            .given(tokenProvider)
+            .getMemberIdByAccessToken("expired-token");
+
+        mockMvc.perform(endpoint.request().get()
+                .header("Authorization", "Bearer expired-token"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError(endpoint.documentPrefix() + "-auth-expired-token", endpoint.summary()));
+    }
+
+    @ParameterizedTest(name = "{0} 지원하지 않는 JWT")
+    @MethodSource("authenticatedGroupEndpoints")
+    void authenticatedApisWithUnsupportedToken(GroupEndpoint endpoint) throws Exception {
+        willThrow(new GeneralException(ErrorStatus.UNSUPPORTED_JWT))
+            .given(tokenProvider)
+            .getMemberIdByAccessToken("unsupported-token");
+
+        mockMvc.perform(endpoint.request().get()
+                .header("Authorization", "Bearer unsupported-token"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError(endpoint.documentPrefix() + "-auth-unsupported-token", endpoint.summary()));
+    }
+
+    @ParameterizedTest(name = "{0} 회원 없음")
+    @MethodSource("memberLookupGroupEndpoints")
+    void memberLookupApisMemberNotFound(GroupEndpoint endpoint) throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        givenMemberNotFound(endpoint.documentPrefix());
+
+        mockMvc.perform(endpoint.request().get()
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError(endpoint.documentPrefix() + "-member-not-found", endpoint.summary()));
+    }
+
+    private static Stream<GroupEndpoint> authenticatedGroupEndpoints() {
+        return Stream.of(
+            new GroupEndpoint(
+                "group-code-generate",
+                "랜덤 그룹 코드 생성",
+                () -> get("/api/v1/groups/code")
+            ),
+            new GroupEndpoint(
+                "group-create",
+                "그룹 생성",
+                () -> post("/api/v1/groups")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "name": "모디 그룹"
+                        }
+                        """)
+            ),
+            new GroupEndpoint(
+                "group-join",
+                "그룹 참여",
+                () -> post("/api/v1/groups/join")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "code": "ABC123"
+                        }
+                        """)
+            ),
+            new GroupEndpoint(
+                "group-list",
+                "내 그룹 목록",
+                () -> get("/api/v1/groups")
+            ),
+            new GroupEndpoint(
+                "group-member-list",
+                "그룹 내 인원 조회",
+                () -> get("/api/v1/groups/{groupId}/members", 10L)
+            ),
+            new GroupEndpoint(
+                "group-leave",
+                "그룹 나가기",
+                () -> delete("/api/v1/groups/{groupId}/members/me", 10L)
+            )
+        );
+    }
+
+    private static Stream<GroupEndpoint> memberLookupGroupEndpoints() {
+        return authenticatedGroupEndpoints()
+            .filter(endpoint -> switch (endpoint.documentPrefix()) {
+                case "group-code-generate", "group-create", "group-join", "group-list" -> true;
+                default -> false;
+            });
+    }
+
+    private void givenMemberNotFound(String documentPrefix) {
+        switch (documentPrefix) {
+            case "group-code-generate" -> willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
+                .given(groupService)
+                .generateCode(1L);
+            case "group-create" -> willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
+                .given(groupService)
+                .createGroup(eq(1L), any(GroupCreateCommand.class));
+            case "group-join" -> willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
+                .given(groupService)
+                .joinGroup(eq(1L), any(GroupJoinCommand.class));
+            case "group-list" -> willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
+                .given(groupService)
+                .getMyGroups(1L);
+            default -> throw new IllegalArgumentException("지원하지 않는 그룹 문서 prefix입니다.");
+        }
+    }
+
+    private RestDocumentationResultHandler documentError(String identifier, String summary) {
+        return document(identifier,
+            resource(ResourceSnippetParameters.builder()
+                .tag("Group")
+                .summary(summary)
+                .description(GROUP_DESCRIPTION)
+                .responseFields(commonResponseFields())
+                .build())
+        );
+    }
+
+    private record GroupEndpoint(
+        String documentPrefix,
+        String summary,
+        Supplier<MockHttpServletRequestBuilder> request
+    ) {
+        @Override
+        public String toString() {
+            return summary;
+        }
     }
 }
