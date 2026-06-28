@@ -31,7 +31,7 @@ class ChallengeControllerDocsTest {
             .andDo(document("challenge-summary",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Challenge")
-                    .summary("챌린지 홈 요약 조회")
+                    .summary("[미구현] 챌린지 홈 요약 조회")
                     .description("그룹과 함께한 날짜, 연속 기록, 이번달 운동 시간, 완료 챌린지 개수를 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.daysTogether").type(JsonFieldType.NUMBER).description("그룹과 함께한 일수"),
@@ -50,7 +50,7 @@ class ChallengeControllerDocsTest {
             .andDo(document("step-challenge-current",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Step Challenge")
-                    .summary("걸음수 챌린지 현황")
+                    .summary("[미구현] 걸음수 챌린지 현황")
                     .description("현재 진행 중인 걸음수 챌린지명, 목표 걸음수, 현재 걸음수를 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.groupChallengeId").type(JsonFieldType.NUMBER).description("그룹 챌린지 id"),
@@ -69,7 +69,7 @@ class ChallengeControllerDocsTest {
             .andDo(document("weekly-challenge-list",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Weekly Challenge")
-                    .summary("이번주의 주간 챌린지 조회")
+                    .summary("[미구현] 이번주의 주간 챌린지 조회")
                     .description("이번주 진행 중인 주간 챌린지 목록과 참여 현황을 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.challenges[].groupChallengeId").type(JsonFieldType.NUMBER).description("그룹 챌린지 id"),
@@ -89,7 +89,7 @@ class ChallengeControllerDocsTest {
             .andDo(document("challenge-nudge-targets",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Challenge")
-                    .summary("버디 찌르기 대상 조회")
+                    .summary("[미구현] 버디 찌르기 대상 조회")
                     .description("오늘 기록하지 않은 그룹 구성원과 기록 여부를 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.members[].memberId").type(JsonFieldType.NUMBER).description("회원 id"),
@@ -108,7 +108,7 @@ class ChallengeControllerDocsTest {
             .andDo(document("challenge-nudge",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Challenge")
-                    .summary("버디 찌르기")
+                    .summary("[미구현] 버디 찌르기")
                     .description("기록하지 않은 그룹 구성원에게 알림을 보낸다.")
                     .responseFields(commonResponseFields())
                     .build())
@@ -122,7 +122,7 @@ class ChallengeControllerDocsTest {
             .andDo(document("step-challenge-regions",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Step Challenge")
-                    .summary("지금까지 걸어간 지역 확인")
+                    .summary("[미구현] 지금까지 걸어간 지역 확인")
                     .description("완료 또는 변경 종료된 걸음수 챌린지 지역 내역을 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.regions[].regionName").type(JsonFieldType.STRING).description("지역명"),
@@ -139,7 +139,7 @@ class ChallengeControllerDocsTest {
             .andDo(document("step-challenge-rankings",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Step Challenge")
-                    .summary("기여도 순위")
+                    .summary("[미구현] 기여도 순위")
                     .description("현재 걸음수 챌린지의 회원별 기여도 순위를 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.rankings[].rank").type(JsonFieldType.NUMBER).description("등수"),
@@ -165,7 +165,7 @@ class ChallengeControllerDocsTest {
             .andDo(document("step-challenge-change",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Step Challenge")
-                    .summary("챌린지 변경")
+                    .summary("[미구현] 챌린지 변경")
                     .description("진행 중인 걸음수 챌린지를 변경하고 현재 진행률을 초기화한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.groupChallengeId").type(JsonFieldType.NUMBER).description("새 그룹 챌린지 id"),
@@ -185,7 +185,7 @@ class ChallengeControllerDocsTest {
             .andDo(document("weekly-challenge-detail",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Weekly Challenge")
-                    .summary("주간 챌린지 상세 조회")
+                    .summary("[미구현] 주간 챌린지 상세 조회")
                     .description("주간 챌린지명과 상세 설명을 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.challengeId").type(JsonFieldType.NUMBER).description("챌린지 id"),
@@ -203,7 +203,7 @@ class ChallengeControllerDocsTest {
             .andDo(document("weekly-challenge-proofs",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Weekly Challenge")
-                    .summary("그룹원 인증 이미지 조회")
+                    .summary("[미구현] 그룹원 인증 이미지 조회")
                     .description("주간 챌린지에 업로드된 그룹원 인증 이미지를 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.proofs[].proofId").type(JsonFieldType.NUMBER).description("인증 id"),
@@ -223,7 +223,7 @@ class ChallengeControllerDocsTest {
             .andDo(document("weekly-challenge-share",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Weekly Challenge")
-                    .summary("챌린지 완료 공유하기")
+                    .summary("[미구현] 챌린지 완료 공유하기")
                     .description("인원수에 맞게 그리드화한 공유 이미지 정보를 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.imageUrl").type(JsonFieldType.STRING).description("공유 이미지 URL"),

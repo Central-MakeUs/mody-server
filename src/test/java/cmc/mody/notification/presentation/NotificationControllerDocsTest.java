@@ -29,7 +29,7 @@ class NotificationControllerDocsTest {
             .andDo(document("notification-list",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Notification")
-                    .summary("알림 리스트 조회")
+                    .summary("[미구현] 알림 리스트 조회")
                     .description("알림 종류, 제목, 설명, 날짜, 읽음 여부를 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.notifications[].notificationId").type(JsonFieldType.NUMBER).description("알림 id"),
@@ -50,7 +50,7 @@ class NotificationControllerDocsTest {
             .andDo(document("notification-read",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Notification")
-                    .summary("알림 읽음 처리")
+                    .summary("[미구현] 알림 읽음 처리")
                     .description("알림을 읽음 상태로 변경한다.")
                     .responseFields(commonResponseFields())
                     .build())

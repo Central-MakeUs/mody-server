@@ -37,7 +37,7 @@ class GroupControllerDocsTest {
             .andDo(document("group-create",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Group")
-                    .summary("그룹 생성")
+                    .summary("[미구현] 그룹 생성")
                     .description("그룹명을 입력해 그룹을 생성한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.groupId").type(JsonFieldType.NUMBER).description("그룹 id"),
@@ -61,7 +61,7 @@ class GroupControllerDocsTest {
             .andDo(document("group-join",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Group")
-                    .summary("그룹 참여")
+                    .summary("[미구현] 그룹 참여")
                     .description("그룹 코드로 그룹에 참여한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.groupId").type(JsonFieldType.NUMBER).description("그룹 id"),
@@ -80,7 +80,7 @@ class GroupControllerDocsTest {
             .andDo(document("group-list",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Group")
-                    .summary("내 그룹 목록")
+                    .summary("[미구현] 내 그룹 목록")
                     .description("내가 참여 중인 그룹 목록을 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.groups[].groupId").type(JsonFieldType.NUMBER).description("그룹 id"),
@@ -100,7 +100,7 @@ class GroupControllerDocsTest {
             .andDo(document("group-member-list",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Group")
-                    .summary("그룹 내 인원 조회")
+                    .summary("[미구현] 그룹 내 인원 조회")
                     .description("그룹 내 구성원 id, 닉네임, 프로필 이미지를 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.members[].memberId").type(JsonFieldType.NUMBER).description("회원 id"),
@@ -118,7 +118,7 @@ class GroupControllerDocsTest {
             .andDo(document("group-leave",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Group")
-                    .summary("그룹 나가기")
+                    .summary("[미구현] 그룹 나가기")
                     .description("현재 회원이 그룹에서 나간다.")
                     .responseFields(commonResponseFields())
                     .build())

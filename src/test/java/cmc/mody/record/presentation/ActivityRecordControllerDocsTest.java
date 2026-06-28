@@ -32,7 +32,7 @@ class ActivityRecordControllerDocsTest {
             .andDo(document("activity-calendar",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
-                    .summary("월/주차별 활동 유무 조회")
+                    .summary("[미구현] 월/주차별 활동 유무 조회")
                     .description("월 단위로 식사/운동 기록 존재 여부를 조회한다.")
                     .queryParameters(parameterWithName("yearMonth").description("조회 월, yyyy-MM"))
                     .responseFields(commonResponseFields(
@@ -53,7 +53,7 @@ class ActivityRecordControllerDocsTest {
             .andDo(document("record-list",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
-                    .summary("날짜별 식사/운동 기록 조회")
+                    .summary("[미구현] 날짜별 식사/운동 기록 조회")
                     .description("날짜별 기록을 커서 기반으로 조회한다.")
                     .queryParameters(
                         parameterWithName("date").description("조회 날짜, yyyy-MM-dd"),
@@ -83,7 +83,7 @@ class ActivityRecordControllerDocsTest {
             .andDo(document("record-detail",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
-                    .summary("기록 상세 조회")
+                    .summary("[미구현] 기록 상세 조회")
                     .description("식사/운동 기록 상세와 댓글을 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.recordId").type(JsonFieldType.NUMBER).description("기록 id"),
@@ -122,7 +122,7 @@ class ActivityRecordControllerDocsTest {
             .andDo(document("record-create",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
-                    .summary("기록 입력")
+                    .summary("[미구현] 기록 입력")
                     .description("식사 또는 운동 기록을 입력한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.recordId").type(JsonFieldType.NUMBER).description("생성된 기록 id")
@@ -144,7 +144,7 @@ class ActivityRecordControllerDocsTest {
             .andDo(document("record-comment-create",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
-                    .summary("기록 댓글 작성")
+                    .summary("[미구현] 기록 댓글 작성")
                     .description("식사/운동 기록에 댓글을 작성한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.commentId").type(JsonFieldType.NUMBER).description("댓글 id"),

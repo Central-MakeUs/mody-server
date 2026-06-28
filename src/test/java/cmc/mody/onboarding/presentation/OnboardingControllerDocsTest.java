@@ -326,7 +326,7 @@ class OnboardingControllerDocsTest {
             .andDo(document("onboarding-weight",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Onboarding")
-                    .summary("체중 입력")
+                    .summary("[미구현] 체중 입력")
                     .description("현재 체중과 목표 체중을 저장한다.")
                     .requestFields(
                         fieldWithPath("currentWeightKg").type(JsonFieldType.NUMBER).description("현재 체중 kg"),
@@ -362,7 +362,7 @@ class OnboardingControllerDocsTest {
             .andDo(document("onboarding-notifications",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Onboarding")
-                    .summary("알림 설정")
+                    .summary("[미구현] 알림 설정")
                     .description("식사 및 운동 기록 알림 시간을 저장한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.enabled").type(JsonFieldType.BOOLEAN).description("알림 설정 여부")
@@ -384,7 +384,7 @@ class OnboardingControllerDocsTest {
             .andDo(document("onboarding-health-connection",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Onboarding")
-                    .summary("건강 앱 연동 상태 저장")
+                    .summary("[미구현] 건강 앱 연동 상태 저장")
                     .description("HealthKit 또는 Health Connect 연동 상태를 저장한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.connected").type(JsonFieldType.BOOLEAN).description("건강 앱 연동 여부")
@@ -406,7 +406,7 @@ class OnboardingControllerDocsTest {
             .andDo(document("onboarding-group-join",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Onboarding")
-                    .summary("그룹 코드 입력")
+                    .summary("[미구현] 그룹 코드 입력")
                     .description("그룹 코드로 온보딩 중 그룹에 참여한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.groupId").type(JsonFieldType.NUMBER).description("그룹 id"),
@@ -431,7 +431,7 @@ class OnboardingControllerDocsTest {
             .andDo(document("onboarding-group-create",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Onboarding")
-                    .summary("그룹 생성")
+                    .summary("[미구현] 그룹 생성")
                     .description("그룹명을 입력해 그룹을 생성하고 초대 코드를 응답한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.groupId").type(JsonFieldType.NUMBER).description("그룹 id"),
