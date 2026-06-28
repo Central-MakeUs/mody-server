@@ -7,6 +7,7 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWit
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cmc.mody.auth.application.oauth.OAuthService;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDoc
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.payload.JsonFieldType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(AuthController.class)
@@ -22,41 +24,8 @@ class AuthControllerDocsTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @Test
-    void socialLogin() throws Exception {
-        mockMvc.perform(post("/api/v1/auth/social-login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {
-                      "loginType": "KAKAO",
-                      "providerAccessToken": "provider-token"
-                    }
-                    """))
-            .andExpect(status().isOk())
-            .andDo(document("auth-social-login",
-                resource(ResourceSnippetParameters.builder()
-                    .tag("Auth")
-                    .summary("소셜 로그인")
-                    .description("소셜 provider 토큰으로 로그인하고 서비스 JWT를 발급한다.")
-                    .requestFields(
-                        fieldWithPath("loginType")
-                            .type(JsonFieldType.STRING)
-                            .description("로그인 타입: KAKAO, APPLE, GOOGLE"),
-                        fieldWithPath("providerAccessToken")
-                            .type(JsonFieldType.STRING)
-                            .description("소셜 provider access token")
-                    )
-                    .responseFields(commonResponseFields(
-                        fieldWithPath("result.id").type(JsonFieldType.NUMBER).description("회원 id"),
-                        fieldWithPath("result.accessToken").type(JsonFieldType.STRING).description("access token"),
-                        fieldWithPath("result.refreshToken").type(JsonFieldType.STRING).description("refresh token"),
-                        fieldWithPath("result.isNewMember")
-                            .type(JsonFieldType.BOOLEAN)
-                            .description("신규 회원 여부")
-                    ))
-                    .build())
-            ));
-    }
+    @MockitoBean
+    private OAuthService oAuthService;
 
     @Test
     void reissue() throws Exception {

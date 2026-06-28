@@ -4,7 +4,7 @@ public record TokenDto(
     Long id,
     String accessToken,
     String refreshToken,
-    boolean isNewMember
+    boolean personalInfoCompleted
 ) {
     public static TokenDto of(Long id, String accessToken, String refreshToken) {
         return of(id, accessToken, refreshToken, false);
@@ -14,8 +14,8 @@ public record TokenDto(
         Long id,
         String accessToken,
         String refreshToken,
-        boolean isNewMember
+        boolean personalInfoCompleted
     ) {
-        return new TokenDto(id, accessToken, refreshToken, isNewMember);
+        return new TokenDto(id, accessToken, refreshToken, personalInfoCompleted);
     }
 }
