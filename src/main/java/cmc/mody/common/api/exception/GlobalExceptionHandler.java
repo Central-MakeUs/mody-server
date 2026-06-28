@@ -2,8 +2,7 @@ package cmc.mody.common.api.exception;
 
 import cmc.mody.common.api.ApiResponse;
 import cmc.mody.common.api.status.ErrorStatus;
-import java.util.Map;
-import java.util.stream.Collectors;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -24,22 +23,21 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationException(
-        MethodArgumentNotValidException e
+    public ResponseEntity<ApiResponse<Void>> handleValidationException(
+        MethodArgumentNotValidException e,
+        HttpServletRequest request
     ) {
-        Map<String, String> errors = e.getBindingResult()
-            .getFieldErrors()
-            .stream()
-            .collect(Collectors.toMap(
-                fieldError -> fieldError.getField(),
-                fieldError -> fieldError.getDefaultMessage() == null ? "Invalid value" : fieldError.getDefaultMessage(),
-                (first, second) -> first
-            ));
-
-        log.warn("Validation failed: {}", errors);
+        log.warn("Validation failed: {}", e.getBindingResult().getFieldErrors());
         return ResponseEntity
             .badRequest()
-            .body(ApiResponse.failure(ErrorStatus.VALIDATION_FAILED, errors));
+            .body(ApiResponse.failure(resolveValidationStatus(request)));
+    }
+
+    private ErrorStatus resolveValidationStatus(HttpServletRequest request) {
+        if ("/api/v1/onboarding/profile".equals(request.getRequestURI())) {
+            return ErrorStatus.MEMBER_SIGNUP_VALIDATION_FAILED;
+        }
+        return ErrorStatus.VALIDATION_FAILED;
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

@@ -28,6 +28,19 @@ class JwtTokenProviderTest {
     }
 
     @Test
+    @DisplayName("access token으로만 현재 회원 id를 읽는다.")
+    void readMemberIdByAccessToken() {
+        JwtTokenProvider provider = provider(SECRET);
+        TokenDto token = provider.createToken(1L);
+
+        assertThat(provider.getMemberIdByAccessToken(token.accessToken())).isEqualTo(1L);
+        assertThatThrownBy(() -> provider.getMemberIdByAccessToken(token.refreshToken()))
+            .isInstanceOf(GeneralException.class)
+            .extracting("status")
+            .isEqualTo(ErrorStatus.INVALID_JWT);
+    }
+
+    @Test
     @DisplayName("만료된 토큰은 EXPIRED_JWT 예외를 던진다.")
     void throwExpiredJwtWhenTokenExpired() {
         JwtTokenProvider provider = provider(SECRET, -1L, -1L);

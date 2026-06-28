@@ -47,7 +47,20 @@ public class JwtTokenProvider implements TokenProvider {
 
     @Override
     public Long getMemberIdByToken(String token) {
-        Object memberId = parseClaims(token).get(MEMBER_ID);
+        return extractMemberId(parseClaims(token));
+    }
+
+    @Override
+    public Long getMemberIdByAccessToken(String token) {
+        Claims claims = parseClaims(token);
+        if (!ACCESS.equals(claims.get(TOKEN_TYPE))) {
+            throw new GeneralException(ErrorStatus.INVALID_JWT);
+        }
+        return extractMemberId(claims);
+    }
+
+    private Long extractMemberId(Claims claims) {
+        Object memberId = claims.get(MEMBER_ID);
         if (memberId instanceof Number number) {
             return number.longValue();
         }

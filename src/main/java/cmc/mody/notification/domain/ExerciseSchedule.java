@@ -30,17 +30,13 @@ public class ExerciseSchedule extends BaseEntity {
     @Column(name = "day_of_week", nullable = false, length = 20)
     private DayOfWeek dayOfWeek;
 
-    @Column(name = "day_time")
-    private LocalTime dayTime;
+    @Column(name = "scheduled_time")
+    private LocalTime scheduledTime;
 
-    @Column(name = "evening_time")
-    private LocalTime eveningTime;
-
-    public ExerciseSchedule(Long id, Long memberId, DayOfWeek dayOfWeek, LocalTime dayTime, LocalTime eveningTime) {
+    public ExerciseSchedule(Long id, Long memberId, DayOfWeek dayOfWeek, LocalTime scheduledTime) {
         super(id);
         this.memberId = memberId;
         this.dayOfWeek = dayOfWeek;
-        this.dayTime = dayTime;
-        this.eveningTime = eveningTime;
+        this.scheduledTime = scheduledTime;
     }
 }

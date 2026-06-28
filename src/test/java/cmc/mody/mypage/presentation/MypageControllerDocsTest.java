@@ -154,7 +154,11 @@ class MypageControllerDocsTest {
                       "mealReminderEnabled": true,
                       "commentNotificationEnabled": true,
                       "challengeNotificationEnabled": true,
-                      "mealReminderTimes": ["08:00", "12:00", "18:00"],
+                      "mealSchedules": [
+                        {"mealType": "BREAKFAST", "time": "08:00", "skipped": false},
+                        {"mealType": "LUNCH", "time": null, "skipped": true},
+                        {"mealType": "DINNER", "time": "18:00", "skipped": false}
+                      ],
                       "exerciseReminderTime": "20:00"
                     }
                     """))
@@ -168,7 +172,10 @@ class MypageControllerDocsTest {
                         fieldWithPath("result.mealReminderEnabled").type(JsonFieldType.BOOLEAN).description("식사 알림 여부"),
                         fieldWithPath("result.commentNotificationEnabled").type(JsonFieldType.BOOLEAN).description("코멘트 알림 여부"),
                         fieldWithPath("result.challengeNotificationEnabled").type(JsonFieldType.BOOLEAN).description("챌린지 알림 여부"),
-                        fieldWithPath("result.mealReminderTimes").type(JsonFieldType.ARRAY).description("식사 알림 시간 목록"),
+                        fieldWithPath("result.mealSchedules").type(JsonFieldType.ARRAY).description("식사 설정 목록"),
+                        fieldWithPath("result.mealSchedules[].mealType").type(JsonFieldType.STRING).description("식사 타입"),
+                        fieldWithPath("result.mealSchedules[].time").type(JsonFieldType.STRING).description("식사 알림 시간. skipped=true이면 null").optional(),
+                        fieldWithPath("result.mealSchedules[].skipped").type(JsonFieldType.BOOLEAN).description("먹지 않음 여부"),
                         fieldWithPath("result.exerciseReminderTime").type(JsonFieldType.STRING).description("운동 알림 시간")
                     ))
                     .build())
@@ -184,8 +191,7 @@ class MypageControllerDocsTest {
                       "schedules": [
                         {
                           "dayOfWeek": "MONDAY",
-                          "dayTime": "10:00",
-                          "eveningTime": "20:00"
+                          "time": "20:00"
                         }
                       ]
                     }
@@ -195,11 +201,10 @@ class MypageControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
                     .summary("운동 일정 수정")
-                    .description("요일별 낮/저녁 운동 일정을 수정한다.")
+                    .description("요일별 운동 일정을 수정한다. 최소 3개 이상 입력한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.schedules[].dayOfWeek").type(JsonFieldType.STRING).description("요일"),
-                        fieldWithPath("result.schedules[].dayTime").type(JsonFieldType.STRING).description("낮 운동 시간"),
-                        fieldWithPath("result.schedules[].eveningTime").type(JsonFieldType.STRING).description("저녁 운동 시간")
+                        fieldWithPath("result.schedules[].time").type(JsonFieldType.STRING).description("운동 시간")
                     ))
                     .build())
             ));
@@ -211,7 +216,11 @@ class MypageControllerDocsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "mealReminderTimes": ["08:00", "12:00", "18:00"]
+                      "mealSchedules": [
+                        {"mealType": "BREAKFAST", "time": "08:00", "skipped": false},
+                        {"mealType": "LUNCH", "time": null, "skipped": true},
+                        {"mealType": "DINNER", "time": "18:00", "skipped": false}
+                      ]
                     }
                     """))
             .andExpect(status().isOk())
@@ -219,9 +228,12 @@ class MypageControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
                     .summary("식사 시간 수정")
-                    .description("식사 알림 시간을 수정한다.")
+                    .description("식사 알림 시간과 먹지 않음 여부를 수정한다.")
                     .responseFields(commonResponseFields(
-                        fieldWithPath("result.mealReminderTimes").type(JsonFieldType.ARRAY).description("식사 알림 시간 목록")
+                        fieldWithPath("result.mealSchedules").type(JsonFieldType.ARRAY).description("식사 설정 목록"),
+                        fieldWithPath("result.mealSchedules[].mealType").type(JsonFieldType.STRING).description("식사 타입"),
+                        fieldWithPath("result.mealSchedules[].time").type(JsonFieldType.STRING).description("식사 알림 시간. skipped=true이면 null").optional(),
+                        fieldWithPath("result.mealSchedules[].skipped").type(JsonFieldType.BOOLEAN).description("먹지 않음 여부")
                     ))
                     .build())
             ));
