@@ -25,7 +25,7 @@
 ### In scope
 
 - 소셜 로그인 provider enum: `KAKAO`, `APPLE`, `GOOGLE`.
-- provider별 OAuth 전략: provider token 또는 authorization code로 외부 프로필을 조회한다.
+- provider별 OAuth 전략: authorization code로 외부 프로필을 조회한다.
 - provider HTTP client는 Spring Cloud OpenFeign 기반으로 구현한다.
 - 전략 선택 팩토리: 등록된 전략을 `LoginType` 기준으로 조회한다.
 - OAuth 프로필 표준 DTO: `loginType`, `providerUserId`, `email`, `nickname`, `profileImageUrl`.
@@ -47,19 +47,14 @@
 ### HTTP API
 
 ```http
-POST /api/v1/auth/social-login
+GET /api/v1/oauth/{loginType}/redirect-url
+GET /api/v1/oauth/{loginType}/callback?code={authorizationCode}
+POST /api/v1/oauth/{loginType}/callback
 ```
 
-요청 예시:
-
-```json
-{
-  "loginType": "KAKAO",
-  "providerAccessToken": "provider-access-token"
-}
-```
-
-`providerAccessToken`은 카카오/구글의 access token, 애플의 id token을 의미한다.
+`redirect-url`은 provider 로그인 화면으로 이동할 URL을 반환한다.
+`callback`은 provider가 내려준 authorization code로 서비스 JWT를 발급한다.
+Apple authorization redirect는 `response_mode=form_post`를 사용하므로 POST callback도 지원한다.
 
 응답 예시:
 
@@ -77,24 +72,11 @@ POST /api/v1/auth/social-login
 }
 ```
 
-서버 callback 흐름이 필요하면 아래 API를 추가한다.
-
-```http
-GET /api/v1/oauth/{loginType}/redirect-url
-GET /api/v1/oauth/{loginType}/callback?code={authorizationCode}
-POST /api/v1/oauth/{loginType}/callback
-```
-
-모바일 앱 우선 흐름은 `social-login` API로 본다.
-클라이언트는 provider SDK로 받은 token을 서버에 전달한다.
-Apple authorization redirect는 `response_mode=form_post`를 사용하므로 POST callback도 지원한다.
-
 ### 내부 포트
 
 ```java
 interface OAuthStrategy {
     LoginType getType();
-    OAuthProfile getProfileByProviderToken(String providerToken);
     OAuthProfile getProfileByAuthorizationCode(String code);
     String getRedirectUrl();
 }
@@ -125,9 +107,9 @@ interface OAuthMemberService {
 
 ## 5. 처리 흐름
 
-1. 클라이언트가 `loginType`과 provider token을 전달한다.
+1. 클라이언트가 redirect URL을 조회하고 provider 로그인을 진행한다.
 2. `OAuthService`가 `OAuthStrategyFactory`에서 provider 전략을 선택한다.
-3. 전략이 외부 provider API 또는 Apple id token payload 파싱으로 `OAuthProfile`을 만든다.
+3. 전략이 authorization code로 provider token을 교환하고 외부 프로필을 조회해 `OAuthProfile`을 만든다.
 4. `OAuthMemberService`가 `loginType + providerUserId`로 기존 소셜 계정을 조회한다.
 5. 기존 계정이 있으면 연결된 `memberId`와 개인 정보 입력 완료 여부를 반환한다.
 6. 기존 계정이 없으면 `member`와 `social_account`를 생성하고 `personalInfoCompleted=false`를 반환한다.
@@ -138,7 +120,7 @@ interface OAuthMemberService {
 ## 6. 예외 / 에러 처리
 
 - 지원하지 않는 `loginType` → `UNSUPPORTED_LOGIN_TYPE`.
-- provider token 검증 실패 → `INVALID_OAUTH_TOKEN`.
+- provider token 교환 실패 → `INVALID_OAUTH_TOKEN`.
 - provider 프로필 조회 실패 → `OAUTH_PROFILE_REQUEST_FAILED`.
 - provider 고유 id 누락 → `INVALID_OAUTH_PROFILE`.
 - refresh token 저장 실패 → 공통 서버 오류.
