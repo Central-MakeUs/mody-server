@@ -15,8 +15,8 @@ ERD 설계 전에 ID 생성, 삭제 정책, 네이밍, 참조 방식, 토큰 저
 ## 결정 (Decision)
 
 - PK는 `Long` 타입의 애플리케이션 레벨 Snowflake 계열 ID를 사용한다.
-- ID는 DB auto increment에 의존하지 않고 `IdGenerator.nextId()` 같은 포트로 생성한다.
-- Snowflake ID의 숫자 자릿수는 가능한 줄이는 방향을 검토하되, 비트 배분과 epoch는 충돌 가능성 및 사용 기간을 계산한 뒤 확정한다.
+- ID는 DB auto increment에 의존하지 않고 `IdGenerator.nextId()` 포트로 생성한다.
+- Snowflake 계열 ID는 2026-01-01 UTC epoch, 초 단위 timestamp, 8-bit node, 10-bit sequence를 사용한다.
 - 삭제 정책은 soft delete를 기본으로 한다.
 - soft delete 대상 엔티티는 `status = ACTIVE/INACTIVE`를 사용하고, JPA 엔티티에는 `@SQLDelete`와 `@SQLRestriction` 적용을 기본으로 한다.
 - unique 값 재사용이 필요한 엔티티는 삭제 시 unique 컬럼 값에 삭제 suffix를 붙인다.
@@ -57,7 +57,7 @@ ERD 설계 전에 ID 생성, 삭제 정책, 네이밍, 참조 방식, 토큰 저
 
 ## 후속 / 미결정
 
-- [ ] Snowflake epoch, timestamp bits, node bits, sequence bits 최종 확정.
+- [x] Snowflake epoch, timestamp bits, node bits, sequence bits 최종 확정.
 - [ ] 자릿수 축소 목표치와 허용 가능한 최대 사용 기간 계산.
 - [ ] node id 할당 방식: 환경변수, 단일 노드 고정값, 배포 인스턴스별 값.
 - [ ] 삭제 suffix 포맷과 대상 unique 컬럼 목록.
