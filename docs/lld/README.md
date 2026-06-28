@@ -12,3 +12,4 @@
 | [LLD-0004](LLD-0004-erd-entity-foundation.md) | ERD 및 엔티티 초안 | Draft | #1 |
 | [LLD-0005](LLD-0005-oauth-social-login.md) | OAuth 소셜 로그인 | Draft | _(미발급)_ |
 | [LLD-0006](LLD-0006-id-generator-foundation.md) | ID 생성기 기반 | Draft | #19 |
+| [LLD-0007](LLD-0007-application-profile-configuration.md) | 환경별 애플리케이션 설정 분기 | Draft | #22 |
