@@ -35,6 +35,6 @@ public class OAuthService {
         OAuthMemberResult result = memberProcessor.ensure(profile);
         TokenDto token = tokenProvider.createToken(result.memberId());
         refreshTokenService.replace(result.memberId(), token.refreshToken());
-        return TokenDto.of(result.memberId(), token.accessToken(), token.refreshToken(), result.isNewMember());
+        return TokenDto.of(result.memberId(), token.accessToken(), token.refreshToken(), result.personalInfoCompleted());
     }
 }

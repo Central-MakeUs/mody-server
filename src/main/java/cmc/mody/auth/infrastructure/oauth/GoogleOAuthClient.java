@@ -6,6 +6,8 @@ import cmc.mody.auth.infrastructure.oauth.dto.GoogleOAuthTokenResponse;
 import cmc.mody.auth.infrastructure.oauth.dto.GoogleUserResponse;
 import cmc.mody.common.api.status.ErrorStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 @Component
 public class GoogleOAuthClient extends OAuthProviderClient {
@@ -31,13 +33,7 @@ public class GoogleOAuthClient extends OAuthProviderClient {
 
     public GoogleOAuthTokenResponse requestAccessToken(String code) {
         return executeFeign(
-            () -> googleAuthFeignClient.requestAccessToken(
-                code,
-                properties.clientId(),
-                properties.clientSecret(),
-                properties.redirectUri(),
-                GRANT_TYPE_AUTHORIZATION_CODE
-            ),
+            () -> googleAuthFeignClient.requestAccessToken(tokenRequest(code)),
             ErrorStatus.INVALID_OAUTH_TOKEN
         );
     }
@@ -48,5 +44,15 @@ public class GoogleOAuthClient extends OAuthProviderClient {
             () -> googleApiFeignClient.requestUserInfo(bearer(accessToken)),
             ErrorStatus.OAUTH_PROFILE_REQUEST_FAILED
         );
+    }
+
+    private MultiValueMap<String, String> tokenRequest(String code) {
+        MultiValueMap<String, String> request = new LinkedMultiValueMap<>();
+        request.add("code", code);
+        request.add("client_id", properties.clientId());
+        request.add("client_secret", properties.clientSecret());
+        request.add("redirect_uri", properties.redirectUri());
+        request.add("grant_type", GRANT_TYPE_AUTHORIZATION_CODE);
+        return request;
     }
 }

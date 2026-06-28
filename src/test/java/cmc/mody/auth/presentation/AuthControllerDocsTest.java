@@ -61,9 +61,9 @@ class AuthControllerDocsTest {
                         fieldWithPath("result.id").type(JsonFieldType.NUMBER).description("회원 id"),
                         fieldWithPath("result.accessToken").type(JsonFieldType.STRING).description("access token"),
                         fieldWithPath("result.refreshToken").type(JsonFieldType.STRING).description("refresh token"),
-                        fieldWithPath("result.isNewMember")
+                        fieldWithPath("result.personalInfoCompleted")
                             .type(JsonFieldType.BOOLEAN)
-                            .description("신규 회원 여부")
+                            .description("개인 정보 입력 완료 여부")
                     ))
                     .build())
             ));

@@ -29,7 +29,10 @@ public class OAuthMemberProcessor {
                 profile.loginType(),
                 profile.providerUserId()
             )
-            .map(account -> new OAuthMemberResult(account.getMemberId(), false))
+            .map(account -> new OAuthMemberResult(
+                account.getMemberId(),
+                isPersonalInfoCompleted(account.getMemberId())
+            ))
             .orElseGet(() -> createMember(profile));
     }
 
@@ -47,7 +50,13 @@ public class OAuthMemberProcessor {
             profile.loginType(),
             profile.providerUserId()
         ));
-        return new OAuthMemberResult(memberId, true);
+        return new OAuthMemberResult(memberId, false);
+    }
+
+    private boolean isPersonalInfoCompleted(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+            .orElseThrow(() -> new GeneralException(ErrorStatus.NOT_FOUND));
+        return member.getBirthDate() != null && member.getTargetWeightKg() != null;
     }
 
     private String resolveNickname(OAuthProfile profile, Long memberId) {

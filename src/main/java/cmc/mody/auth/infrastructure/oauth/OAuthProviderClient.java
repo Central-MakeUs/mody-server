@@ -4,8 +4,10 @@ import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import feign.FeignException;
 import java.util.function.Supplier;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.util.UriComponentsBuilder;
 
+@Slf4j
 public abstract class OAuthProviderClient {
     private static final String BEARER_PREFIX = "Bearer ";
 
@@ -25,6 +27,11 @@ public abstract class OAuthProviderClient {
         try {
             return supplier.get();
         } catch (FeignException e) {
+            log.warn(
+                "OAuth provider request failed. status={}, responseBody={}",
+                e.status(),
+                sanitizeResponseBody(e.contentUTF8())
+            );
             throw new GeneralException(status);
         }
     }
@@ -37,5 +44,12 @@ public abstract class OAuthProviderClient {
         if (providerToken == null || providerToken.isBlank()) {
             throw new GeneralException(ErrorStatus.INVALID_OAUTH_TOKEN);
         }
+    }
+
+    private String sanitizeResponseBody(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return "";
+        }
+        return responseBody.replaceAll("[\\r\\n\\t]+", " ");
     }
 }

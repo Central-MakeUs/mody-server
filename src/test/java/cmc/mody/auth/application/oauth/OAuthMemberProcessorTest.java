@@ -13,6 +13,8 @@ import cmc.mody.member.domain.Member;
 import cmc.mody.member.domain.SocialAccount;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.member.infrastructure.repository.SocialAccountRepository;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -46,11 +48,13 @@ class OAuthMemberProcessorTest {
         OAuthProfile profile = new OAuthProfile(LoginType.KAKAO, "provider-1", null, "민석", null);
         given(socialAccountRepository.findByLoginTypeAndProviderUserId(LoginType.KAKAO, "provider-1"))
             .willReturn(Optional.of(new SocialAccount(10L, 1L, LoginType.KAKAO, "provider-1")));
+        given(memberRepository.findById(1L))
+            .willReturn(Optional.of(new Member(1L, "민석", LocalDate.of(2000, 1, 1), BigDecimal.valueOf(68.0))));
 
         OAuthMemberResult result = processor.ensure(profile);
 
-        assertThat(result).isEqualTo(new OAuthMemberResult(1L, false));
-        then(memberRepository).shouldHaveNoInteractions();
+        assertThat(result).isEqualTo(new OAuthMemberResult(1L, true));
+        then(memberRepository).should().findById(1L);
     }
 
     @Test
@@ -67,7 +71,7 @@ class OAuthMemberProcessorTest {
 
         OAuthMemberResult result = processor.ensure(profile);
 
-        assertThat(result).isEqualTo(new OAuthMemberResult(1L, true));
+        assertThat(result).isEqualTo(new OAuthMemberResult(1L, false));
         then(memberRepository).should().save(memberCaptor.capture());
         then(socialAccountRepository).should().save(socialAccountCaptor.capture());
         assertThat(memberCaptor.getValue().getId()).isEqualTo(1L);

@@ -49,14 +49,14 @@ public class AuthController {
         Long id,
         String accessToken,
         String refreshToken,
-        boolean isNewMember
+        boolean personalInfoCompleted
     ) {
         public static SocialLoginResponse from(TokenDto token) {
             return new SocialLoginResponse(
                 token.id(),
                 token.accessToken(),
                 token.refreshToken(),
-                token.isNewMember()
+                token.personalInfoCompleted()
             );
         }
     }
