@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -38,6 +39,16 @@ public class GlobalExceptionHandler {
             return ErrorStatus.MEMBER_SIGNUP_VALIDATION_FAILED;
         }
         return ErrorStatus.VALIDATION_FAILED;
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingServletRequestParameterException(
+        MissingServletRequestParameterException e
+    ) {
+        log.warn("Missing request parameter: {}", e.getParameterName());
+        return ResponseEntity
+            .badRequest()
+            .body(ApiResponse.failure(ErrorStatus.BAD_REQUEST));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
