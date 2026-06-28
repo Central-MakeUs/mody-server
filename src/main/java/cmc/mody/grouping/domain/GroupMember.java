@@ -51,4 +51,23 @@ public class GroupMember extends BaseEntity {
         this.groupId = groupId;
         this.joinedAt = joinedAt;
     }
+
+    public GroupMember(
+        Long id,
+        Long memberId,
+        Long groupId,
+        String displayNickname,
+        String displayProfileImageKey,
+        LocalDateTime joinedAt
+    ) {
+        this(id, memberId, groupId, joinedAt);
+        this.displayNickname = displayNickname;
+        this.displayProfileImageKey = displayProfileImageKey;
+    }
+
+    public void leave(LocalDateTime leftAt) {
+        this.groupMemberStatus = GroupMemberStatus.LEFT;
+        this.leftAt = leftAt;
+        delete();
+    }
 }
