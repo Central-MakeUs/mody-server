@@ -40,3 +40,11 @@ out/
 
 ### Kotlin ###
 .kotlin
+
+### Spring external config ###
+/config/application.yaml
+/config/application-*.yaml
+!/config/application-*.example.yaml
+src/main/resources/application-local.yaml
+src/main/resources/application-dev.yaml
+src/main/resources/application-prod.yaml
