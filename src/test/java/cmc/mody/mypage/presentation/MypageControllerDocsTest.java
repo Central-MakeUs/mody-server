@@ -33,7 +33,7 @@ class MypageControllerDocsTest {
             .andDo(document("mypage-weight-history",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
-                    .summary("체중 기록 변화 조회")
+                    .summary("[미구현] 체중 기록 변화 조회")
                     .description("날짜별 체중과 이전 기록 대비 증감 값을 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.weights[].weightRecordId").type(JsonFieldType.NUMBER).description("체중 기록 id"),
@@ -58,7 +58,7 @@ class MypageControllerDocsTest {
             .andDo(document("mypage-weight-create",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
-                    .summary("체중 추가")
+                    .summary("[미구현] 체중 추가")
                     .description("체중 기록을 추가한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.weightRecordId").type(JsonFieldType.NUMBER).description("체중 기록 id"),
@@ -77,7 +77,7 @@ class MypageControllerDocsTest {
             .andDo(document("mypage-me",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
-                    .summary("내 정보 조회")
+                    .summary("[미구현] 내 정보 조회")
                     .description("프사, id, 닉네임, 그룹과 함께한 날짜를 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.memberId").type(JsonFieldType.NUMBER).description("회원 id"),
@@ -96,7 +96,7 @@ class MypageControllerDocsTest {
             .andDo(document("mypage-delete-me",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
-                    .summary("회원 탈퇴")
+                    .summary("[미구현] 회원 탈퇴")
                     .description("현재 회원을 탈퇴 처리한다.")
                     .responseFields(commonResponseFields())
                     .build())
@@ -110,7 +110,7 @@ class MypageControllerDocsTest {
             .andDo(document("mypage-profile",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
-                    .summary("프로필 확인")
+                    .summary("[미구현] 프로필 확인")
                     .description("로그인 타입, 이름, 생년월일을 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.loginType").type(JsonFieldType.STRING).description("로그인 타입"),
@@ -135,7 +135,7 @@ class MypageControllerDocsTest {
             .andDo(document("mypage-profile-update",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
-                    .summary("프로필 수정")
+                    .summary("[미구현] 프로필 수정")
                     .description("닉네임과 생년월일을 수정한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.nickname").type(JsonFieldType.STRING).description("닉네임"),
@@ -166,7 +166,7 @@ class MypageControllerDocsTest {
             .andDo(document("mypage-notification-settings-update",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
-                    .summary("알림 설정 수정")
+                    .summary("[미구현] 알림 설정 수정")
                     .description("식사/운동, 코멘트, 챌린지 알림 설정을 수정한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.mealReminderEnabled").type(JsonFieldType.BOOLEAN).description("식사 알림 여부"),
@@ -246,7 +246,7 @@ class MypageControllerDocsTest {
             .andDo(document("mypage-group-members",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
-                    .summary("그룹 구성원 조회")
+                    .summary("[미구현] 그룹 구성원 조회")
                     .description("마이페이지에서 그룹 구성원 id, 닉네임, 프로필 이미지를 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.members[].memberId").type(JsonFieldType.NUMBER).description("회원 id"),
@@ -264,7 +264,7 @@ class MypageControllerDocsTest {
             .andDo(document("mypage-group-leave",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
-                    .summary("그룹 나가기")
+                    .summary("[미구현] 그룹 나가기")
                     .description("마이페이지에서 현재 회원이 그룹을 나간다.")
                     .responseFields(commonResponseFields())
                     .build())

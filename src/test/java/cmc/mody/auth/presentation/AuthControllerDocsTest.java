@@ -40,7 +40,7 @@ class AuthControllerDocsTest {
             .andDo(document("auth-reissue",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Auth")
-                    .summary("토큰 재발급")
+                    .summary("[미구현] 토큰 재발급")
                     .description("refresh token으로 access token과 refresh token을 재발급한다.")
                     .requestFields(
                         fieldWithPath("refreshToken").type(JsonFieldType.STRING).description("refresh token")
@@ -60,7 +60,7 @@ class AuthControllerDocsTest {
             .andDo(document("auth-logout",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Auth")
-                    .summary("로그아웃")
+                    .summary("[미구현] 로그아웃")
                     .description("현재 로그인 세션을 로그아웃 처리한다.")
                     .responseFields(commonResponseFields())
                     .build())

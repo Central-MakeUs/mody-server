@@ -29,7 +29,7 @@ class UploadControllerDocsTest {
             .andDo(document("upload-presigned-url",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Upload")
-                    .summary("Presigned URL 생성")
+                    .summary("[미구현] Presigned URL 생성")
                     .description("이미지 업로드용 presigned URL과 저장할 imageKey를 발급한다.")
                     .queryParameters(
                         parameterWithName("domain").description("업로드 도메인: record, weekly-challenge 등"),

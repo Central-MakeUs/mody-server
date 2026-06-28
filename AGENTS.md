@@ -24,6 +24,10 @@ Use JUnit 5 with Spring Boot test support. Name tests after the unit under test,
 
 Recent history follows Conventional Commits, such as `feat(health): ...`, `build: ...`, and `chore(ci): ...`. Keep commits small and scoped. Pull requests should include a concise description, linked issue when applicable, test results, and any API/configuration changes. Update ADR or LLD docs when a change records an architectural decision or detailed design.
 
+## Agent-Specific Instructions
+
+Codex workflow skills live in `.agents/skills`. Use the issue skill before starting new work, the commit skill for scoped Conventional Commit messages, and the PR skill for pull request creation. Commit trailers should use `Co-Authored-By: Codex <codex@openai.com>`. Keep unresolved policy notes out of commits unless explicitly requested.
+
 ## Security & Configuration Tips
 
 Do not commit secrets. Supply database credentials and Docker image settings through environment variables such as `DB_USERNAME`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`, `DB_NAME`, and `DOCKER_REPO`.
