@@ -50,11 +50,14 @@
 GET /api/v1/oauth/{loginType}/redirect-url
 GET /api/v1/oauth/{loginType}/callback?code={authorizationCode}
 POST /api/v1/oauth/{loginType}/callback
+GET /api/v1/oauth/client/{loginType}?accessToken={providerToken}
 ```
 
 `redirect-url`은 provider 로그인 화면으로 이동할 URL을 반환한다.
 `callback`은 provider가 내려준 authorization code로 서비스 JWT를 발급한다.
 Apple authorization redirect는 `response_mode=form_post`를 사용하므로 POST callback도 지원한다.
+`client/{loginType}`은 클라이언트가 provider SDK로 받은 token을 서버 JWT로 교환한다.
+Kakao/Google은 access token, Apple은 identity token을 `accessToken` query parameter로 전달한다.
 
 응답 예시:
 
@@ -78,6 +81,7 @@ Apple authorization redirect는 `response_mode=form_post`를 사용하므로 POS
 interface OAuthStrategy {
     LoginType getType();
     OAuthProfile getProfileByAuthorizationCode(String code);
+    OAuthProfile getProfileByProviderToken(String providerToken);
     String getRedirectUrl();
 }
 ```
@@ -107,7 +111,7 @@ interface OAuthMemberService {
 
 ## 5. 처리 흐름
 
-1. 클라이언트가 redirect URL을 조회하고 provider 로그인을 진행한다.
+1. 서버 callback 흐름은 클라이언트가 redirect URL을 조회하고 provider 로그인을 진행한다.
 2. `OAuthService`가 `OAuthStrategyFactory`에서 provider 전략을 선택한다.
 3. 전략이 authorization code로 provider token을 교환하고 외부 프로필을 조회해 `OAuthProfile`을 만든다.
 4. `OAuthMemberService`가 `loginType + providerUserId`로 기존 소셜 계정을 조회한다.
@@ -117,9 +121,13 @@ interface OAuthMemberService {
 8. 기존 refresh token을 비활성화 또는 삭제한 뒤 새 refresh token을 DB에 저장한다.
 9. `TokenDto(id, accessToken, refreshToken, personalInfoCompleted)`를 반환한다.
 
+클라이언트 provider token 흐름은 1~3단계 대신 `GET /api/v1/oauth/client/{loginType}`로 받은
+provider token을 각 전략의 `getProfileByProviderToken`에 전달한다. 이후 회원 보장과 JWT 발급 흐름은 동일하다.
+
 ## 6. 예외 / 에러 처리
 
 - 지원하지 않는 `loginType` → `UNSUPPORTED_LOGIN_TYPE`.
+- 클라이언트용 API의 `accessToken` 누락 → `BAD_REQUEST`.
 - provider token 교환 실패 → `INVALID_OAUTH_TOKEN`.
 - provider 프로필 조회 실패 → `OAUTH_PROFILE_REQUEST_FAILED`.
 - provider 고유 id 누락 → `INVALID_OAUTH_PROFILE`.
