@@ -4,7 +4,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | Approved |
+| 상태 | Accepted |
 | Issue | _(미발급 — GitHub Issue 생성 후 채움)_ |
 | 관련 ADR | - |
 | 작성자 | msk226 |

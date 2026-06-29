@@ -6,13 +6,13 @@
 
 | 번호 | 제목 | 상태 | Issue |
 | --- | --- | --- | --- |
-| [LLD-0001](LLD-0001-health-check.md) | 헬스 체크 API + 공통 응답/예외 처리 | Approved | _(미발급)_ |
-| [LLD-0002](LLD-0002-jwt-token-foundation.md) | JWT 토큰 기반 로직 | Approved | _(미발급)_ |
-| [LLD-0003](LLD-0003-common-foundation.md) | 공통 응답/예외 및 엔티티 기반 | Approved | _(미발급)_ |
-| [LLD-0004](LLD-0004-erd-entity-foundation.md) | ERD 및 엔티티 초안 | Draft | #1 |
-| [LLD-0005](LLD-0005-oauth-social-login.md) | OAuth 소셜 로그인 | Draft | #18 |
-| [LLD-0006](LLD-0006-id-generator-foundation.md) | ID 생성기 기반 | Draft | #19 |
-| [LLD-0007](LLD-0007-application-profile-configuration.md) | 환경별 애플리케이션 설정 분기 | Draft | #22 |
-| [LLD-0008](LLD-0008-group-api.md) | 그룹 API | Draft | #30 |
-| [LLD-0009](LLD-0009-mypage-member-weight-api.md) | 마이페이지 회원 정보 및 체중 기록 API | Draft | #32 |
-| [LLD-0010](LLD-0010-auth-token-lifecycle.md) | 토큰 재발급 및 로그아웃 API | Draft | #36 |
+| [LLD-0001](LLD-0001-health-check.md) | 헬스 체크 API + 공통 응답/예외 처리 | Accepted | _(미발급)_ |
+| [LLD-0002](LLD-0002-jwt-token-foundation.md) | JWT 토큰 기반 로직 | Accepted | _(미발급)_ |
+| [LLD-0003](LLD-0003-common-foundation.md) | 공통 응답/예외 및 엔티티 기반 | Accepted | _(미발급)_ |
+| [LLD-0004](LLD-0004-erd-entity-foundation.md) | ERD 및 엔티티 기반 설계 | Accepted | #1 |
+| [LLD-0005](LLD-0005-oauth-social-login.md) | OAuth 소셜 로그인 | Accepted | #18 |
+| [LLD-0006](LLD-0006-id-generator-foundation.md) | ID 생성기 기반 | Accepted | #19 |
+| [LLD-0007](LLD-0007-application-profile-configuration.md) | 환경별 애플리케이션 설정 분기 | Accepted | #22 |
+| [LLD-0008](LLD-0008-group-api.md) | 그룹 API | Accepted | #30 |
+| [LLD-0009](LLD-0009-mypage-member-weight-api.md) | 마이페이지 회원 정보 및 체중 기록 API | Accepted | #32 |
+| [LLD-0010](LLD-0010-auth-token-lifecycle.md) | 토큰 재발급 및 로그아웃 API | Accepted | #36 |

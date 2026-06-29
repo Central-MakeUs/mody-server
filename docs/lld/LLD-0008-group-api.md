@@ -4,7 +4,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | Draft |
+| 상태 | Accepted |
 | Issue | #30 |
 | 관련 ADR | ADR-0003 |
 | 작성자 | Codex |
