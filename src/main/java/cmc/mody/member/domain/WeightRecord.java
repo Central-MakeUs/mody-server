@@ -33,7 +33,13 @@ public class WeightRecord extends BaseEntity {
     @Column(name = "change_from_previous_kg", nullable = false, precision = 5, scale = 2)
     private BigDecimal changeFromPreviousKg;
 
-    public WeightRecord(Long id, Long memberId, LocalDate recordedOn, BigDecimal weightKg, BigDecimal changeFromPreviousKg) {
+    public WeightRecord(
+        Long id,
+        Long memberId,
+        LocalDate recordedOn,
+        BigDecimal weightKg,
+        BigDecimal changeFromPreviousKg
+    ) {
         super(id);
         this.memberId = memberId;
         this.recordedOn = recordedOn;

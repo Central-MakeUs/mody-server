@@ -28,6 +28,8 @@ public enum ErrorStatus implements BaseCode {
     GROUP_ALREADY_JOINED(409, "GROUP305", "이미 참여 중인 그룹입니다."),
     GROUP_MEMBER_NOT_FOUND(404, "GROUP306", "그룹 참여 정보를 찾을 수 없습니다."),
     GROUP_CAPACITY_EXCEEDED(409, "GROUP307", "그룹 최대 인원을 초과했습니다."),
+    MYPAGE_VALIDATION_FAILED(400, "MYPAGE301", "마이페이지 입력값이 올바르지 않습니다."),
+    MYPAGE_SOCIAL_ACCOUNT_NOT_FOUND(404, "MYPAGE302", "소셜 계정 정보를 찾을 수 없습니다."),
     NOT_FOUND(404, "COMMON404", "리소스를 찾을 수 없습니다.");
 
     private final int httpStatus;

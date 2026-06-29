@@ -41,6 +41,9 @@ public class GlobalExceptionHandler {
         if (request.getRequestURI().startsWith("/api/v1/groups")) {
             return ErrorStatus.GROUP_VALIDATION_FAILED;
         }
+        if (request.getRequestURI().startsWith("/api/v1/mypage")) {
+            return ErrorStatus.MYPAGE_VALIDATION_FAILED;
+        }
         return ErrorStatus.VALIDATION_FAILED;
     }
 
