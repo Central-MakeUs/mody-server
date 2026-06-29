@@ -5,7 +5,7 @@
 
 | 항목 | 값 |
 | --- | --- |
-| 상태 | Draft |
+| 상태 | Accepted |
 | Issue | #38 |
 | 관련 ADR | ADR-0004 |
 | 작성자 | Codex |

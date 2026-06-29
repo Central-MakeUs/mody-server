@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cmc.mody.auth.application.AuthService;
 import cmc.mody.auth.application.oauth.OAuthService;
 import cmc.mody.auth.presentation.dto.TokenDto;
 import cmc.mody.common.api.exception.GeneralException;
@@ -44,6 +45,9 @@ class OAuthControllerDocsTest {
 
     @MockitoBean
     private OAuthService oAuthService;
+
+    @MockitoBean
+    private AuthService authService;
 
     @Test
     void getRedirectUrl() throws Exception {
@@ -112,7 +116,9 @@ class OAuthControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("OAuth")
                     .summary("OAuth callback 로그인(Form POST)")
-                    .description("form_post 방식 authorization code로 로그인하고 서비스 JWT를 발급한다.")
+                    .description("""
+                        form_post 방식 authorization code로 로그인하고 서비스 JWT를 발급한다.
+                        """)
                     .pathParameters(
                         parameterWithName("loginType").description("로그인 타입: apple")
                     )
