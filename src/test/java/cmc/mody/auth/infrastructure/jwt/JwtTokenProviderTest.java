@@ -41,6 +41,19 @@ class JwtTokenProviderTest {
     }
 
     @Test
+    @DisplayName("refresh token으로만 재발급 대상 회원 id를 읽는다.")
+    void readMemberIdByRefreshToken() {
+        JwtTokenProvider provider = provider(SECRET);
+        TokenDto token = provider.createToken(1L);
+
+        assertThat(provider.getMemberIdByRefreshToken(token.refreshToken())).isEqualTo(1L);
+        assertThatThrownBy(() -> provider.getMemberIdByRefreshToken(token.accessToken()))
+            .isInstanceOf(GeneralException.class)
+            .extracting("status")
+            .isEqualTo(ErrorStatus.INVALID_REFRESH_TOKEN);
+    }
+
+    @Test
     @DisplayName("만료된 토큰은 EXPIRED_JWT 예외를 던진다.")
     void throwExpiredJwtWhenTokenExpired() {
         JwtTokenProvider provider = provider(SECRET, -1L, -1L);
