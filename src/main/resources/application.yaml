@@ -16,6 +16,12 @@ id:
   epoch-second: ${ID_EPOCH_SECOND:1767225600}
   node-id: ${ID_NODE_ID:0}
 
+upload:
+  provider: ${UPLOAD_PROVIDER:local}
+  gcp-bucket: ${GCP_STORAGE_BUCKET:}
+  base-url: ${UPLOAD_BASE_URL:https://storage.example.com}
+  presigned-url-expires-in-seconds: ${UPLOAD_PRESIGNED_URL_EXPIRES_IN_SECONDS:300}
+
 oauth:
   kakao:
     authorization-uri: ${KAKAO_AUTHORIZATION_URI:https://kauth.kakao.com/oauth/authorize}

@@ -15,3 +15,4 @@
 | [LLD-0007](LLD-0007-application-profile-configuration.md) | 환경별 애플리케이션 설정 분기 | Draft | #22 |
 | [LLD-0008](LLD-0008-group-api.md) | 그룹 API | Draft | #30 |
 | [LLD-0009](LLD-0009-mypage-member-weight-api.md) | 마이페이지 회원 정보 및 체중 기록 API | Draft | #32 |
+| [LLD-0011](LLD-0011-presigned-url-api.md) | Presigned URL 발급 API | Draft | #38 |
