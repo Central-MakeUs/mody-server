@@ -1,7 +1,7 @@
 package cmc.mody.auth.presentation;
 
 import cmc.mody.auth.application.oauth.OAuthService;
-import cmc.mody.auth.presentation.AuthController.SocialLoginResponse;
+import cmc.mody.auth.presentation.dto.SocialLoginResponse;
 import cmc.mody.auth.presentation.dto.TokenDto;
 import cmc.mody.common.api.ApiResponse;
 import cmc.mody.member.domain.LoginType;
@@ -41,6 +41,15 @@ public class OAuthController {
         @RequestParam String code
     ) {
         TokenDto token = oAuthService.loginByAuthorizationCode(LoginType.from(loginType), code);
+        return ApiResponse.ok(SocialLoginResponse.from(token));
+    }
+
+    @GetMapping("/client/{loginType}")
+    public ApiResponse<SocialLoginResponse> clientLogin(
+        @PathVariable String loginType,
+        @RequestParam("accessToken") String providerToken
+    ) {
+        TokenDto token = oAuthService.loginByProviderToken(LoginType.from(loginType), providerToken);
         return ApiResponse.ok(SocialLoginResponse.from(token));
     }
 
