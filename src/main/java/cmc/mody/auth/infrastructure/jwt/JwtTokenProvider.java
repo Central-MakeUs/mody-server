@@ -59,6 +59,15 @@ public class JwtTokenProvider implements TokenProvider {
         return extractMemberId(claims);
     }
 
+    @Override
+    public Long getMemberIdByRefreshToken(String token) {
+        Claims claims = parseRefreshTokenClaims(token);
+        if (!REFRESH.equals(claims.get(TOKEN_TYPE))) {
+            throw new GeneralException(ErrorStatus.INVALID_REFRESH_TOKEN);
+        }
+        return extractMemberId(claims);
+    }
+
     private Long extractMemberId(Claims claims) {
         Object memberId = claims.get(MEMBER_ID);
         if (memberId instanceof Number number) {
@@ -118,6 +127,20 @@ public class JwtTokenProvider implements TokenProvider {
             throwJwtException(ErrorStatus.INVALID_JWT);
         }
         throw new GeneralException(ErrorStatus.INVALID_JWT);
+    }
+
+    private Claims parseRefreshTokenClaims(String token) {
+        if (token == null || token.isBlank()) {
+            throw new GeneralException(ErrorStatus.INVALID_REFRESH_TOKEN);
+        }
+        try {
+            return parseClaims(token);
+        } catch (GeneralException e) {
+            if (e.getStatus() == ErrorStatus.EXPIRED_JWT || e.getStatus() == ErrorStatus.UNSUPPORTED_JWT) {
+                throw e;
+            }
+            throw new GeneralException(ErrorStatus.INVALID_REFRESH_TOKEN);
+        }
     }
 
     private SecretKey signingKey() {

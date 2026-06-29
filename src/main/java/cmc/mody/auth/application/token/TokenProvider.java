@@ -10,4 +10,6 @@ public interface TokenProvider {
     Long getMemberIdByToken(String token);
 
     Long getMemberIdByAccessToken(String token);
+
+    Long getMemberIdByRefreshToken(String token);
 }
