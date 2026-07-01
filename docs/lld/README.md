@@ -16,3 +16,4 @@
 | [LLD-0008](LLD-0008-group-api.md) | 그룹 API | Accepted | #30 |
 | [LLD-0009](LLD-0009-mypage-member-weight-api.md) | 마이페이지 회원 정보 및 체중 기록 API | Accepted | #32 |
 | [LLD-0010](LLD-0010-auth-token-lifecycle.md) | 토큰 재발급 및 로그아웃 API | Accepted | #36 |
+| [LLD-0011](LLD-0011-presigned-url-api.md) | Presigned URL 발급 API | Accepted | #38 |

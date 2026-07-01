@@ -29,6 +29,7 @@ repositories {
 dependencyManagement {
     imports {
         mavenBom("org.springframework.cloud:spring-cloud-dependencies:2024.0.2")
+        mavenBom("com.google.cloud:libraries-bom:26.83.0")
     }
 }
 
@@ -37,6 +38,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
+    implementation("com.google.cloud:google-cloud-storage")
     // API 문서 (Swagger UI). springdoc 2.x = Spring Boot 3.x 지원
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0")
     // JWT

@@ -23,3 +23,9 @@ token:
 id:
   epoch-second: 1767225600
   node-id: 1
+
+upload:
+  provider: local
+  gcp-bucket: mody-test
+  base-url: https://storage.example.com
+  presigned-url-expires-in-seconds: 300

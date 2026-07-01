@@ -13,3 +13,4 @@
 | [ADR-0007](ADR-0007-cursor-pagination-strategy.md) | 커서 기반 페이징 전략 | Accepted | 2026-06-29 |
 | [ADR-0008](ADR-0008-deployment-strategy.md) | 배포 전략 | Accepted | 2026-06-29 |
 | [ADR-0009](ADR-0009-member-authentication-authorization.md) | 회원 인증/인가 전략 | Accepted | 2026-06-29 |
+| [ADR-0010](ADR-0010-direct-image-upload-via-signed-url.md) | Signed URL 기반 직접 이미지 업로드 채택 | Accepted | 2026-06-29 |
