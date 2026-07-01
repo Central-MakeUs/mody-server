@@ -7,7 +7,7 @@
 | --- | --- |
 | 상태 | Accepted |
 | Issue | #38 |
-| 관련 ADR | ADR-0004 |
+| 관련 ADR | ADR-0010 |
 | 작성자 | Codex |
 | 작성일 | 2026-06-29 |
 
@@ -92,7 +92,7 @@ POST /api/v1/uploads/presigned-url?domain=record&fileName=meal.jpg
 
 - `common` 패키지에 upload service와 issuer port가 추가된다.
 - 실제 스토리지 provider 도입 시 `PresignedUrlIssuer` 구현체만 교체한다.
-- Signed URL 발급 후 DB 참조 없이 남은 고아 이미지는 ADR-0004에 따라 배치로 정리한다.
+- Signed URL 발급 후 DB 참조 없이 남은 고아 이미지는 ADR-0010에 따라 배치로 정리한다.
 
 ## 9. 미결정 사항 (Open Questions)
 
