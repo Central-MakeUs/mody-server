@@ -52,12 +52,73 @@ public class ActivityRecord extends BaseEntity {
     @Column(name = "uploaded_at", nullable = false)
     private LocalDateTime uploadedAt;
 
-    public ActivityRecord(Long id, Long memberId, Long groupId, RecordType recordType, String imageKey, LocalDateTime uploadedAt) {
+    public ActivityRecord(
+        Long id,
+        Long memberId,
+        Long groupId,
+        RecordType recordType,
+        LocalTime mealTime,
+        String menu,
+        Integer exerciseDurationMinutes,
+        String exerciseName,
+        String imageKey,
+        LocalDateTime uploadedAt
+    ) {
         super(id);
         this.memberId = memberId;
         this.groupId = groupId;
         this.recordType = recordType;
+        this.mealTime = mealTime;
+        this.menu = menu;
+        this.exerciseDurationMinutes = exerciseDurationMinutes;
+        this.exerciseName = exerciseName;
         this.imageKey = imageKey;
         this.uploadedAt = uploadedAt;
+    }
+
+    public static ActivityRecord meal(
+        Long id,
+        Long memberId,
+        Long groupId,
+        LocalTime mealTime,
+        String menu,
+        String imageKey,
+        LocalDateTime uploadedAt
+    ) {
+        return new ActivityRecord(
+            id,
+            memberId,
+            groupId,
+            RecordType.MEAL,
+            mealTime,
+            menu,
+            null,
+            null,
+            imageKey,
+            uploadedAt
+        );
+    }
+
+    public static ActivityRecord exercise(
+        Long id,
+        Long memberId,
+        Long groupId,
+        Integer exerciseDurationMinutes,
+        String exerciseName,
+        String imageKey,
+        LocalDateTime uploadedAt
+    ) {
+        return new ActivityRecord(
+            id,
+            memberId,
+            groupId,
+            RecordType.EXERCISE,
+            null,
+            null,
+            exerciseDurationMinutes,
+            exerciseName,
+            imageKey,
+            uploadedAt
+        );
     }
 }

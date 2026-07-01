@@ -1,18 +1,43 @@
 package cmc.mody.record.presentation;
 
+import cmc.mody.auth.presentation.support.CurrentMember;
 import cmc.mody.common.api.ApiResponse;
+import cmc.mody.record.application.ActivityRecordService;
+import cmc.mody.record.application.ActivityRecordService.RecordCreateCommand;
+import cmc.mody.record.domain.RecordType;
+import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+import java.time.LocalTime;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/v1")
 public class ActivityRecordController {
+    private static final String MEAL_RECORD_PAYLOAD_MESSAGE =
+        "식사 기록은 식사 시간과 메뉴를 입력하고 운동 정보는 비워주세요.";
+    private static final String EXERCISE_RECORD_PAYLOAD_MESSAGE =
+        "운동 기록은 운동 시간과 운동명을 입력하고 식사 정보는 비워주세요.";
+
+    private final ActivityRecordService activityRecordService;
+
     @GetMapping("/groups/{groupId}/activities/calendar")
     public ApiResponse<ActivityCalendarResponse> getActivityCalendar(
         @PathVariable Long groupId,
@@ -62,8 +87,16 @@ public class ActivityRecordController {
     }
 
     @PostMapping("/records")
-    public ApiResponse<RecordCreateResponse> createRecord(@RequestBody RecordCreateRequest request) {
-        return ApiResponse.created(new RecordCreateResponse(1L));
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<RecordCreateResponse> createRecord(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @Valid @RequestBody RecordCreateRequest request
+    ) {
+        ActivityRecordService.RecordCreateResult result = activityRecordService.createRecord(
+            memberId,
+            request.toCommand()
+        );
+        return ApiResponse.created(RecordCreateResponse.from(result));
     }
 
     @PostMapping("/records/{recordId}/comments")
@@ -112,17 +145,69 @@ public class ActivityRecordController {
     }
 
     public record RecordCreateRequest(
+        @Positive(message = "그룹 id는 양수여야 합니다.")
         Long groupId,
-        String recordType,
+        @NotNull(message = "기록 타입은 필수입니다.")
+        RecordType recordType,
+        @NotBlank(message = "이미지 키는 필수입니다.")
+        @Size(max = 500, message = "이미지 키는 500자 이하로 입력해주세요.")
+        @Pattern(
+            regexp = "^records/[A-Za-z0-9/_-]+\\.(jpg|jpeg|png|webp)$",
+            message = "기록 이미지는 records 도메인으로 발급된 이미지 키여야 합니다."
+        )
         String imageKey,
-        String mealTime,
+        LocalTime mealTime,
+        @Size(max = 100, message = "메뉴는 100자 이하로 입력해주세요.")
         String menu,
+        @Positive(message = "운동 시간은 1분 이상이어야 합니다.")
+        @Max(value = 1440, message = "운동 시간은 1440분 이하로 입력해주세요.")
         Integer exerciseDurationMinutes,
+        @Size(max = 30, message = "운동명은 30자 이하로 입력해주세요.")
         String exerciseName
     ) {
+        @AssertTrue(message = MEAL_RECORD_PAYLOAD_MESSAGE)
+        public boolean isMealRecordPayloadValid() {
+            if (recordType != RecordType.MEAL) {
+                return true;
+            }
+            return mealTime != null
+                && hasText(menu)
+                && exerciseDurationMinutes == null
+                && !hasText(exerciseName);
+        }
+
+        @AssertTrue(message = EXERCISE_RECORD_PAYLOAD_MESSAGE)
+        public boolean isExerciseRecordPayloadValid() {
+            if (recordType != RecordType.EXERCISE) {
+                return true;
+            }
+            return exerciseDurationMinutes != null
+                && hasText(exerciseName)
+                && mealTime == null
+                && !hasText(menu);
+        }
+
+        public RecordCreateCommand toCommand() {
+            return new RecordCreateCommand(
+                groupId,
+                recordType,
+                imageKey,
+                mealTime,
+                menu,
+                exerciseDurationMinutes,
+                exerciseName
+            );
+        }
+
+        private boolean hasText(String value) {
+            return value != null && !value.isBlank();
+        }
     }
 
     public record RecordCreateResponse(Long recordId) {
+        public static RecordCreateResponse from(ActivityRecordService.RecordCreateResult result) {
+            return new RecordCreateResponse(result.recordId());
+        }
     }
 
     public record CommentCreateRequest(String content) {
