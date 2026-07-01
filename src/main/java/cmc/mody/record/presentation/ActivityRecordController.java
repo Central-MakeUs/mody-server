@@ -14,10 +14,13 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
+import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.YearMonth;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,35 +43,34 @@ public class ActivityRecordController {
 
     @GetMapping("/groups/{groupId}/activities/calendar")
     public ApiResponse<ActivityCalendarResponse> getActivityCalendar(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
         @PathVariable Long groupId,
-        @RequestParam String yearMonth
+        @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth
     ) {
-        return ApiResponse.ok(new ActivityCalendarResponse(List.of(
-            new ActivityDayResponse("2026-06-27", true, true)
-        )));
+        ActivityRecordService.ActivityCalendarResult result = activityRecordService.getActivityCalendar(
+            memberId,
+            groupId,
+            yearMonth
+        );
+        return ApiResponse.ok(ActivityCalendarResponse.from(result));
     }
 
     @GetMapping("/groups/{groupId}/records")
     public ApiResponse<RecordCursorResponse> getRecords(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
         @PathVariable Long groupId,
-        @RequestParam String date,
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
         @RequestParam(required = false) Long cursor,
         @RequestParam(defaultValue = "20") int size
     ) {
-        return ApiResponse.ok(new RecordCursorResponse(
-            List.of(new RecordSummaryResponse(
-                1L,
-                "MEAL",
-                1L,
-                "민석",
-                "profiles/member-1.jpg",
-                "12:30",
-                "샐러드",
-                "records/meal-1.jpg"
-            )),
-            1L,
-            false
-        ));
+        ActivityRecordService.RecordCursorResult result = activityRecordService.getRecords(
+            memberId,
+            groupId,
+            date,
+            cursor,
+            size
+        );
+        return ApiResponse.ok(RecordCursorResponse.from(result));
     }
 
     @GetMapping("/records/{recordId}")
@@ -108,24 +110,53 @@ public class ActivityRecordController {
     }
 
     public record ActivityCalendarResponse(List<ActivityDayResponse> days) {
+        public static ActivityCalendarResponse from(ActivityRecordService.ActivityCalendarResult result) {
+            return new ActivityCalendarResponse(result.days().stream()
+                .map(ActivityDayResponse::from)
+                .toList());
+        }
     }
 
-    public record ActivityDayResponse(String date, boolean mealRecorded, boolean exerciseRecorded) {
+    public record ActivityDayResponse(LocalDate date, boolean mealRecorded, boolean exerciseRecorded) {
+        public static ActivityDayResponse from(ActivityRecordService.ActivityDayResult result) {
+            return new ActivityDayResponse(result.date(), result.mealRecorded(), result.exerciseRecorded());
+        }
     }
 
     public record RecordCursorResponse(List<RecordSummaryResponse> records, Long nextCursor, boolean hasNext) {
+        public static RecordCursorResponse from(ActivityRecordService.RecordCursorResult result) {
+            return new RecordCursorResponse(result.records().stream()
+                .map(RecordSummaryResponse::from)
+                .toList(), result.nextCursor(), result.hasNext());
+        }
     }
 
     public record RecordSummaryResponse(
         Long recordId,
-        String recordType,
+        RecordType recordType,
         Long memberId,
         String nickname,
         String profileImageUrl,
-        String recordedTime,
+        LocalTime recordedTime,
         String menu,
+        Integer exerciseDurationMinutes,
+        String exerciseName,
         String imageUrl
     ) {
+        public static RecordSummaryResponse from(ActivityRecordService.RecordSummaryResult result) {
+            return new RecordSummaryResponse(
+                result.recordId(),
+                result.recordType(),
+                result.memberId(),
+                result.nickname(),
+                result.profileImageUrl(),
+                result.recordedTime(),
+                result.menu(),
+                result.exerciseDurationMinutes(),
+                result.exerciseName(),
+                result.imageUrl()
+            );
+        }
     }
 
     public record RecordDetailResponse(

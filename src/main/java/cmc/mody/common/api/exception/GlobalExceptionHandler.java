@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -70,6 +71,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity
             .badRequest()
             .body(ApiResponse.failure(ErrorStatus.BAD_REQUEST));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMethodArgumentTypeMismatchException(
+        MethodArgumentTypeMismatchException e,
+        HttpServletRequest request
+    ) {
+        log.warn("Request parameter type mismatch: name={}, value={}", e.getName(), e.getValue());
+        return ResponseEntity
+            .badRequest()
+            .body(ApiResponse.failure(resolveValidationStatus(request)));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

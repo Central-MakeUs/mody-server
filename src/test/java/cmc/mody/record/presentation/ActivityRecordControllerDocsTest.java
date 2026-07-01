@@ -22,6 +22,7 @@ import cmc.mody.record.application.ActivityRecordService;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateCommand;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateResult;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;
@@ -76,13 +77,21 @@ class ActivityRecordControllerDocsTest {
 
     @Test
     void getActivityCalendar() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(activityRecordService.getActivityCalendar(eq(1L), eq(1L), any()))
+            .willReturn(new ActivityRecordService.ActivityCalendarResult(List.of(
+                new ActivityRecordService.ActivityDayResult(java.time.LocalDate.of(2026, 6, 1), false, false),
+                new ActivityRecordService.ActivityDayResult(java.time.LocalDate.of(2026, 6, 27), true, true)
+            )));
+
         mockMvc.perform(get("/api/v1/groups/{groupId}/activities/calendar", 1L)
+                .header("Authorization", "Bearer access-token")
                 .param("yearMonth", "2026-06"))
             .andExpect(status().isOk())
             .andDo(document("activity-calendar",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
-                    .summary("[미구현] 월/주차별 활동 유무 조회")
+                    .summary("월/주차별 활동 유무 조회")
                     .description("월 단위로 식사/운동 기록 존재 여부를 조회한다.")
                     .queryParameters(parameterWithName("yearMonth").description("조회 월, yyyy-MM"))
                     .responseFields(commonResponseFields(
@@ -100,14 +109,34 @@ class ActivityRecordControllerDocsTest {
 
     @Test
     void getRecords() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(activityRecordService.getRecords(eq(1L), eq(1L), any(), any(), eq(20)))
+            .willReturn(new ActivityRecordService.RecordCursorResult(
+                List.of(new ActivityRecordService.RecordSummaryResult(
+                    10L,
+                    cmc.mody.record.domain.RecordType.MEAL,
+                    1L,
+                    "민석",
+                    "https://storage.example.com/profiles/member-1.jpg",
+                    java.time.LocalTime.of(12, 30),
+                    "샐러드",
+                    null,
+                    null,
+                    "https://storage.example.com/records/1/2026/07/meal.jpg"
+                )),
+                null,
+                false
+            ));
+
         mockMvc.perform(get("/api/v1/groups/{groupId}/records", 1L)
+                .header("Authorization", "Bearer access-token")
                 .param("date", "2026-06-27")
                 .param("size", "20"))
             .andExpect(status().isOk())
             .andDo(document("record-list",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
-                    .summary("[미구현] 날짜별 식사/운동 기록 조회")
+                    .summary("날짜별 식사/운동 기록 조회")
                     .description("날짜별 기록을 커서 기반으로 조회한다.")
                     .queryParameters(
                         parameterWithName("date").description("조회 날짜, yyyy-MM-dd"),
@@ -132,16 +161,84 @@ class ActivityRecordControllerDocsTest {
                             .type(JsonFieldType.STRING)
                             .description("기록 시간"),
                         fieldWithPath("result.records[].menu").type(JsonFieldType.STRING).description("메뉴명"),
+                        fieldWithPath("result.records[].exerciseDurationMinutes")
+                            .type(JsonFieldType.NULL)
+                            .description("운동 시간(분). 식사 기록이면 null"),
+                        fieldWithPath("result.records[].exerciseName")
+                            .type(JsonFieldType.NULL)
+                            .description("운동명. 식사 기록이면 null"),
                         fieldWithPath("result.records[].imageUrl")
                             .type(JsonFieldType.STRING)
                             .description("기록 이미지 URL"),
-                        fieldWithPath("result.nextCursor").type(JsonFieldType.NUMBER).description("다음 커서"),
+                        fieldWithPath("result.nextCursor").type(JsonFieldType.NULL).description("다음 커서"),
                         fieldWithPath("result.hasNext")
                             .type(JsonFieldType.BOOLEAN)
                             .description("다음 페이지 존재 여부")
                     ))
                     .build())
             ));
+    }
+
+    @Test
+    void getActivityCalendarWithoutAuthorization() throws Exception {
+        mockMvc.perform(get("/api/v1/groups/{groupId}/activities/calendar", 1L)
+                .param("yearMonth", "2026-06"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("activity-calendar-auth-missing", "월/주차별 활동 유무 조회"));
+    }
+
+    @Test
+    void getRecordsWithoutAuthorization() throws Exception {
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records", 1L)
+                .param("date", "2026-06-27")
+                .param("size", "20"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-list-auth-missing", "날짜별 식사/운동 기록 조회"));
+    }
+
+    @Test
+    void getRecordsMemberNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
+            .given(activityRecordService)
+            .getRecords(eq(1L), eq(1L), any(), any(), eq(20));
+
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records", 1L)
+                .header("Authorization", "Bearer access-token")
+                .param("date", "2026-06-27")
+                .param("size", "20"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("record-list-member-not-found", "날짜별 식사/운동 기록 조회"));
+    }
+
+    @Test
+    void getRecordsGroupNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_NOT_FOUND))
+            .given(activityRecordService)
+            .getRecords(eq(1L), eq(1L), any(), any(), eq(20));
+
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records", 1L)
+                .header("Authorization", "Bearer access-token")
+                .param("date", "2026-06-27")
+                .param("size", "20"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("record-list-group-not-found", "날짜별 식사/운동 기록 조회"));
+    }
+
+    @Test
+    void getRecordsGroupMemberNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND))
+            .given(activityRecordService)
+            .getRecords(eq(1L), eq(1L), any(), any(), eq(20));
+
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records", 1L)
+                .header("Authorization", "Bearer access-token")
+                .param("date", "2026-06-27")
+                .param("size", "20"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("record-list-group-member-not-found", "날짜별 식사/운동 기록 조회"));
     }
 
     @Test

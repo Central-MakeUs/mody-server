@@ -9,6 +9,8 @@ import static org.mockito.BDDMockito.then;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.common.upload.UploadProperties;
+import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.grouping.domain.ModyGroup;
 import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
@@ -22,7 +24,10 @@ import cmc.mody.record.domain.RecordType;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,6 +56,97 @@ class ActivityRecordServiceTest {
 
     @Captor
     private ArgumentCaptor<ActivityRecord> activityRecordCaptor;
+
+    @Test
+    @DisplayName("월별 활동 여부는 해당 월 전체 날짜의 기록 여부를 반환한다.")
+    void getActivityCalendar() {
+        ActivityRecordService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(modyGroupRepository.findById(10L)).willReturn(Optional.of(group()));
+        given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            1L,
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(true);
+        given(activityRecordRepository.findActiveGroupRecordsBetween(
+            10L,
+            LocalDateTime.of(2026, 7, 1, 0, 0),
+            LocalDateTime.of(2026, 8, 1, 0, 0),
+            GroupMemberStatus.JOINED
+        )).willReturn(List.of(
+            mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30)),
+            exerciseRecord(101L, LocalDateTime.of(2026, 7, 1, 20, 0)),
+            exerciseRecord(102L, LocalDateTime.of(2026, 7, 3, 21, 0))
+        ));
+
+        ActivityRecordService.ActivityCalendarResult result = service.getActivityCalendar(
+            1L,
+            10L,
+            YearMonth.of(2026, 7)
+        );
+
+        assertThat(result.days()).hasSize(31);
+        assertThat(result.days().get(0).date()).isEqualTo(LocalDate.of(2026, 7, 1));
+        assertThat(result.days().get(0).mealRecorded()).isTrue();
+        assertThat(result.days().get(0).exerciseRecorded()).isTrue();
+        assertThat(result.days().get(1).mealRecorded()).isFalse();
+        assertThat(result.days().get(1).exerciseRecorded()).isFalse();
+        assertThat(result.days().get(2).mealRecorded()).isFalse();
+        assertThat(result.days().get(2).exerciseRecorded()).isTrue();
+    }
+
+    @Test
+    @DisplayName("날짜별 기록은 커서 기반으로 조회하고 작성자 표시 정보를 함께 반환한다.")
+    void getRecords() {
+        ActivityRecordService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(modyGroupRepository.findById(10L)).willReturn(Optional.of(group()));
+        given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            1L,
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(true);
+        given(activityRecordRepository.findActiveGroupRecordsByCursor(
+            org.mockito.ArgumentMatchers.eq(10L),
+            org.mockito.ArgumentMatchers.eq(LocalDateTime.of(2026, 7, 1, 0, 0)),
+            org.mockito.ArgumentMatchers.eq(LocalDateTime.of(2026, 7, 2, 0, 0)),
+            org.mockito.ArgumentMatchers.isNull(),
+            org.mockito.ArgumentMatchers.eq(GroupMemberStatus.JOINED),
+            any()
+        )).willReturn(List.of(
+            mealRecord(103L, LocalDateTime.of(2026, 7, 1, 12, 30)),
+            exerciseRecord(102L, LocalDateTime.of(2026, 7, 1, 20, 0)),
+            mealRecord(101L, LocalDateTime.of(2026, 7, 1, 8, 0))
+        ));
+        given(groupMemberRepository.findByGroupIdAndGroupMemberStatusAndDeletedAtIsNullOrderByJoinedAtAsc(
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(List.of(new GroupMember(
+            20L,
+            1L,
+            10L,
+            "민석",
+            "profiles/member-1.jpg",
+            LocalDateTime.of(2026, 6, 1, 0, 0)
+        )));
+
+        ActivityRecordService.RecordCursorResult result = service.getRecords(
+            1L,
+            10L,
+            LocalDate.of(2026, 7, 1),
+            null,
+            2
+        );
+
+        assertThat(result.records()).hasSize(2);
+        assertThat(result.nextCursor()).isEqualTo(102L);
+        assertThat(result.hasNext()).isTrue();
+        ActivityRecordService.RecordSummaryResult firstRecord = result.records().get(0);
+        assertThat(firstRecord.recordId()).isEqualTo(103L);
+        assertThat(firstRecord.nickname()).isEqualTo("민석");
+        assertThat(firstRecord.profileImageUrl()).isEqualTo("https://storage.example.com/profiles/member-1.jpg");
+        assertThat(firstRecord.imageUrl()).isEqualTo("https://storage.example.com/records/1/2026/07/meal.jpg");
+    }
 
     @Test
     @DisplayName("식사 기록을 생성하면 식사 필드만 저장한다.")
@@ -167,7 +263,8 @@ class ActivityRecordServiceTest {
             memberRepository,
             modyGroupRepository,
             groupMemberRepository,
-            activityRecordRepository
+            activityRecordRepository,
+            new UploadProperties()
         );
     }
 
@@ -189,5 +286,29 @@ class ActivityRecordServiceTest {
 
     private ModyGroup group() {
         return new ModyGroup(10L, "ABC123", "모디 그룹");
+    }
+
+    private ActivityRecord mealRecord(Long id, LocalDateTime uploadedAt) {
+        return ActivityRecord.meal(
+            id,
+            1L,
+            10L,
+            LocalTime.of(12, 30),
+            "샐러드",
+            "records/1/2026/07/meal.jpg",
+            uploadedAt
+        );
+    }
+
+    private ActivityRecord exerciseRecord(Long id, LocalDateTime uploadedAt) {
+        return ActivityRecord.exercise(
+            id,
+            1L,
+            10L,
+            40,
+            "러닝",
+            "records/1/2026/07/exercise.jpg",
+            uploadedAt
+        );
     }
 }
