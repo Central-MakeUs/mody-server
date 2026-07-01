@@ -3,26 +3,76 @@ package cmc.mody.record.presentation;
 import static cmc.mody.docs.ApiDocumentUtils.commonResponseFields;
 import static com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.document;
 import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
 import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import cmc.mody.auth.application.token.TokenProvider;
+import cmc.mody.auth.presentation.support.CurrentMemberArgumentResolver;
+import cmc.mody.common.api.exception.GeneralException;
+import cmc.mody.common.api.status.ErrorStatus;
+import cmc.mody.common.config.WebConfig;
+import cmc.mody.record.application.ActivityRecordService;
+import cmc.mody.record.application.ActivityRecordService.RecordCreateCommand;
+import cmc.mody.record.application.ActivityRecordService.RecordCreateResult;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.restdocs.mockmvc.RestDocumentationResultHandler;
 import org.springframework.restdocs.payload.JsonFieldType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @WebMvcTest(ActivityRecordController.class)
 @AutoConfigureRestDocs
+@Import(WebConfig.class)
 class ActivityRecordControllerDocsTest {
+    private static final String RECORD_DESCRIPTION = """
+        구현된 기록 API는 access token의 회원 id 기준으로 처리한다.
+        이미지 파일은 먼저 Presigned URL로 직접 업로드한다.
+        이 API에는 발급받은 imageKey만 전달한다.
+
+        발생 가능한 예외 코드:
+        - AUTH401: Authorization 헤더가 없거나 비어있음
+        - AUTH402: Bearer 뒤 JWT 값이 비어있음
+        - AUTH403: JWT 형식이 올바르지 않거나 refresh token을 사용함
+        - AUTH404: 만료된 JWT
+        - AUTH405: 지원하지 않는 JWT
+        - MEMBER302: 토큰의 회원 id에 해당하는 회원 없음
+        - GROUP302: 그룹 없음
+        - GROUP306: 그룹 참여 정보 없음
+        - RECORD301: 기록 입력값 검증 실패
+        """;
+
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private ActivityRecordService activityRecordService;
+
+    @MockitoBean
+    private TokenProvider tokenProvider;
+
+    @TestConfiguration
+    static class CurrentMemberTestConfig {
+        @Bean
+        CurrentMemberArgumentResolver currentMemberArgumentResolver(TokenProvider tokenProvider) {
+            return new CurrentMemberArgumentResolver(tokenProvider);
+        }
+    }
 
     @Test
     void getActivityCalendar() throws Exception {
@@ -37,8 +87,12 @@ class ActivityRecordControllerDocsTest {
                     .queryParameters(parameterWithName("yearMonth").description("조회 월, yyyy-MM"))
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.days[].date").type(JsonFieldType.STRING).description("날짜"),
-                        fieldWithPath("result.days[].mealRecorded").type(JsonFieldType.BOOLEAN).description("식사 기록 여부"),
-                        fieldWithPath("result.days[].exerciseRecorded").type(JsonFieldType.BOOLEAN).description("운동 기록 여부")
+                        fieldWithPath("result.days[].mealRecorded")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("식사 기록 여부"),
+                        fieldWithPath("result.days[].exerciseRecorded")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("운동 기록 여부")
                     ))
                     .build())
             ));
@@ -62,15 +116,29 @@ class ActivityRecordControllerDocsTest {
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.records[].recordId").type(JsonFieldType.NUMBER).description("기록 id"),
-                        fieldWithPath("result.records[].recordType").type(JsonFieldType.STRING).description("기록 타입: MEAL, EXERCISE"),
-                        fieldWithPath("result.records[].memberId").type(JsonFieldType.NUMBER).description("작성자 id"),
-                        fieldWithPath("result.records[].nickname").type(JsonFieldType.STRING).description("작성자 닉네임"),
-                        fieldWithPath("result.records[].profileImageUrl").type(JsonFieldType.STRING).description("작성자 프로필 이미지"),
-                        fieldWithPath("result.records[].recordedTime").type(JsonFieldType.STRING).description("기록 시간"),
+                        fieldWithPath("result.records[].recordType")
+                            .type(JsonFieldType.STRING)
+                            .description("기록 타입: MEAL, EXERCISE"),
+                        fieldWithPath("result.records[].memberId")
+                            .type(JsonFieldType.NUMBER)
+                            .description("작성자 id"),
+                        fieldWithPath("result.records[].nickname")
+                            .type(JsonFieldType.STRING)
+                            .description("작성자 닉네임"),
+                        fieldWithPath("result.records[].profileImageUrl")
+                            .type(JsonFieldType.STRING)
+                            .description("작성자 프로필 이미지"),
+                        fieldWithPath("result.records[].recordedTime")
+                            .type(JsonFieldType.STRING)
+                            .description("기록 시간"),
                         fieldWithPath("result.records[].menu").type(JsonFieldType.STRING).description("메뉴명"),
-                        fieldWithPath("result.records[].imageUrl").type(JsonFieldType.STRING).description("기록 이미지 URL"),
+                        fieldWithPath("result.records[].imageUrl")
+                            .type(JsonFieldType.STRING)
+                            .description("기록 이미지 URL"),
                         fieldWithPath("result.nextCursor").type(JsonFieldType.NUMBER).description("다음 커서"),
-                        fieldWithPath("result.hasNext").type(JsonFieldType.BOOLEAN).description("다음 페이지 존재 여부")
+                        fieldWithPath("result.hasNext")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("다음 페이지 존재 여부")
                     ))
                     .build())
             ));
@@ -90,45 +158,233 @@ class ActivityRecordControllerDocsTest {
                         fieldWithPath("result.recordType").type(JsonFieldType.STRING).description("기록 타입"),
                         fieldWithPath("result.memberId").type(JsonFieldType.NUMBER).description("작성자 id"),
                         fieldWithPath("result.nickname").type(JsonFieldType.STRING).description("작성자 닉네임"),
-                        fieldWithPath("result.profileImageUrl").type(JsonFieldType.STRING).description("작성자 프로필 이미지"),
+                        fieldWithPath("result.profileImageUrl")
+                            .type(JsonFieldType.STRING)
+                            .description("작성자 프로필 이미지"),
                         fieldWithPath("result.recordedTime").type(JsonFieldType.STRING).description("기록 시간"),
                         fieldWithPath("result.menu").type(JsonFieldType.STRING).description("메뉴명"),
                         fieldWithPath("result.imageUrl").type(JsonFieldType.STRING).description("기록 이미지 URL"),
-                        fieldWithPath("result.comments[].commentId").type(JsonFieldType.NUMBER).description("댓글 id"),
-                        fieldWithPath("result.comments[].memberId").type(JsonFieldType.NUMBER).description("댓글 작성자 id"),
-                        fieldWithPath("result.comments[].nickname").type(JsonFieldType.STRING).description("댓글 작성자 닉네임"),
-                        fieldWithPath("result.comments[].content").type(JsonFieldType.STRING).description("댓글 내용")
+                        fieldWithPath("result.comments[].commentId")
+                            .type(JsonFieldType.NUMBER)
+                            .description("댓글 id"),
+                        fieldWithPath("result.comments[].memberId")
+                            .type(JsonFieldType.NUMBER)
+                            .description("댓글 작성자 id"),
+                        fieldWithPath("result.comments[].nickname")
+                            .type(JsonFieldType.STRING)
+                            .description("댓글 작성자 닉네임"),
+                        fieldWithPath("result.comments[].content")
+                            .type(JsonFieldType.STRING)
+                            .description("댓글 내용")
                     ))
                     .build())
             ));
     }
 
     @Test
-    void createRecord() throws Exception {
-        mockMvc.perform(post("/api/v1/records")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {
-                      "groupId": 1,
-                      "recordType": "MEAL",
-                      "imageKey": "records/2026/06/meal.jpg",
-                      "mealTime": "12:30",
-                      "menu": "샐러드",
-                      "exerciseDurationMinutes": null,
-                      "exerciseName": null
-                    }
-                    """))
-            .andExpect(status().isOk())
+    void createMealRecord() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(activityRecordService.createRecord(eq(1L), any(RecordCreateCommand.class)))
+            .willReturn(new RecordCreateResult(10L));
+
+        mockMvc.perform(postCreateRecord())
+            .andExpect(status().isCreated())
             .andDo(document("record-create",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
-                    .summary("[미구현] 기록 입력")
-                    .description("식사 또는 운동 기록을 입력한다.")
+                    .summary("기록 입력")
+                    .description(RECORD_DESCRIPTION)
+                    .requestFields(
+                        fieldWithPath("groupId")
+                            .type(JsonFieldType.NUMBER)
+                            .optional()
+                            .description("그룹 id. 개인 기록이면 null"),
+                        fieldWithPath("recordType")
+                            .type(JsonFieldType.STRING)
+                            .description("기록 타입: MEAL, EXERCISE"),
+                        fieldWithPath("imageKey")
+                            .type(JsonFieldType.STRING)
+                            .description("records 도메인으로 발급받은 업로드 이미지 키"),
+                        fieldWithPath("mealTime")
+                            .type(JsonFieldType.STRING)
+                            .optional()
+                            .description("식사 시간. MEAL일 때 필수"),
+                        fieldWithPath("menu")
+                            .type(JsonFieldType.STRING)
+                            .optional()
+                            .description("메뉴명. MEAL일 때 필수"),
+                        fieldWithPath("exerciseDurationMinutes")
+                            .type(JsonFieldType.NUMBER)
+                            .optional()
+                            .description("운동 시간(분). EXERCISE일 때 필수"),
+                        fieldWithPath("exerciseName")
+                            .type(JsonFieldType.STRING)
+                            .optional()
+                            .description("운동명. EXERCISE일 때 필수")
+                    )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.recordId").type(JsonFieldType.NUMBER).description("생성된 기록 id")
                     ))
                     .build())
             ));
+    }
+
+    @Test
+    void createExerciseRecord() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(activityRecordService.createRecord(eq(1L), any(RecordCreateCommand.class)))
+            .willReturn(new RecordCreateResult(11L));
+
+        mockMvc.perform(post("/api/v1/records")
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "groupId": 1,
+                      "recordType": "EXERCISE",
+                      "imageKey": "records/1/2026/07/4111584723969.jpg",
+                      "mealTime": null,
+                      "menu": null,
+                      "exerciseDurationMinutes": 40,
+                      "exerciseName": "러닝"
+                    }
+                    """))
+            .andExpect(status().isCreated())
+            .andDo(document("record-create-exercise",
+                resource(ResourceSnippetParameters.builder()
+                    .tag("Feed")
+                    .summary("기록 입력")
+                    .description(RECORD_DESCRIPTION)
+                    .responseFields(commonResponseFields(
+                        fieldWithPath("result.recordId").type(JsonFieldType.NUMBER).description("생성된 기록 id")
+                    ))
+                    .build())
+            ));
+    }
+
+    @Test
+    void createRecordValidationError() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(post("/api/v1/records")
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "groupId": 1,
+                      "recordType": "MEAL",
+                      "imageKey": "profiles/1/2026/07/profile.jpg",
+                      "mealTime": null,
+                      "menu": "",
+                      "exerciseDurationMinutes": null,
+                      "exerciseName": null
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andDo(documentError("record-create-validation-error", "기록 입력"));
+    }
+
+    @Test
+    void createRecordUnreadableBody() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(post("/api/v1/records")
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "groupId": 1,
+                      "recordType": "UNKNOWN",
+                      "imageKey": "records/1/2026/07/4111584723968.jpg",
+                      "mealTime": "12:30",
+                      "menu": "샐러드"
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andDo(documentError("record-create-unreadable-body", "기록 입력"));
+    }
+
+    @Test
+    void createRecordMemberNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
+            .given(activityRecordService)
+            .createRecord(eq(1L), any(RecordCreateCommand.class));
+
+        mockMvc.perform(postCreateRecord())
+            .andExpect(status().isNotFound())
+            .andDo(documentError("record-create-member-not-found", "기록 입력"));
+    }
+
+    @Test
+    void createRecordGroupNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_NOT_FOUND))
+            .given(activityRecordService)
+            .createRecord(eq(1L), any(RecordCreateCommand.class));
+
+        mockMvc.perform(postCreateRecord())
+            .andExpect(status().isNotFound())
+            .andDo(documentError("record-create-group-not-found", "기록 입력"));
+    }
+
+    @Test
+    void createRecordGroupMemberNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND))
+            .given(activityRecordService)
+            .createRecord(eq(1L), any(RecordCreateCommand.class));
+
+        mockMvc.perform(postCreateRecord())
+            .andExpect(status().isNotFound())
+            .andDo(documentError("record-create-group-member-not-found", "기록 입력"));
+    }
+
+    @Test
+    void createRecordWithoutAuthorization() throws Exception {
+        mockMvc.perform(postCreateRecordWithoutAuthorization())
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-create-auth-missing", "기록 입력"));
+    }
+
+    @Test
+    void createRecordWithEmptyToken() throws Exception {
+        mockMvc.perform(postCreateRecordWithoutAuthorization()
+                .header("Authorization", "Bearer "))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-create-auth-empty-token", "기록 입력"));
+    }
+
+    @Test
+    void createRecordWithInvalidAuthorizationHeader() throws Exception {
+        mockMvc.perform(postCreateRecordWithoutAuthorization()
+                .header("Authorization", "access-token"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-create-auth-invalid-header", "기록 입력"));
+    }
+
+    @Test
+    void createRecordWithExpiredToken() throws Exception {
+        willThrow(new GeneralException(ErrorStatus.EXPIRED_JWT))
+            .given(tokenProvider)
+            .getMemberIdByAccessToken("expired-token");
+
+        mockMvc.perform(postCreateRecordWithoutAuthorization()
+                .header("Authorization", "Bearer expired-token"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-create-auth-expired-token", "기록 입력"));
+    }
+
+    @Test
+    void createRecordWithUnsupportedToken() throws Exception {
+        willThrow(new GeneralException(ErrorStatus.UNSUPPORTED_JWT))
+            .given(tokenProvider)
+            .getMemberIdByAccessToken("unsupported-token");
+
+        mockMvc.perform(postCreateRecordWithoutAuthorization()
+                .header("Authorization", "Bearer unsupported-token"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-create-auth-unsupported-token", "기록 입력"));
     }
 
     @Test
@@ -152,5 +408,37 @@ class ActivityRecordControllerDocsTest {
                     ))
                     .build())
             ));
+    }
+
+    private MockHttpServletRequestBuilder postCreateRecord() {
+        return postCreateRecordWithoutAuthorization()
+            .header("Authorization", "Bearer access-token");
+    }
+
+    private MockHttpServletRequestBuilder postCreateRecordWithoutAuthorization() {
+        return post("/api/v1/records")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "groupId": 1,
+                  "recordType": "MEAL",
+                  "imageKey": "records/1/2026/07/4111584723968.jpg",
+                  "mealTime": "12:30",
+                  "menu": "샐러드",
+                  "exerciseDurationMinutes": null,
+                  "exerciseName": null
+                }
+                """);
+    }
+
+    private RestDocumentationResultHandler documentError(String identifier, String summary) {
+        return document(identifier,
+            resource(ResourceSnippetParameters.builder()
+                .tag("Feed")
+                .summary(summary)
+                .description(RECORD_DESCRIPTION)
+                .responseFields(commonResponseFields())
+                .build())
+        );
     }
 }

@@ -6,10 +6,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.bind.MissingServletRequestParameterException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -44,7 +45,21 @@ public class GlobalExceptionHandler {
         if (request.getRequestURI().startsWith("/api/v1/mypage")) {
             return ErrorStatus.MYPAGE_VALIDATION_FAILED;
         }
+        if (request.getRequestURI().startsWith("/api/v1/records")) {
+            return ErrorStatus.RECORD_VALIDATION_FAILED;
+        }
         return ErrorStatus.VALIDATION_FAILED;
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(
+        HttpMessageNotReadableException e,
+        HttpServletRequest request
+    ) {
+        log.warn("Request body is not readable: {}", e.getMessage());
+        return ResponseEntity
+            .badRequest()
+            .body(ApiResponse.failure(resolveValidationStatus(request)));
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
