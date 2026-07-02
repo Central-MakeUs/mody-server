@@ -25,6 +25,7 @@
 - 회원당 참여 그룹 최대 4개 제한.
 - 그룹당 참여 회원 최대 12명 제한.
 - 그룹 나가기는 `GroupMember` 논리 삭제로 처리.
+- 그룹 생성 또는 참여 성공 시 회원의 그룹 온보딩 완료 이력을 저장.
 
 ### Out of scope
 
@@ -69,6 +70,9 @@ DELETE /api/v1/groups/{groupId}/members/me
   - `group_member_status`: `JOINED`, `LEFT`.
   - `display_nickname`, `display_profile_image_key`: 그룹 내 노출용 회원 정보 스냅샷.
   - `joined_at`, `left_at`: 그룹 참여/탈퇴 시각.
+- `member`
+  - `group_onboarding_completed`: 그룹 생성 또는 참여를 한 번이라도 완료했는지 여부.
+    그룹을 모두 나가도 유지해 로그인 후 라우팅 분기에 사용한다.
 
 외래키 제약조건은 사용하지 않고 id 값으로만 참조한다.
 
@@ -81,7 +85,9 @@ DELETE /api/v1/groups/{groupId}/members/me
 5. 그룹 참여 시 코드로 그룹을 찾는다.
 6. 이미 참여 중인지, 회원당 그룹 수와 그룹 정원이 초과되지 않았는지 확인한다.
 7. 검증을 통과하면 `group_member`를 저장한다.
-8. 그룹 나가기는 `group_member_status=LEFT`, `left_at`, `deleted_at`, `status=INACTIVE`로 처리한다.
+8. 그룹 생성 또는 참여 성공 시 `member.group_onboarding_completed=true`로 변경한다.
+9. 그룹 나가기는 `group_member_status=LEFT`, `left_at`, `deleted_at`, `status=INACTIVE`로 처리한다.
+   `group_onboarding_completed`는 변경하지 않는다.
 
 ## 6. 예외 / 에러 처리
 
@@ -102,6 +108,7 @@ DELETE /api/v1/groups/{groupId}/members/me
 - [x] 인증 회원이 그룹 코드로 그룹에 참여할 수 있다.
 - [x] 인증 회원이 참여 중인 그룹 목록과 구성원 목록을 조회할 수 있다.
 - [x] 인증 회원이 그룹에서 나갈 수 있다.
+- [x] 그룹 생성 또는 참여 성공 시 그룹 온보딩 완료 이력이 저장된다.
 - [x] 회원당 참여 그룹은 최대 4개로 제한된다.
 - [x] 그룹당 참여 회원은 최대 12명으로 제한된다.
 - [x] Swagger에 성공/주요 예외 응답이 반영된다.

@@ -53,32 +53,34 @@ class OAuthMemberProcessorTest {
         OAuthProfile profile = new OAuthProfile(LoginType.KAKAO, "provider-1", null, "민석", null);
         given(socialAccountRepository.findByLoginTypeAndProviderUserId(LoginType.KAKAO, "provider-1"))
             .willReturn(Optional.of(new SocialAccount(10L, 1L, LoginType.KAKAO, "provider-1")));
-        given(memberRepository.findById(1L))
-            .willReturn(Optional.of(new Member(1L, "민석", LocalDate.of(2000, 1, 1), BigDecimal.valueOf(68.0))));
+        Member member = completedMember();
+        member.completeGroupOnboarding();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
         given(groupMemberRepository.countByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
             .willReturn(1L);
 
         OAuthMemberResult result = processor.ensure(profile);
 
-        assertThat(result).isEqualTo(new OAuthMemberResult(1L, true, true));
+        assertThat(result).isEqualTo(new OAuthMemberResult(1L, true, true, true));
         then(memberRepository).should().findById(1L);
     }
 
     @Test
-    @DisplayName("참여 그룹이 없으면 메인 진입 불가 상태를 반환한다.")
+    @DisplayName("그룹 플로우 완료 후 참여 그룹이 없으면 메인 진입 불가 상태를 반환한다.")
     void ensureExistingMemberWithoutJoinedGroup() {
         OAuthMemberProcessor processor = processor();
         OAuthProfile profile = new OAuthProfile(LoginType.KAKAO, "provider-1", null, "민석", null);
         given(socialAccountRepository.findByLoginTypeAndProviderUserId(LoginType.KAKAO, "provider-1"))
             .willReturn(Optional.of(new SocialAccount(10L, 1L, LoginType.KAKAO, "provider-1")));
-        given(memberRepository.findById(1L))
-            .willReturn(Optional.of(new Member(1L, "민석", LocalDate.of(2000, 1, 1), BigDecimal.valueOf(68.0))));
+        Member member = completedMember();
+        member.completeGroupOnboarding();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
         given(groupMemberRepository.countByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
             .willReturn(0L);
 
         OAuthMemberResult result = processor.ensure(profile);
 
-        assertThat(result).isEqualTo(new OAuthMemberResult(1L, true, false));
+        assertThat(result).isEqualTo(new OAuthMemberResult(1L, true, false, true));
     }
 
     @Test
@@ -102,7 +104,7 @@ class OAuthMemberProcessorTest {
 
         OAuthMemberResult result = processor.ensure(profile);
 
-        assertThat(result).isEqualTo(new OAuthMemberResult(1L, false, false));
+        assertThat(result).isEqualTo(new OAuthMemberResult(1L, false, false, false));
         then(memberRepository).should().save(memberCaptor.capture());
         then(socialAccountRepository).should().save(socialAccountCaptor.capture());
         assertThat(memberCaptor.getValue().getId()).isEqualTo(1L);
@@ -113,5 +115,9 @@ class OAuthMemberProcessorTest {
 
     private OAuthMemberProcessor processor() {
         return new OAuthMemberProcessor(idGenerator, memberRepository, socialAccountRepository, groupMemberRepository);
+    }
+
+    private Member completedMember() {
+        return new Member(1L, "민석", LocalDate.of(2000, 1, 1), BigDecimal.valueOf(68.0));
     }
 }

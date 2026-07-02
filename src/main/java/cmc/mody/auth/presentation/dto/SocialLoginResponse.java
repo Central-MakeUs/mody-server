@@ -5,7 +5,8 @@ public record SocialLoginResponse(
     String accessToken,
     String refreshToken,
     boolean personalInfoCompleted,
-    boolean mainAccessible
+    boolean mainAccessible,
+    boolean groupOnboardingCompleted
 ) {
     public static SocialLoginResponse from(TokenDto token) {
         return new SocialLoginResponse(
@@ -13,7 +14,8 @@ public record SocialLoginResponse(
             token.accessToken(),
             token.refreshToken(),
             token.personalInfoCompleted(),
-            token.mainAccessible()
+            token.mainAccessible(),
+            token.groupOnboardingCompleted()
         );
     }
 }

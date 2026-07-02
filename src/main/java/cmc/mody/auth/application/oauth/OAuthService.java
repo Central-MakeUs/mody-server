@@ -40,7 +40,8 @@ public class OAuthService {
             token.accessToken(),
             token.refreshToken(),
             result.personalInfoCompleted(),
-            result.mainAccessible()
+            result.mainAccessible(),
+            result.groupOnboardingCompleted()
         );
     }
 }

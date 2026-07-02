@@ -41,6 +41,8 @@ class OAuthControllerDocsTest {
         """;
     private static final String MAIN_ACCESSIBLE_DESCRIPTION =
         "메인 화면 진입 가능 여부. 개인 정보 입력 완료 및 참여 그룹 1개 이상이면 true";
+    private static final String GROUP_ONBOARDING_COMPLETED_DESCRIPTION =
+        "그룹 생성 또는 참여를 한 번이라도 완료했는지 여부";
 
     @Autowired
     private MockMvc mockMvc;
@@ -78,7 +80,7 @@ class OAuthControllerDocsTest {
     @Test
     void callback() throws Exception {
         given(oAuthService.loginByAuthorizationCode(LoginType.KAKAO, "authorization-code"))
-            .willReturn(TokenDto.of(1L, "access-token", "refresh-token", true, true));
+            .willReturn(TokenDto.of(1L, "access-token", "refresh-token", true, true, true));
 
         mockMvc.perform(get("/api/v1/oauth/{loginType}/callback", "kakao")
                 .queryParam("code", "authorization-code"))
@@ -103,7 +105,10 @@ class OAuthControllerDocsTest {
                             .description("개인 정보 입력 완료 여부"),
                         fieldWithPath("result.mainAccessible")
                             .type(JsonFieldType.BOOLEAN)
-                            .description(MAIN_ACCESSIBLE_DESCRIPTION)
+                            .description(MAIN_ACCESSIBLE_DESCRIPTION),
+                        fieldWithPath("result.groupOnboardingCompleted")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description(GROUP_ONBOARDING_COMPLETED_DESCRIPTION)
                     ))
                     .build())
             ));
@@ -112,7 +117,7 @@ class OAuthControllerDocsTest {
     @Test
     void callbackByFormPost() throws Exception {
         given(oAuthService.loginByAuthorizationCode(LoginType.APPLE, "authorization-code"))
-            .willReturn(TokenDto.of(1L, "access-token", "refresh-token", true, true));
+            .willReturn(TokenDto.of(1L, "access-token", "refresh-token", true, true, true));
 
         mockMvc.perform(post("/api/v1/oauth/{loginType}/callback", "apple")
                 .queryParam("code", "authorization-code"))
@@ -139,7 +144,10 @@ class OAuthControllerDocsTest {
                             .description("개인 정보 입력 완료 여부"),
                         fieldWithPath("result.mainAccessible")
                             .type(JsonFieldType.BOOLEAN)
-                            .description(MAIN_ACCESSIBLE_DESCRIPTION)
+                            .description(MAIN_ACCESSIBLE_DESCRIPTION),
+                        fieldWithPath("result.groupOnboardingCompleted")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description(GROUP_ONBOARDING_COMPLETED_DESCRIPTION)
                     ))
                     .build())
             ));
@@ -174,7 +182,10 @@ class OAuthControllerDocsTest {
                             .description("개인 정보 입력 완료 여부"),
                         fieldWithPath("result.mainAccessible")
                             .type(JsonFieldType.BOOLEAN)
-                            .description(MAIN_ACCESSIBLE_DESCRIPTION)
+                            .description(MAIN_ACCESSIBLE_DESCRIPTION),
+                        fieldWithPath("result.groupOnboardingCompleted")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description(GROUP_ONBOARDING_COMPLETED_DESCRIPTION)
                     ))
                     .build())
             ));

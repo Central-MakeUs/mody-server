@@ -37,9 +37,15 @@ public class OAuthMemberProcessor {
     }
 
     private OAuthMemberResult buildExistingMemberResult(Long memberId) {
-        boolean personalInfoCompleted = isPersonalInfoCompleted(memberId);
+        Member member = getMember(memberId);
+        boolean personalInfoCompleted = member.isPersonalInfoCompleted();
         boolean mainAccessible = personalInfoCompleted && hasJoinedGroup(memberId);
-        return new OAuthMemberResult(memberId, personalInfoCompleted, mainAccessible);
+        return new OAuthMemberResult(
+            memberId,
+            personalInfoCompleted,
+            mainAccessible,
+            member.isGroupOnboardingCompleted()
+        );
     }
 
     private OAuthMemberResult createMember(OAuthProfile profile) {
@@ -56,13 +62,12 @@ public class OAuthMemberProcessor {
             profile.loginType(),
             profile.providerUserId()
         ));
-        return new OAuthMemberResult(memberId, false, false);
+        return new OAuthMemberResult(memberId, false, false, false);
     }
 
-    private boolean isPersonalInfoCompleted(Long memberId) {
-        Member member = memberRepository.findById(memberId)
+    private Member getMember(Long memberId) {
+        return memberRepository.findById(memberId)
             .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-        return member.isPersonalInfoCompleted();
     }
 
     private boolean hasJoinedGroup(Long memberId) {
