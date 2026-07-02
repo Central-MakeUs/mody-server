@@ -12,8 +12,10 @@ import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.record.domain.ActivityRecord;
+import cmc.mody.record.domain.RecordComment;
 import cmc.mody.record.domain.RecordType;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
+import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -40,6 +42,7 @@ public class ActivityRecordService {
     private final ModyGroupRepository modyGroupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final ActivityRecordRepository activityRecordRepository;
+    private final RecordCommentRepository recordCommentRepository;
     private final UploadProperties uploadProperties;
 
     @Transactional(readOnly = true)
@@ -97,6 +100,36 @@ public class ActivityRecordService {
         return new RecordCursorResult(summaries, nextCursor, hasNext);
     }
 
+    @Transactional(readOnly = true)
+    public RecordDetailResult getRecordDetail(Long memberId, Long recordId) {
+        Member member = getMember(memberId);
+        ActivityRecord record = getAccessibleRecord(memberId, recordId);
+
+        if (record.getGroupId() == null) {
+            return toPersonalRecordDetail(member, record);
+        }
+
+        Map<Long, GroupMember> groupMembers = getJoinedGroupMembers(record.getGroupId());
+        GroupMember recordWriter = groupMembers.get(record.getMemberId());
+        if (recordWriter == null) {
+            throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
+        }
+
+        List<CommentResult> comments = recordCommentRepository
+            .findByRecordIdAndDeletedAtIsNullOrderByCreatedAtAscIdAsc(record.getId())
+            .stream()
+            .filter(comment -> groupMembers.containsKey(comment.getMemberId()))
+            .map(comment -> toCommentResult(comment, groupMembers.get(comment.getMemberId())))
+            .toList();
+
+        return toRecordDetail(
+            record,
+            recordWriter.getDisplayNickname(),
+            recordWriter.getDisplayProfileImageKey(),
+            comments
+        );
+    }
+
     @Transactional
     public RecordCreateResult createRecord(Long memberId, RecordCreateCommand command) {
         getMember(memberId);
@@ -127,6 +160,89 @@ public class ActivityRecordService {
 
         ActivityRecord savedRecord = activityRecordRepository.save(activityRecord);
         return new RecordCreateResult(savedRecord.getId());
+    }
+
+    @Transactional
+    public CommentCreateResult createComment(Long memberId, Long recordId, CommentCreateCommand command) {
+        getMember(memberId);
+        ActivityRecord record = getAccessibleRecord(memberId, recordId);
+        if (record.getGroupId() != null) {
+            Map<Long, GroupMember> groupMembers = getJoinedGroupMembers(record.getGroupId());
+            if (!groupMembers.containsKey(record.getMemberId())) {
+                throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
+            }
+        }
+
+        Long commentId = idGenerator.nextId();
+        RecordComment savedComment = recordCommentRepository.save(new RecordComment(
+            commentId,
+            recordId,
+            memberId,
+            command.content().trim()
+        ));
+        return new CommentCreateResult(savedComment.getId(), recordId);
+    }
+
+    private ActivityRecord getAccessibleRecord(Long memberId, Long recordId) {
+        ActivityRecord record = activityRecordRepository.findById(recordId)
+            .filter(ActivityRecord::isActive)
+            .orElseThrow(() -> new GeneralException(ErrorStatus.RECORD_NOT_FOUND));
+
+        if (record.getGroupId() == null) {
+            if (!record.getMemberId().equals(memberId)) {
+                throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
+            }
+            return record;
+        }
+
+        validateGroupMembership(memberId, record.getGroupId());
+        return record;
+    }
+
+    private RecordDetailResult toPersonalRecordDetail(Member member, ActivityRecord record) {
+        List<CommentResult> comments = recordCommentRepository
+            .findByRecordIdAndDeletedAtIsNullOrderByCreatedAtAscIdAsc(record.getId())
+            .stream()
+            .filter(comment -> comment.getMemberId().equals(member.getId()))
+            .map(comment -> new CommentResult(
+                comment.getId(),
+                comment.getMemberId(),
+                member.getNickname(),
+                comment.getContent()
+            ))
+            .toList();
+
+        return toRecordDetail(record, member.getNickname(), member.getProfileImageKey(), comments);
+    }
+
+    private RecordDetailResult toRecordDetail(
+        ActivityRecord record,
+        String nickname,
+        String profileImageKey,
+        List<CommentResult> comments
+    ) {
+        return new RecordDetailResult(
+            record.getId(),
+            record.getRecordType(),
+            record.getMemberId(),
+            nickname,
+            toImageUrl(profileImageKey),
+            resolveRecordedTime(record),
+            record.getMenu(),
+            record.getExerciseDurationMinutes(),
+            record.getExerciseName(),
+            toImageUrl(record.getImageKey()),
+            comments
+        );
+    }
+
+    private CommentResult toCommentResult(RecordComment comment, GroupMember groupMember) {
+        return new CommentResult(
+            comment.getId(),
+            comment.getMemberId(),
+            groupMember.getDisplayNickname(),
+            comment.getContent()
+        );
     }
 
     private EnumMap<RecordType, Boolean> toRecordTypeMap(List<ActivityRecord> records) {
@@ -226,6 +342,12 @@ public class ActivityRecordService {
     public record RecordCreateResult(Long recordId) {
     }
 
+    public record CommentCreateCommand(String content) {
+    }
+
+    public record CommentCreateResult(Long commentId, Long recordId) {
+    }
+
     public record ActivityCalendarResult(List<ActivityDayResult> days) {
     }
 
@@ -247,5 +369,23 @@ public class ActivityRecordService {
         String exerciseName,
         String imageUrl
     ) {
+    }
+
+    public record RecordDetailResult(
+        Long recordId,
+        RecordType recordType,
+        Long memberId,
+        String nickname,
+        String profileImageUrl,
+        LocalTime recordedTime,
+        String menu,
+        Integer exerciseDurationMinutes,
+        String exerciseName,
+        String imageUrl,
+        List<CommentResult> comments
+    ) {
+    }
+
+    public record CommentResult(Long commentId, Long memberId, String nickname, String content) {
     }
 }
