@@ -14,3 +14,4 @@
 | [ADR-0008](ADR-0008-deployment-strategy.md) | 배포 전략 | Accepted | 2026-06-29 |
 | [ADR-0009](ADR-0009-member-authentication-authorization.md) | 회원 인증/인가 전략 | Accepted | 2026-06-29 |
 | [ADR-0010](ADR-0010-direct-image-upload-via-signed-url.md) | Signed URL 기반 직접 이미지 업로드 채택 | Accepted | 2026-06-29 |
+| [ADR-0011](ADR-0011-app-entry-flow-state-flags.md) | 앱 진입 플로우 상태 플래그 분리 | Accepted | 2026-07-02 |

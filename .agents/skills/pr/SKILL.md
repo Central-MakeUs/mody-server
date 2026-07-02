@@ -15,6 +15,9 @@ mody-server의 Pull Request를 생성하거나 갱신한다. PR 본문은 실제
 - 이슈를 완전히 해결하는 PR이면 `Closes #N`, 일부만 다루면 `Refs #N`를 사용한다.
 - base 브랜치는 기본적으로 `main`이다. PR 체이닝이 필요하면 현재 작업의 기반 PR 브랜치를 base로 사용하고 본문에 명시한다.
 - `.agents/`와 `docs/policy/`는 사용자가 명시하지 않으면 PR에 포함하지 않는다.
+- PR 생성 또는 갱신 시 Assignees와 Labels를 반드시 지정한다.
+- 기본 Assignee는 `msk226`다. 사용자가 다른 담당자를 지정한 경우에만 변경한다.
+- Label은 관련 이슈의 label을 우선 그대로 사용한다. 관련 이슈가 없으면 작업 성격에 맞게 `feature`, `bug`, `documentation`, `ci`, `refactor` 중 선택한다.
 
 ## 사전 확인
 
@@ -22,6 +25,8 @@ mody-server의 Pull Request를 생성하거나 갱신한다. PR 본문은 실제
 - 현재 브랜치가 `main`이면 PR을 만들지 말고 새 브랜치 필요 여부를 사용자에게 확인한다.
 - 아직 커밋되지 않은 변경이 있으면 PR 생성 전에 커밋 필요 여부를 확인한다.
 - 원격에 브랜치가 없으면 `git push -u origin <branch>` 후 PR을 만든다.
+- 관련 이슈가 있으면 이슈 label을 확인해 PR에도 같은 label을 붙인다.
+- Assignee/Label 지정 권한이 없거나 실패하면 PR 생성 후 사용자에게 즉시 알린다.
 
 ## 절차
 
@@ -31,7 +36,9 @@ mody-server의 Pull Request를 생성하거나 갱신한다. PR 본문은 실제
 4. `git diff <base>...HEAD --stat`와 필요한 파일 diff를 읽는다.
 5. 관련 LLD/ADR가 있으면 읽고, 없으면 diff와 이슈 기준으로만 쓴다.
 6. 아래 템플릿으로 본문을 작성한다.
-7. `gh pr create --base <base> --head <branch> --title "<title>" --body-file <tmpfile>`로 생성한다. 이미 PR이 있으면 `gh pr edit`로 갱신한다.
+7. `gh pr create --base <base> --head <branch> --title "<title>" --body-file <tmpfile> --assignee msk226 --label "<label>"`로 생성한다. label이 여러 개면 `--label`을 반복한다.
+8. 이미 PR이 있으면 `gh pr edit <PR> --add-assignee msk226 --add-label "<label>"`로 Assignee/Label을 보강한다.
+9. 생성 또는 갱신 후 `gh pr view <PR> --json assignees,labels`로 Assignee/Label이 실제 반영됐는지 확인한다.
 
 ## PR 본문 템플릿
 
