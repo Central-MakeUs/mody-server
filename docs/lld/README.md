@@ -20,3 +20,4 @@
 | [LLD-0012](LLD-0012-activity-record-create-api.md) | 기록 업로드 API | Accepted | #40 |
 | [LLD-0013](LLD-0013-activity-record-feed-api.md) | 기록 피드 조회 API | Accepted | #42 |
 | [LLD-0014](LLD-0014-record-detail-comment-api.md) | 기록 상세 및 댓글 API | Accepted | #43 |
+| [LLD-0015](LLD-0015-onboarding-api.md) | 온보딩 개별 API | Accepted | #44 |

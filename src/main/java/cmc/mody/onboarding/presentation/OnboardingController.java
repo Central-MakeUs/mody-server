@@ -2,11 +2,17 @@ package cmc.mody.onboarding.presentation;
 
 import cmc.mody.auth.presentation.support.CurrentMember;
 import cmc.mody.common.api.ApiResponse;
+import cmc.mody.grouping.application.GroupService;
+import cmc.mody.grouping.application.GroupService.GroupCreateCommand;
+import cmc.mody.grouping.application.GroupService.GroupJoinCommand;
 import cmc.mody.notification.domain.MealType;
 import cmc.mody.onboarding.application.OnboardingService;
 import cmc.mody.onboarding.application.OnboardingService.ExerciseScheduleCommand;
+import cmc.mody.onboarding.application.OnboardingService.HealthConnectionCommand;
 import cmc.mody.onboarding.application.OnboardingService.MealScheduleCommand;
+import cmc.mody.onboarding.application.OnboardingService.NotificationSetupCommand;
 import cmc.mody.onboarding.application.OnboardingService.ProfileSetupCommand;
+import cmc.mody.onboarding.application.OnboardingService.WeightSetupCommand;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
@@ -16,6 +22,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
@@ -24,6 +31,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +48,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/onboarding")
 public class OnboardingController {
     private final OnboardingService onboardingService;
+    private final GroupService groupService;
 
     @PostMapping("/profile")
     public ApiResponse<ProfileSetupResponse> setupProfile(
@@ -51,29 +60,55 @@ public class OnboardingController {
     }
 
     @PostMapping("/weight")
-    public ApiResponse<WeightSetupResponse> setupWeight(@RequestBody WeightSetupRequest request) {
-        return ApiResponse.ok(new WeightSetupResponse(1L, "2026-06-27", request.currentWeightKg(), BigDecimal.ZERO));
+    public ApiResponse<WeightSetupResponse> setupWeight(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @Valid @RequestBody WeightSetupRequest request
+    ) {
+        OnboardingService.WeightSetupResult result = onboardingService.setupWeight(memberId, request.toCommand());
+        return ApiResponse.ok(WeightSetupResponse.from(result));
     }
 
     @PutMapping("/notifications")
-    public ApiResponse<NotificationSetupResponse> setupNotifications(@RequestBody NotificationSetupRequest request) {
-        return ApiResponse.ok(new NotificationSetupResponse(true));
+    public ApiResponse<NotificationSetupResponse> setupNotifications(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @Valid @RequestBody NotificationSetupRequest request
+    ) {
+        OnboardingService.NotificationSetupResult result = onboardingService.setupNotifications(
+            memberId,
+            request.toCommand()
+        );
+        return ApiResponse.ok(NotificationSetupResponse.from(result));
     }
 
     @PutMapping("/health-connection")
-    public ApiResponse<HealthConnectionResponse> updateHealthConnection(@RequestBody HealthConnectionRequest request) {
-        return ApiResponse.ok(new HealthConnectionResponse(request.connected()));
+    public ApiResponse<HealthConnectionResponse> updateHealthConnection(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @Valid @RequestBody HealthConnectionRequest request
+    ) {
+        OnboardingService.HealthConnectionResult result = onboardingService.updateHealthConnection(
+            memberId,
+            request.toCommand()
+        );
+        return ApiResponse.ok(HealthConnectionResponse.from(result));
     }
 
     @PostMapping("/groups/join")
-    public ApiResponse<GroupJoinResponse> joinGroup(@RequestBody GroupJoinRequest request) {
-        return ApiResponse.ok(new GroupJoinResponse(1L, request.code(), "모디 그룹", 4));
+    public ApiResponse<GroupJoinResponse> joinGroup(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @Valid @RequestBody GroupJoinRequest request
+    ) {
+        GroupService.GroupJoinResult result = groupService.joinGroup(memberId, request.toCommand());
+        return ApiResponse.ok(GroupJoinResponse.from(result));
     }
 
     @PostMapping("/groups")
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<GroupCreateResponse> createGroup(@RequestBody GroupCreateRequest request) {
-        return ApiResponse.created(new GroupCreateResponse(1L, "ABCDEF", request.name()));
+    public ApiResponse<GroupCreateResponse> createGroup(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @Valid @RequestBody GroupCreateRequest request
+    ) {
+        GroupService.GroupCreateResult result = groupService.createGroup(memberId, request.toCommand());
+        return ApiResponse.created(GroupCreateResponse.from(result));
     }
 
     public record ProfileSetupRequest(
@@ -86,12 +121,20 @@ public class OnboardingController {
         @NotNull(message = "현재 체중은 필수입니다.")
         @DecimalMin(value = "20.0", message = "현재 체중은 20kg 이상이어야 합니다.")
         @DecimalMax(value = "300.0", message = "현재 체중은 300kg 이하여야 합니다.")
-        @Digits(integer = 3, fraction = 2, message = "현재 체중은 소수점 둘째 자리까지 입력해주세요.")
+        @Digits(
+            integer = 3,
+            fraction = 2,
+            message = "현재 체중은 소수점 둘째 자리까지 입력해주세요."
+        )
         BigDecimal currentWeightKg,
         @NotNull(message = "목표 체중은 필수입니다.")
         @DecimalMin(value = "20.0", message = "목표 체중은 20kg 이상이어야 합니다.")
         @DecimalMax(value = "300.0", message = "목표 체중은 300kg 이하여야 합니다.")
-        @Digits(integer = 3, fraction = 2, message = "목표 체중은 소수점 둘째 자리까지 입력해주세요.")
+        @Digits(
+            integer = 3,
+            fraction = 2,
+            message = "목표 체중은 소수점 둘째 자리까지 입력해주세요."
+        )
         BigDecimal targetWeightKg,
         @NotNull(message = "식사 설정은 필수입니다.")
         @Size(min = 3, max = 3, message = "식사 설정은 아침, 점심, 저녁 3개를 입력해주세요.")
@@ -136,7 +179,9 @@ public class OnboardingController {
         boolean skipped
     ) {
         @JsonIgnore
-        @AssertTrue(message = "먹지 않음이면 시간은 비워두고, 먹는 식사는 시간을 입력해주세요.")
+        @AssertTrue(
+            message = "먹지 않음이면 시간은 비워두고, 먹는 식사는 시간을 입력해주세요."
+        )
         public boolean isTimeValid() {
             return skipped ? time == null : time != null;
         }
@@ -172,45 +217,121 @@ public class OnboardingController {
     }
 
     public record WeightSetupRequest(
+        @NotNull(message = "현재 체중은 필수입니다.")
+        @DecimalMin(value = "20.0", message = "현재 체중은 20kg 이상이어야 합니다.")
+        @DecimalMax(value = "300.0", message = "현재 체중은 300kg 이하여야 합니다.")
+        @Digits(
+            integer = 3,
+            fraction = 2,
+            message = "현재 체중은 소수점 둘째 자리까지 입력해주세요."
+        )
         BigDecimal currentWeightKg,
+        @NotNull(message = "목표 체중은 필수입니다.")
+        @DecimalMin(value = "20.0", message = "목표 체중은 20kg 이상이어야 합니다.")
+        @DecimalMax(value = "300.0", message = "목표 체중은 300kg 이하여야 합니다.")
+        @Digits(
+            integer = 3,
+            fraction = 2,
+            message = "목표 체중은 소수점 둘째 자리까지 입력해주세요."
+        )
         BigDecimal targetWeightKg
     ) {
+        public WeightSetupCommand toCommand() {
+            return new WeightSetupCommand(currentWeightKg, targetWeightKg);
+        }
     }
 
     public record WeightSetupResponse(
         Long weightRecordId,
-        String recordedOn,
+        LocalDate recordedOn,
         BigDecimal weightKg,
         BigDecimal changeFromPreviousKg
     ) {
+        public static WeightSetupResponse from(OnboardingService.WeightSetupResult result) {
+            return new WeightSetupResponse(
+                result.weightRecordId(),
+                result.recordedOn(),
+                result.weightKg(),
+                result.changeFromPreviousKg()
+            );
+        }
     }
 
     public record NotificationSetupRequest(
         boolean mealReminderEnabled,
-        List<MealScheduleRequest> mealSchedules,
+        @NotNull(message = "식사 설정은 필수입니다.")
+        @Size(min = 3, max = 3, message = "식사 설정은 아침, 점심, 저녁 3개를 입력해주세요.")
+        List<@Valid MealScheduleRequest> mealSchedules,
         boolean exerciseReminderEnabled,
-        String exerciseReminderTime
+        LocalTime exerciseReminderTime
     ) {
+        @JsonIgnore
+        @AssertTrue(message = "식사 설정은 아침, 점심, 저녁을 각각 1개씩 입력해주세요.")
+        public boolean isMealTypesValid() {
+            if (mealSchedules == null) {
+                return true;
+            }
+            Set<MealType> mealTypes = mealSchedules.stream()
+                .map(MealScheduleRequest::mealType)
+                .filter(Objects::nonNull)
+                .collect(() -> EnumSet.noneOf(MealType.class), Set::add, Set::addAll);
+            return mealTypes.equals(EnumSet.allOf(MealType.class));
+        }
+
+        @JsonIgnore
+        @AssertTrue(message = "운동 알림을 켜면 운동 알림 시간을 입력해주세요.")
+        public boolean isExerciseReminderTimeValid() {
+            return !exerciseReminderEnabled || exerciseReminderTime != null;
+        }
+
+        public NotificationSetupCommand toCommand() {
+            return new NotificationSetupCommand(
+                mealReminderEnabled,
+                mealSchedules.stream()
+                    .map(MealScheduleRequest::toCommand)
+                    .toList(),
+                exerciseReminderEnabled,
+                exerciseReminderTime
+            );
+        }
     }
 
     public record NotificationSetupResponse(
+        Long notificationSettingId,
         boolean enabled
     ) {
+        public static NotificationSetupResponse from(OnboardingService.NotificationSetupResult result) {
+            return new NotificationSetupResponse(result.notificationSettingId(), result.enabled());
+        }
     }
 
     public record HealthConnectionRequest(
         boolean connected
     ) {
+        public HealthConnectionCommand toCommand() {
+            return new HealthConnectionCommand(connected);
+        }
     }
 
     public record HealthConnectionResponse(
         boolean connected
     ) {
+        public static HealthConnectionResponse from(OnboardingService.HealthConnectionResult result) {
+            return new HealthConnectionResponse(result.connected());
+        }
     }
 
     public record GroupJoinRequest(
+        @NotBlank(message = "그룹 코드는 필수입니다.")
+        @Pattern(
+            regexp = "^[A-Za-z0-9]{6}$",
+            message = "그룹 코드는 영문 또는 숫자 6자리여야 합니다."
+        )
         String code
     ) {
+        public GroupJoinCommand toCommand() {
+            return new GroupJoinCommand(code.toUpperCase(Locale.ROOT));
+        }
     }
 
     public record GroupJoinResponse(
@@ -219,11 +340,19 @@ public class OnboardingController {
         String name,
         int memberCount
     ) {
+        public static GroupJoinResponse from(GroupService.GroupJoinResult result) {
+            return new GroupJoinResponse(result.groupId(), result.code(), result.name(), result.memberCount());
+        }
     }
 
     public record GroupCreateRequest(
+        @NotBlank(message = "그룹명은 필수입니다.")
+        @Size(max = 30, message = "그룹명은 30자 이하로 입력해주세요.")
         String name
     ) {
+        public GroupCreateCommand toCommand() {
+            return new GroupCreateCommand(name);
+        }
     }
 
     public record GroupCreateResponse(
@@ -231,5 +360,8 @@ public class OnboardingController {
         String code,
         String name
     ) {
+        public static GroupCreateResponse from(GroupService.GroupCreateResult result) {
+            return new GroupCreateResponse(result.groupId(), result.code(), result.name());
+        }
     }
 }

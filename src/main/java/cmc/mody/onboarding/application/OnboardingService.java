@@ -32,8 +32,7 @@ public class OnboardingService {
 
     @Transactional
     public ProfileSetupResult setupProfile(Long memberId, ProfileSetupCommand command) {
-        Member member = memberRepository.findById(memberId)
-            .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+        Member member = getMember(memberId);
 
         if (member.isPersonalInfoCompleted()) {
             throw new GeneralException(ErrorStatus.MEMBER_PROFILE_ALREADY_COMPLETED);
@@ -41,10 +40,50 @@ public class OnboardingService {
 
         member.completeProfile(command.nickname(), command.birthDate(), command.targetWeightKg());
         WeightRecord weightRecord = saveWeightRecord(memberId, command.currentWeightKg());
-        saveNotificationSetting(memberId, command.mealSchedules());
+        saveNotificationSetting(
+            memberId,
+            hasMealReminder(command.mealSchedules()),
+            command.mealSchedules(),
+            true,
+            null
+        );
         saveExerciseSchedules(memberId, command.exerciseSchedules());
 
         return new ProfileSetupResult(member.getId(), weightRecord.getId(), true);
+    }
+
+    @Transactional
+    public WeightSetupResult setupWeight(Long memberId, WeightSetupCommand command) {
+        Member member = getMember(memberId);
+        member.updateTargetWeight(command.targetWeightKg());
+        WeightRecord weightRecord = saveWeightRecord(memberId, command.currentWeightKg());
+        return WeightSetupResult.from(weightRecord);
+    }
+
+    @Transactional
+    public NotificationSetupResult setupNotifications(Long memberId, NotificationSetupCommand command) {
+        getMember(memberId);
+        NotificationSetting notificationSetting = saveNotificationSetting(
+            memberId,
+            command.mealReminderEnabled(),
+            command.mealSchedules(),
+            command.exerciseReminderEnabled(),
+            command.exerciseReminderTime()
+        );
+        return new NotificationSetupResult(notificationSetting.getId(), true);
+    }
+
+    @Transactional
+    public HealthConnectionResult updateHealthConnection(Long memberId, HealthConnectionCommand command) {
+        Member member = getMember(memberId);
+        member.updateHealthConnection(command.connected());
+        return new HealthConnectionResult(command.connected());
+    }
+
+    private Member getMember(Long memberId) {
+        return memberRepository.findById(memberId)
+            .filter(Member::isActive)
+            .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
     }
 
     private WeightRecord saveWeightRecord(Long memberId, BigDecimal currentWeightKg) {
@@ -62,25 +101,29 @@ public class OnboardingService {
         ));
     }
 
-    private void saveNotificationSetting(
+    private NotificationSetting saveNotificationSetting(
         Long memberId,
-        List<MealScheduleCommand> mealSchedules
+        boolean mealReminderEnabled,
+        List<MealScheduleCommand> mealSchedules,
+        boolean exerciseReminderEnabled,
+        LocalTime exerciseReminderTime
     ) {
         LocalTime breakfastTime = findMealTime(mealSchedules, MealType.BREAKFAST);
         LocalTime lunchTime = findMealTime(mealSchedules, MealType.LUNCH);
         LocalTime dinnerTime = findMealTime(mealSchedules, MealType.DINNER);
-        boolean mealReminderEnabled = breakfastTime != null || lunchTime != null || dinnerTime != null;
 
-        notificationSettingRepository.save(new NotificationSetting(
-            idGenerator.nextId(),
-            memberId,
+        NotificationSetting notificationSetting = notificationSettingRepository
+            .findByMemberIdAndDeletedAtIsNull(memberId)
+            .orElseGet(() -> new NotificationSetting(idGenerator.nextId(), memberId));
+        notificationSetting.updateMealAndExercise(
             mealReminderEnabled,
             breakfastTime,
             lunchTime,
             dinnerTime,
-            true,
-            null
-        ));
+            exerciseReminderEnabled,
+            exerciseReminderTime
+        );
+        return notificationSettingRepository.save(notificationSetting);
     }
 
     private LocalTime findMealTime(List<MealScheduleCommand> mealSchedules, MealType mealType) {
@@ -90,6 +133,11 @@ public class OnboardingService {
             .filter(schedule -> !schedule.skipped())
             .map(MealScheduleCommand::time)
             .orElse(null);
+    }
+
+    private boolean hasMealReminder(List<MealScheduleCommand> mealSchedules) {
+        return mealSchedules.stream()
+            .anyMatch(schedule -> !schedule.skipped() && schedule.time() != null);
     }
 
     private void saveExerciseSchedules(Long memberId, List<ExerciseScheduleCommand> exerciseSchedules) {
@@ -126,10 +174,49 @@ public class OnboardingService {
     ) {
     }
 
+    public record WeightSetupCommand(
+        BigDecimal currentWeightKg,
+        BigDecimal targetWeightKg
+    ) {
+    }
+
+    public record NotificationSetupCommand(
+        boolean mealReminderEnabled,
+        List<MealScheduleCommand> mealSchedules,
+        boolean exerciseReminderEnabled,
+        LocalTime exerciseReminderTime
+    ) {
+    }
+
+    public record HealthConnectionCommand(boolean connected) {
+    }
+
     public record ProfileSetupResult(
         Long memberId,
         Long weightRecordId,
         boolean personalInfoCompleted
     ) {
+    }
+
+    public record WeightSetupResult(
+        Long weightRecordId,
+        LocalDate recordedOn,
+        BigDecimal weightKg,
+        BigDecimal changeFromPreviousKg
+    ) {
+        public static WeightSetupResult from(WeightRecord weightRecord) {
+            return new WeightSetupResult(
+                weightRecord.getId(),
+                weightRecord.getRecordedOn(),
+                weightRecord.getWeightKg(),
+                weightRecord.getChangeFromPreviousKg()
+            );
+        }
+    }
+
+    public record NotificationSetupResult(Long notificationSettingId, boolean enabled) {
+    }
+
+    public record HealthConnectionResult(boolean connected) {
     }
 }
