@@ -20,8 +20,10 @@ import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateCommand;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateResult;
 import cmc.mody.record.domain.ActivityRecord;
+import cmc.mody.record.domain.RecordComment;
 import cmc.mody.record.domain.RecordType;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
+import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -54,8 +56,14 @@ class ActivityRecordServiceTest {
     @Mock
     private ActivityRecordRepository activityRecordRepository;
 
+    @Mock
+    private RecordCommentRepository recordCommentRepository;
+
     @Captor
     private ArgumentCaptor<ActivityRecord> activityRecordCaptor;
+
+    @Captor
+    private ArgumentCaptor<RecordComment> recordCommentCaptor;
 
     @Test
     @DisplayName("월별 활동 여부는 해당 월 전체 날짜의 기록 여부를 반환한다.")
@@ -149,6 +157,66 @@ class ActivityRecordServiceTest {
     }
 
     @Test
+    @DisplayName("기록 상세는 현재 그룹원의 댓글만 포함해 반환한다.")
+    void getRecordDetail() {
+        ActivityRecordService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(activityRecordRepository.findById(100L))
+            .willReturn(Optional.of(mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30))));
+        given(modyGroupRepository.findById(10L)).willReturn(Optional.of(group()));
+        given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            1L,
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(true);
+        given(groupMemberRepository.findByGroupIdAndGroupMemberStatusAndDeletedAtIsNullOrderByJoinedAtAsc(
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(List.of(
+            new GroupMember(20L, 1L, 10L, "민석", "profiles/member-1.jpg", LocalDateTime.of(2026, 6, 1, 0, 0)),
+            new GroupMember(21L, 2L, 10L, "친구", "profiles/member-2.jpg", LocalDateTime.of(2026, 6, 2, 0, 0))
+        ));
+        given(recordCommentRepository.findByRecordIdAndDeletedAtIsNullOrderByCreatedAtAscIdAsc(100L))
+            .willReturn(List.of(
+                new RecordComment(200L, 100L, 2L, "좋다"),
+                new RecordComment(201L, 100L, 3L, "탈퇴 회원 댓글")
+            ));
+
+        ActivityRecordService.RecordDetailResult result = service.getRecordDetail(1L, 100L);
+
+        assertThat(result.recordId()).isEqualTo(100L);
+        assertThat(result.nickname()).isEqualTo("민석");
+        assertThat(result.profileImageUrl()).isEqualTo("https://storage.example.com/profiles/member-1.jpg");
+        assertThat(result.imageUrl()).isEqualTo("https://storage.example.com/records/1/2026/07/meal.jpg");
+        assertThat(result.comments()).hasSize(1);
+        assertThat(result.comments().get(0).memberId()).isEqualTo(2L);
+        assertThat(result.comments().get(0).nickname()).isEqualTo("친구");
+    }
+
+    @Test
+    @DisplayName("기록 작성자가 그룹을 나갔으면 상세를 조회할 수 없다.")
+    void getRecordDetailRecordWriterLeft() {
+        ActivityRecordService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(activityRecordRepository.findById(100L))
+            .willReturn(Optional.of(mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30))));
+        given(modyGroupRepository.findById(10L)).willReturn(Optional.of(group()));
+        given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            1L,
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(true);
+        given(groupMemberRepository.findByGroupIdAndGroupMemberStatusAndDeletedAtIsNullOrderByJoinedAtAsc(
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(List.of());
+
+        assertThatThrownBy(() -> service.getRecordDetail(1L, 100L))
+            .isInstanceOfSatisfying(GeneralException.class, exception ->
+                assertThat(exception.getStatus()).isEqualTo(ErrorStatus.RECORD_NOT_FOUND));
+    }
+
+    @Test
     @DisplayName("식사 기록을 생성하면 식사 필드만 저장한다.")
     void createMealRecord() {
         ActivityRecordService service = service();
@@ -218,6 +286,64 @@ class ActivityRecordServiceTest {
     }
 
     @Test
+    @DisplayName("접근 가능한 기록에 댓글을 작성한다.")
+    void createComment() {
+        ActivityRecordService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(activityRecordRepository.findById(100L))
+            .willReturn(Optional.of(mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30))));
+        given(modyGroupRepository.findById(10L)).willReturn(Optional.of(group()));
+        given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            1L,
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(true);
+        given(groupMemberRepository.findByGroupIdAndGroupMemberStatusAndDeletedAtIsNullOrderByJoinedAtAsc(
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(List.of(new GroupMember(
+            20L,
+            1L,
+            10L,
+            "민석",
+            "profiles/member-1.jpg",
+            LocalDateTime.of(2026, 6, 1, 0, 0)
+        )));
+        given(idGenerator.nextId()).willReturn(200L);
+        given(recordCommentRepository.save(any(RecordComment.class)))
+            .willAnswer(invocation -> invocation.getArgument(0));
+
+        ActivityRecordService.CommentCreateResult result = service.createComment(
+            1L,
+            100L,
+            new ActivityRecordService.CommentCreateCommand("  좋다  ")
+        );
+
+        assertThat(result.commentId()).isEqualTo(200L);
+        then(recordCommentRepository).should().save(recordCommentCaptor.capture());
+        RecordComment savedComment = recordCommentCaptor.getValue();
+        assertThat(savedComment.getRecordId()).isEqualTo(100L);
+        assertThat(savedComment.getMemberId()).isEqualTo(1L);
+        assertThat(savedComment.getContent()).isEqualTo("좋다");
+    }
+
+    @Test
+    @DisplayName("없는 기록에는 댓글을 작성할 수 없다.")
+    void createCommentRecordNotFound() {
+        ActivityRecordService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(activityRecordRepository.findById(100L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.createComment(
+            1L,
+            100L,
+            new ActivityRecordService.CommentCreateCommand("좋다")
+        ))
+            .isInstanceOfSatisfying(GeneralException.class, exception ->
+                assertThat(exception.getStatus()).isEqualTo(ErrorStatus.RECORD_NOT_FOUND));
+    }
+
+    @Test
     @DisplayName("회원이 없으면 기록을 생성할 수 없다.")
     void createRecordMemberNotFound() {
         ActivityRecordService service = service();
@@ -264,6 +390,7 @@ class ActivityRecordServiceTest {
             modyGroupRepository,
             groupMemberRepository,
             activityRecordRepository,
+            recordCommentRepository,
             new UploadProperties()
         );
     }

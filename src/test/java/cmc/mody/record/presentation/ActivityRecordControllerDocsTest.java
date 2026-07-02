@@ -19,8 +19,13 @@ import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.config.WebConfig;
 import cmc.mody.record.application.ActivityRecordService;
+import cmc.mody.record.application.ActivityRecordService.CommentCreateCommand;
+import cmc.mody.record.application.ActivityRecordService.CommentCreateResult;
+import cmc.mody.record.application.ActivityRecordService.CommentResult;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateCommand;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateResult;
+import cmc.mody.record.application.ActivityRecordService.RecordDetailResult;
+import cmc.mody.record.domain.RecordType;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -56,6 +61,7 @@ class ActivityRecordControllerDocsTest {
         - GROUP302: 그룹 없음
         - GROUP306: 그룹 참여 정보 없음
         - RECORD301: 기록 입력값 검증 실패
+        - RECORD302: 기록 없음 또는 접근할 수 없는 기록
         """;
 
     @Autowired
@@ -243,12 +249,29 @@ class ActivityRecordControllerDocsTest {
 
     @Test
     void getRecordDetail() throws Exception {
-        mockMvc.perform(get("/api/v1/records/{recordId}", 1L))
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(activityRecordService.getRecordDetail(1L, 1L))
+            .willReturn(new RecordDetailResult(
+                1L,
+                RecordType.MEAL,
+                1L,
+                "민석",
+                "https://storage.example.com/profiles/member-1.jpg",
+                java.time.LocalTime.of(12, 30),
+                "샐러드",
+                null,
+                null,
+                "https://storage.example.com/records/1/2026/07/meal.jpg",
+                List.of(new CommentResult(10L, 2L, "친구", "좋다"))
+            ));
+
+        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+                .header("Authorization", "Bearer access-token"))
             .andExpect(status().isOk())
             .andDo(document("record-detail",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
-                    .summary("[미구현] 기록 상세 조회")
+                    .summary("기록 상세 조회")
                     .description("식사/운동 기록 상세와 댓글을 조회한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.recordId").type(JsonFieldType.NUMBER).description("기록 id"),
@@ -260,6 +283,12 @@ class ActivityRecordControllerDocsTest {
                             .description("작성자 프로필 이미지"),
                         fieldWithPath("result.recordedTime").type(JsonFieldType.STRING).description("기록 시간"),
                         fieldWithPath("result.menu").type(JsonFieldType.STRING).description("메뉴명"),
+                        fieldWithPath("result.exerciseDurationMinutes")
+                            .type(JsonFieldType.NULL)
+                            .description("운동 시간(분). 식사 기록이면 null"),
+                        fieldWithPath("result.exerciseName")
+                            .type(JsonFieldType.NULL)
+                            .description("운동명. 식사 기록이면 null"),
                         fieldWithPath("result.imageUrl").type(JsonFieldType.STRING).description("기록 이미지 URL"),
                         fieldWithPath("result.comments[].commentId")
                             .type(JsonFieldType.NUMBER)
@@ -276,6 +305,39 @@ class ActivityRecordControllerDocsTest {
                     ))
                     .build())
             ));
+    }
+
+    @Test
+    void getRecordDetailRecordNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.RECORD_NOT_FOUND))
+            .given(activityRecordService)
+            .getRecordDetail(1L, 1L);
+
+        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("record-detail-record-not-found", "기록 상세 조회"));
+    }
+
+    @Test
+    void getRecordDetailGroupMemberNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND))
+            .given(activityRecordService)
+            .getRecordDetail(1L, 1L);
+
+        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("record-detail-group-member-not-found", "기록 상세 조회"));
+    }
+
+    @Test
+    void getRecordDetailWithoutAuthorization() throws Exception {
+        mockMvc.perform(get("/api/v1/records/{recordId}", 1L))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-detail-auth-missing", "기록 상세 조회"));
     }
 
     @Test
@@ -486,19 +548,29 @@ class ActivityRecordControllerDocsTest {
 
     @Test
     void createComment() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(activityRecordService.createComment(eq(1L), eq(1L), any(CommentCreateCommand.class)))
+            .willReturn(new CommentCreateResult(10L, 1L));
+
         mockMvc.perform(post("/api/v1/records/{recordId}/comments", 1L)
+                .header("Authorization", "Bearer access-token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
                       "content": "좋다"
                     }
                     """))
-            .andExpect(status().isOk())
+            .andExpect(status().isCreated())
             .andDo(document("record-comment-create",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
-                    .summary("[미구현] 기록 댓글 작성")
+                    .summary("기록 댓글 작성")
                     .description("식사/운동 기록에 댓글을 작성한다.")
+                    .requestFields(
+                        fieldWithPath("content")
+                            .type(JsonFieldType.STRING)
+                            .description("댓글 내용. 100자 이하")
+                    )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.commentId").type(JsonFieldType.NUMBER).description("댓글 id"),
                         fieldWithPath("result.recordId").type(JsonFieldType.NUMBER).description("기록 id")
@@ -507,9 +579,71 @@ class ActivityRecordControllerDocsTest {
             ));
     }
 
+    @Test
+    void createCommentValidationError() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(post("/api/v1/records/{recordId}/comments", 1L)
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "content": ""
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andDo(documentError("record-comment-create-validation-error", "기록 댓글 작성"));
+    }
+
+    @Test
+    void createCommentRecordNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.RECORD_NOT_FOUND))
+            .given(activityRecordService)
+            .createComment(eq(1L), eq(1L), any(CommentCreateCommand.class));
+
+        mockMvc.perform(postCreateComment())
+            .andExpect(status().isNotFound())
+            .andDo(documentError("record-comment-create-record-not-found", "기록 댓글 작성"));
+    }
+
+    @Test
+    void createCommentGroupMemberNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND))
+            .given(activityRecordService)
+            .createComment(eq(1L), eq(1L), any(CommentCreateCommand.class));
+
+        mockMvc.perform(postCreateComment())
+            .andExpect(status().isNotFound())
+            .andDo(documentError("record-comment-create-group-member-not-found", "기록 댓글 작성"));
+    }
+
+    @Test
+    void createCommentWithoutAuthorization() throws Exception {
+        mockMvc.perform(postCreateCommentWithoutAuthorization())
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-comment-create-auth-missing", "기록 댓글 작성"));
+    }
+
     private MockHttpServletRequestBuilder postCreateRecord() {
         return postCreateRecordWithoutAuthorization()
             .header("Authorization", "Bearer access-token");
+    }
+
+    private MockHttpServletRequestBuilder postCreateComment() {
+        return postCreateCommentWithoutAuthorization()
+            .header("Authorization", "Bearer access-token");
+    }
+
+    private MockHttpServletRequestBuilder postCreateCommentWithoutAuthorization() {
+        return post("/api/v1/records/{recordId}/comments", 1L)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "content": "좋다"
+                }
+                """);
     }
 
     private MockHttpServletRequestBuilder postCreateRecordWithoutAuthorization() {

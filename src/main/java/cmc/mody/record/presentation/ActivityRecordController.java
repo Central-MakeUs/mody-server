@@ -3,6 +3,7 @@ package cmc.mody.record.presentation;
 import cmc.mody.auth.presentation.support.CurrentMember;
 import cmc.mody.common.api.ApiResponse;
 import cmc.mody.record.application.ActivityRecordService;
+import cmc.mody.record.application.ActivityRecordService.CommentCreateCommand;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateCommand;
 import cmc.mody.record.domain.RecordType;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -74,18 +75,12 @@ public class ActivityRecordController {
     }
 
     @GetMapping("/records/{recordId}")
-    public ApiResponse<RecordDetailResponse> getRecordDetail(@PathVariable Long recordId) {
-        return ApiResponse.ok(new RecordDetailResponse(
-            recordId,
-            "MEAL",
-            1L,
-            "민석",
-            "profiles/member-1.jpg",
-            "12:30",
-            "샐러드",
-            "records/meal-1.jpg",
-            List.of(new CommentResponse(1L, 2L, "친구", "좋다"))
-        ));
+    public ApiResponse<RecordDetailResponse> getRecordDetail(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long recordId
+    ) {
+        ActivityRecordService.RecordDetailResult result = activityRecordService.getRecordDetail(memberId, recordId);
+        return ApiResponse.ok(RecordDetailResponse.from(result));
     }
 
     @PostMapping("/records")
@@ -102,11 +97,18 @@ public class ActivityRecordController {
     }
 
     @PostMapping("/records/{recordId}/comments")
+    @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<CommentCreateResponse> createComment(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
         @PathVariable Long recordId,
-        @RequestBody CommentCreateRequest request
+        @Valid @RequestBody CommentCreateRequest request
     ) {
-        return ApiResponse.created(new CommentCreateResponse(1L, recordId));
+        ActivityRecordService.CommentCreateResult result = activityRecordService.createComment(
+            memberId,
+            recordId,
+            request.toCommand()
+        );
+        return ApiResponse.created(CommentCreateResponse.from(result));
     }
 
     public record ActivityCalendarResponse(List<ActivityDayResponse> days) {
@@ -161,18 +163,45 @@ public class ActivityRecordController {
 
     public record RecordDetailResponse(
         Long recordId,
-        String recordType,
+        RecordType recordType,
         Long memberId,
         String nickname,
         String profileImageUrl,
-        String recordedTime,
+        LocalTime recordedTime,
         String menu,
+        Integer exerciseDurationMinutes,
+        String exerciseName,
         String imageUrl,
         List<CommentResponse> comments
     ) {
+        public static RecordDetailResponse from(ActivityRecordService.RecordDetailResult result) {
+            return new RecordDetailResponse(
+                result.recordId(),
+                result.recordType(),
+                result.memberId(),
+                result.nickname(),
+                result.profileImageUrl(),
+                result.recordedTime(),
+                result.menu(),
+                result.exerciseDurationMinutes(),
+                result.exerciseName(),
+                result.imageUrl(),
+                result.comments().stream()
+                    .map(CommentResponse::from)
+                    .toList()
+            );
+        }
     }
 
     public record CommentResponse(Long commentId, Long memberId, String nickname, String content) {
+        public static CommentResponse from(ActivityRecordService.CommentResult result) {
+            return new CommentResponse(
+                result.commentId(),
+                result.memberId(),
+                result.nickname(),
+                result.content()
+            );
+        }
     }
 
     public record RecordCreateRequest(
@@ -241,9 +270,19 @@ public class ActivityRecordController {
         }
     }
 
-    public record CommentCreateRequest(String content) {
+    public record CommentCreateRequest(
+        @NotBlank(message = "댓글 내용은 필수입니다.")
+        @Size(max = 100, message = "댓글은 100자 이하로 입력해주세요.")
+        String content
+    ) {
+        public CommentCreateCommand toCommand() {
+            return new CommentCreateCommand(content);
+        }
     }
 
     public record CommentCreateResponse(Long commentId, Long recordId) {
+        public static CommentCreateResponse from(ActivityRecordService.CommentCreateResult result) {
+            return new CommentCreateResponse(result.commentId(), result.recordId());
+        }
     }
 }
