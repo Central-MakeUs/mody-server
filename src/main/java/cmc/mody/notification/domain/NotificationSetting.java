@@ -67,4 +67,20 @@ public class NotificationSetting extends BaseEntity {
         this.exerciseReminderEnabled = exerciseReminderEnabled;
         this.exerciseTime = exerciseTime;
     }
+
+    public void updateMealAndExercise(
+        boolean mealReminderEnabled,
+        LocalTime breakfastTime,
+        LocalTime lunchTime,
+        LocalTime dinnerTime,
+        boolean exerciseReminderEnabled,
+        LocalTime exerciseTime
+    ) {
+        this.mealReminderEnabled = mealReminderEnabled;
+        this.breakfastTime = breakfastTime;
+        this.lunchTime = lunchTime;
+        this.dinnerTime = dinnerTime;
+        this.exerciseReminderEnabled = exerciseReminderEnabled;
+        this.exerciseTime = exerciseTime;
+    }
 }

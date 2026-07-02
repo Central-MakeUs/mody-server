@@ -66,9 +66,19 @@ public class Member extends BaseEntity {
         this.targetWeightKg = targetWeightKg;
     }
 
+    public void updateTargetWeight(BigDecimal targetWeightKg) {
+        this.targetWeightKg = targetWeightKg;
+    }
+
     public void updateProfile(String nickname, LocalDate birthDate) {
         this.nickname = nickname;
         this.birthDate = birthDate;
+    }
+
+    public void updateHealthConnection(boolean connected) {
+        this.healthConnectionStatus = connected
+            ? HealthConnectionStatus.CONNECTED
+            : HealthConnectionStatus.DISCONNECTED;
     }
 
     public void completeGroupOnboarding() {

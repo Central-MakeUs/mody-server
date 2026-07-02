@@ -10,6 +10,7 @@ import static org.mockito.Mockito.times;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.member.domain.HealthConnectionStatus;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.domain.WeightRecord;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
@@ -20,9 +21,12 @@ import cmc.mody.notification.domain.NotificationSetting;
 import cmc.mody.notification.infrastructure.repository.ExerciseScheduleRepository;
 import cmc.mody.notification.infrastructure.repository.NotificationSettingRepository;
 import cmc.mody.onboarding.application.OnboardingService.ExerciseScheduleCommand;
+import cmc.mody.onboarding.application.OnboardingService.HealthConnectionCommand;
 import cmc.mody.onboarding.application.OnboardingService.MealScheduleCommand;
+import cmc.mody.onboarding.application.OnboardingService.NotificationSetupCommand;
 import cmc.mody.onboarding.application.OnboardingService.ProfileSetupCommand;
 import cmc.mody.onboarding.application.OnboardingService.ProfileSetupResult;
+import cmc.mody.onboarding.application.OnboardingService.WeightSetupCommand;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -62,6 +66,7 @@ class OnboardingServiceTest {
         given(idGenerator.nextId()).willReturn(10L, 11L, 12L, 13L, 14L);
         given(weightRecordRepository.findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(1L))
             .willReturn(Optional.empty());
+        given(notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(Optional.empty());
         given(weightRecordRepository.save(any(WeightRecord.class)))
             .willAnswer(invocation -> invocation.getArgument(0));
         given(notificationSettingRepository.save(any(NotificationSetting.class)))
@@ -104,12 +109,19 @@ class OnboardingServiceTest {
     void setupProfileWithPreviousWeight() {
         OnboardingService service = service();
         Member member = Member.oauthMember(1L, "temp", null);
-        WeightRecord previous = new WeightRecord(9L, 1L, LocalDate.now().minusDays(1), BigDecimal.valueOf(73.2), BigDecimal.ZERO);
+        WeightRecord previous = new WeightRecord(
+            9L,
+            1L,
+            LocalDate.now().minusDays(1),
+            BigDecimal.valueOf(73.2),
+            BigDecimal.ZERO
+        );
 
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
         given(idGenerator.nextId()).willReturn(10L, 11L, 12L, 13L, 14L);
         given(weightRecordRepository.findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(1L))
             .willReturn(Optional.of(previous));
+        given(notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(Optional.empty());
         given(weightRecordRepository.save(any(WeightRecord.class)))
             .willAnswer(invocation -> invocation.getArgument(0));
         given(notificationSettingRepository.save(any(NotificationSetting.class)))
@@ -122,6 +134,82 @@ class OnboardingServiceTest {
         ArgumentCaptor<WeightRecord> weightCaptor = ArgumentCaptor.forClass(WeightRecord.class);
         then(weightRecordRepository).should().save(weightCaptor.capture());
         assertThat(weightCaptor.getValue().getChangeFromPreviousKg()).isEqualByComparingTo("-0.7");
+    }
+
+    @Test
+    void setupWeight() {
+        OnboardingService service = service();
+        Member member = Member.oauthMember(1L, "temp", null);
+        WeightRecord previous = new WeightRecord(
+            9L,
+            1L,
+            LocalDate.now().minusDays(1),
+            BigDecimal.valueOf(73.2),
+            BigDecimal.ZERO
+        );
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+        given(weightRecordRepository.findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(1L))
+            .willReturn(Optional.of(previous));
+        given(idGenerator.nextId()).willReturn(10L);
+        given(weightRecordRepository.save(any(WeightRecord.class)))
+            .willAnswer(invocation -> invocation.getArgument(0));
+
+        OnboardingService.WeightSetupResult result = service.setupWeight(
+            1L,
+            new WeightSetupCommand(BigDecimal.valueOf(72.5), BigDecimal.valueOf(68.0))
+        );
+
+        assertThat(result.weightRecordId()).isEqualTo(10L);
+        assertThat(result.weightKg()).isEqualByComparingTo("72.5");
+        assertThat(result.changeFromPreviousKg()).isEqualByComparingTo("-0.7");
+        assertThat(member.getTargetWeightKg()).isEqualByComparingTo("68.0");
+    }
+
+    @Test
+    void setupNotifications() {
+        OnboardingService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(Member.oauthMember(1L, "temp", null)));
+        given(notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(Optional.empty());
+        given(idGenerator.nextId()).willReturn(20L);
+        given(notificationSettingRepository.save(any(NotificationSetting.class)))
+            .willAnswer(invocation -> invocation.getArgument(0));
+
+        OnboardingService.NotificationSetupResult result = service.setupNotifications(
+            1L,
+            new NotificationSetupCommand(
+                true,
+                List.of(
+                    new MealScheduleCommand(MealType.BREAKFAST, LocalTime.of(8, 0), false),
+                    new MealScheduleCommand(MealType.LUNCH, null, true),
+                    new MealScheduleCommand(MealType.DINNER, LocalTime.of(18, 0), false)
+                ),
+                true,
+                LocalTime.of(20, 0)
+            )
+        );
+
+        assertThat(result).isEqualTo(new OnboardingService.NotificationSetupResult(20L, true));
+        ArgumentCaptor<NotificationSetting> notificationCaptor = ArgumentCaptor.forClass(NotificationSetting.class);
+        then(notificationSettingRepository).should().save(notificationCaptor.capture());
+        assertThat(notificationCaptor.getValue().getBreakfastTime()).isEqualTo(LocalTime.of(8, 0));
+        assertThat(notificationCaptor.getValue().getLunchTime()).isNull();
+        assertThat(notificationCaptor.getValue().getDinnerTime()).isEqualTo(LocalTime.of(18, 0));
+        assertThat(notificationCaptor.getValue().getExerciseTime()).isEqualTo(LocalTime.of(20, 0));
+    }
+
+    @Test
+    void updateHealthConnection() {
+        OnboardingService service = service();
+        Member member = Member.oauthMember(1L, "temp", null);
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+
+        OnboardingService.HealthConnectionResult result = service.updateHealthConnection(
+            1L,
+            new HealthConnectionCommand(true)
+        );
+
+        assertThat(result.connected()).isTrue();
+        assertThat(member.getHealthConnectionStatus()).isEqualTo(HealthConnectionStatus.CONNECTED);
     }
 
     @Test
