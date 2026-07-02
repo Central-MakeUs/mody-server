@@ -76,6 +76,7 @@ class GroupServiceTest {
         assertThat(groupMemberCaptor.getValue().getMemberId()).isEqualTo(1L);
         assertThat(groupMemberCaptor.getValue().getGroupId()).isEqualTo(10L);
         assertThat(groupMemberCaptor.getValue().getDisplayNickname()).isEqualTo("민석");
+        assertThat(member.isGroupOnboardingCompleted()).isTrue();
     }
 
     @Test
@@ -102,6 +103,7 @@ class GroupServiceTest {
         assertThat(result).isEqualTo(new GroupJoinResult(10L, "ABC123", "모디 그룹", 3));
         then(groupMemberRepository).should().save(groupMemberCaptor.capture());
         assertThat(groupMemberCaptor.getValue().getGroupId()).isEqualTo(10L);
+        assertThat(member.isGroupOnboardingCompleted()).isTrue();
     }
 
     @Test

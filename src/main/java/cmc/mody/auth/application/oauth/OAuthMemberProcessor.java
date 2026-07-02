@@ -5,6 +5,8 @@ import cmc.mody.auth.application.oauth.dto.OAuthProfile;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.grouping.domain.GroupMemberStatus;
+import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.domain.SocialAccount;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
@@ -21,6 +23,7 @@ public class OAuthMemberProcessor {
     private final IdGenerator idGenerator;
     private final MemberRepository memberRepository;
     private final SocialAccountRepository socialAccountRepository;
+    private final GroupMemberRepository groupMemberRepository;
 
     @Transactional
     public OAuthMemberResult ensure(OAuthProfile profile) {
@@ -29,11 +32,20 @@ public class OAuthMemberProcessor {
                 profile.loginType(),
                 profile.providerUserId()
             )
-            .map(account -> new OAuthMemberResult(
-                account.getMemberId(),
-                isPersonalInfoCompleted(account.getMemberId())
-            ))
+            .map(account -> buildExistingMemberResult(account.getMemberId()))
             .orElseGet(() -> createMember(profile));
+    }
+
+    private OAuthMemberResult buildExistingMemberResult(Long memberId) {
+        Member member = getMember(memberId);
+        boolean personalInfoCompleted = member.isPersonalInfoCompleted();
+        boolean mainAccessible = personalInfoCompleted && hasJoinedGroup(memberId);
+        return new OAuthMemberResult(
+            memberId,
+            personalInfoCompleted,
+            mainAccessible,
+            member.isGroupOnboardingCompleted()
+        );
     }
 
     private OAuthMemberResult createMember(OAuthProfile profile) {
@@ -50,13 +62,19 @@ public class OAuthMemberProcessor {
             profile.loginType(),
             profile.providerUserId()
         ));
-        return new OAuthMemberResult(memberId, false);
+        return new OAuthMemberResult(memberId, false, false, false);
     }
 
-    private boolean isPersonalInfoCompleted(Long memberId) {
-        Member member = memberRepository.findById(memberId)
+    private Member getMember(Long memberId) {
+        return memberRepository.findById(memberId)
             .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
-        return member.isPersonalInfoCompleted();
+    }
+
+    private boolean hasJoinedGroup(Long memberId) {
+        return groupMemberRepository.countByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(
+            memberId,
+            GroupMemberStatus.JOINED
+        ) > 0;
     }
 
     private String resolveNickname(OAuthProfile profile, Long memberId) {

@@ -49,6 +49,7 @@ public class GroupService {
             command.name()
         ));
         groupMemberRepository.save(newGroupMember(member, group.getId()));
+        member.completeGroupOnboarding();
 
         return new GroupCreateResult(group.getId(), group.getCode(), group.getName());
     }
@@ -69,6 +70,7 @@ public class GroupService {
         validateGroupCapacity(group.getId());
 
         groupMemberRepository.save(newGroupMember(member, group.getId()));
+        member.completeGroupOnboarding();
         int memberCount = (int) groupMemberRepository.countByGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
             group.getId(),
             GroupMemberStatus.JOINED

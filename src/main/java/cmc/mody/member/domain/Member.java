@@ -31,6 +31,9 @@ public class Member extends BaseEntity {
     @Column(name = "profile_image_key", length = 500)
     private String profileImageKey;
 
+    @Column(name = "group_onboarding_completed", nullable = false)
+    private boolean groupOnboardingCompleted = false;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private HealthConnectionStatus healthConnectionStatus = HealthConnectionStatus.DISCONNECTED;
@@ -66,6 +69,10 @@ public class Member extends BaseEntity {
     public void updateProfile(String nickname, LocalDate birthDate) {
         this.nickname = nickname;
         this.birthDate = birthDate;
+    }
+
+    public void completeGroupOnboarding() {
+        this.groupOnboardingCompleted = true;
     }
 
     public boolean isPersonalInfoCompleted() {

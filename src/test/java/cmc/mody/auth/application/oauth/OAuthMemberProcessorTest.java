@@ -8,6 +8,8 @@ import static org.mockito.BDDMockito.then;
 import cmc.mody.auth.application.oauth.dto.OAuthMemberResult;
 import cmc.mody.auth.application.oauth.dto.OAuthProfile;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.grouping.domain.GroupMemberStatus;
+import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.member.domain.LoginType;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.domain.SocialAccount;
@@ -35,6 +37,9 @@ class OAuthMemberProcessorTest {
     @Mock
     private SocialAccountRepository socialAccountRepository;
 
+    @Mock
+    private GroupMemberRepository groupMemberRepository;
+
     @Captor
     private ArgumentCaptor<Member> memberCaptor;
 
@@ -42,36 +47,64 @@ class OAuthMemberProcessorTest {
     private ArgumentCaptor<SocialAccount> socialAccountCaptor;
 
     @Test
-    @DisplayName("기존 소셜 계정이 있으면 연결된 회원 id를 반환한다.")
+    @DisplayName("메인 진입 조건을 만족하면 가능 상태를 반환한다.")
     void ensureExistingMember() {
         OAuthMemberProcessor processor = processor();
         OAuthProfile profile = new OAuthProfile(LoginType.KAKAO, "provider-1", null, "민석", null);
         given(socialAccountRepository.findByLoginTypeAndProviderUserId(LoginType.KAKAO, "provider-1"))
             .willReturn(Optional.of(new SocialAccount(10L, 1L, LoginType.KAKAO, "provider-1")));
-        given(memberRepository.findById(1L))
-            .willReturn(Optional.of(new Member(1L, "민석", LocalDate.of(2000, 1, 1), BigDecimal.valueOf(68.0))));
+        Member member = completedMember();
+        member.completeGroupOnboarding();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+        given(groupMemberRepository.countByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
+            .willReturn(1L);
 
         OAuthMemberResult result = processor.ensure(profile);
 
-        assertThat(result).isEqualTo(new OAuthMemberResult(1L, true));
+        assertThat(result).isEqualTo(new OAuthMemberResult(1L, true, true, true));
         then(memberRepository).should().findById(1L);
+    }
+
+    @Test
+    @DisplayName("그룹 플로우 완료 후 참여 그룹이 없으면 메인 진입 불가 상태를 반환한다.")
+    void ensureExistingMemberWithoutJoinedGroup() {
+        OAuthMemberProcessor processor = processor();
+        OAuthProfile profile = new OAuthProfile(LoginType.KAKAO, "provider-1", null, "민석", null);
+        given(socialAccountRepository.findByLoginTypeAndProviderUserId(LoginType.KAKAO, "provider-1"))
+            .willReturn(Optional.of(new SocialAccount(10L, 1L, LoginType.KAKAO, "provider-1")));
+        Member member = completedMember();
+        member.completeGroupOnboarding();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+        given(groupMemberRepository.countByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
+            .willReturn(0L);
+
+        OAuthMemberResult result = processor.ensure(profile);
+
+        assertThat(result).isEqualTo(new OAuthMemberResult(1L, true, false, true));
     }
 
     @Test
     @DisplayName("신규 소셜 계정이면 회원과 소셜 계정을 함께 생성한다.")
     void ensureNewMember() {
         OAuthMemberProcessor processor = processor();
-        OAuthProfile profile = new OAuthProfile(LoginType.GOOGLE, "provider-2", "a@b.com", "긴닉네임입니다긴닉네임입니다", "image");
+        OAuthProfile profile = new OAuthProfile(
+            LoginType.GOOGLE,
+            "provider-2",
+            "a@b.com",
+            "긴닉네임입니다긴닉네임입니다",
+            "image"
+        );
 
         given(socialAccountRepository.findByLoginTypeAndProviderUserId(LoginType.GOOGLE, "provider-2"))
             .willReturn(Optional.empty());
         given(idGenerator.nextId()).willReturn(1L, 2L);
         given(memberRepository.save(any(Member.class))).willAnswer(invocation -> invocation.getArgument(0));
-        given(socialAccountRepository.save(any(SocialAccount.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(socialAccountRepository.save(any(SocialAccount.class)))
+            .willAnswer(invocation -> invocation.getArgument(0));
 
         OAuthMemberResult result = processor.ensure(profile);
 
-        assertThat(result).isEqualTo(new OAuthMemberResult(1L, false));
+        assertThat(result).isEqualTo(new OAuthMemberResult(1L, false, false, false));
         then(memberRepository).should().save(memberCaptor.capture());
         then(socialAccountRepository).should().save(socialAccountCaptor.capture());
         assertThat(memberCaptor.getValue().getId()).isEqualTo(1L);
@@ -81,6 +114,10 @@ class OAuthMemberProcessorTest {
     }
 
     private OAuthMemberProcessor processor() {
-        return new OAuthMemberProcessor(idGenerator, memberRepository, socialAccountRepository);
+        return new OAuthMemberProcessor(idGenerator, memberRepository, socialAccountRepository, groupMemberRepository);
+    }
+
+    private Member completedMember() {
+        return new Member(1L, "민석", LocalDate.of(2000, 1, 1), BigDecimal.valueOf(68.0));
     }
 }
