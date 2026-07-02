@@ -20,7 +20,7 @@
 - 설정 바인딩: `token.access-secret`, `token.access-token-expiration-time`, `token.refresh-token-expiration-time`.
 - 토큰 포트: `TokenProvider`.
 - 토큰 구현체: `JwtTokenProvider`.
-- 토큰 응답 DTO: `TokenDto(id, accessToken, refreshToken, personalInfoCompleted)`.
+- 토큰 응답 DTO: `TokenDto(id, accessToken, refreshToken, personalInfoCompleted, mainAccessible)`.
 - JWT 공통 상수: `Authorization`, `Bearer `.
 - JWT 에러 코드: `EMPTY_JWT`, `INVALID_JWT`, `EXPIRED_JWT`, `UNSUPPORTED_JWT`, `NO_AUTHORIZED`, `INVALID_REFRESH_TOKEN`.
 - access/refresh 토큰 생성, 검증, `memberId` 추출 테스트.
@@ -54,6 +54,7 @@ interface TokenProvider {
   - `accessToken`: access JWT.
   - `refreshToken`: refresh JWT.
   - `personalInfoCompleted`: 개인 정보 입력 완료 여부. 기본값은 `false`.
+  - `mainAccessible`: 메인 화면 진입 가능 여부. 기본값은 `false`.
 - `JwtProperties`
   - `accessSecret`: HS256 서명 키. 최소 32 bytes 이상이어야 한다.
   - `accessTokenExpirationTime`: access token 만료 시간(ms).

@@ -40,12 +40,12 @@ class OAuthServiceTest {
             refreshTokenService
         );
 
-        given(memberProcessor.ensure(profile)).willReturn(new OAuthMemberResult(1L, true));
+        given(memberProcessor.ensure(profile)).willReturn(new OAuthMemberResult(1L, true, true));
         given(tokenProvider.createToken(1L)).willReturn(TokenDto.of(1L, "access", "refresh"));
 
         TokenDto result = service.loginByProviderToken(LoginType.KAKAO, "provider-token");
 
-        assertThat(result).isEqualTo(TokenDto.of(1L, "access", "refresh", true));
+        assertThat(result).isEqualTo(TokenDto.of(1L, "access", "refresh", true, true));
         then(refreshTokenService).should().replace(1L, "refresh");
     }
 

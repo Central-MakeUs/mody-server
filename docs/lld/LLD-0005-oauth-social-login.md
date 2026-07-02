@@ -17,8 +17,10 @@
 - 카카오, 애플, 구글 소셜 로그인을 동일한 애플리케이션 흐름으로 처리한다.
 - provider별 외부 API 차이는 전략 객체로 숨긴다.
 - 회원 생성/조회와 JWT 발급은 공통 흐름으로 둔다.
-- 로그인 응답에 `personalInfoCompleted`를 포함한다.
+- 로그인 응답에 `personalInfoCompleted`, `mainAccessible`를 포함한다.
 - 클라이언트는 `personalInfoCompleted=false`이면 개인 정보 입력 화면으로 이동한다.
+- 클라이언트는 `mainAccessible=true`이면 메인 화면으로 이동할 수 있다.
+- `mainAccessible`은 개인 정보 입력이 완료되어 있고, 참여 중인 그룹이 1개 이상일 때만 `true`다.
 
 ## 2. 범위
 
@@ -70,7 +72,8 @@ Kakao/Google은 access token, Apple은 identity token을 `accessToken` query par
     "id": 1,
     "accessToken": "access.jwt",
     "refreshToken": "refresh.jwt",
-    "personalInfoCompleted": false
+    "personalInfoCompleted": false,
+    "mainAccessible": false
   }
 }
 ```
@@ -115,11 +118,11 @@ interface OAuthMemberService {
 2. `OAuthService`가 `OAuthStrategyFactory`에서 provider 전략을 선택한다.
 3. 전략이 authorization code로 provider token을 교환하고 외부 프로필을 조회해 `OAuthProfile`을 만든다.
 4. `OAuthMemberService`가 `loginType + providerUserId`로 기존 소셜 계정을 조회한다.
-5. 기존 계정이 있으면 연결된 `memberId`와 개인 정보 입력 완료 여부를 반환한다.
-6. 기존 계정이 없으면 `member`와 `social_account`를 생성하고 `personalInfoCompleted=false`를 반환한다.
+5. 기존 계정이 있으면 연결된 `memberId`, 개인 정보 입력 완료 여부, 메인 진입 가능 여부를 반환한다.
+6. 기존 계정이 없으면 `member`와 `social_account`를 생성하고 `personalInfoCompleted=false`, `mainAccessible=false`를 반환한다.
 7. `TokenProvider`가 access/refresh token을 발급한다.
 8. 기존 refresh token을 비활성화 또는 삭제한 뒤 새 refresh token을 DB에 저장한다.
-9. `TokenDto(id, accessToken, refreshToken, personalInfoCompleted)`를 반환한다.
+9. `TokenDto(id, accessToken, refreshToken, personalInfoCompleted, mainAccessible)`를 반환한다.
 
 클라이언트 provider token 흐름은 1~3단계 대신 `GET /api/v1/oauth/client/{loginType}`로 받은
 provider token을 각 전략의 `getProfileByProviderToken`에 전달한다. 이후 회원 보장과 JWT 발급 흐름은 동일하다.
@@ -143,6 +146,7 @@ provider token을 각 전략의 `getProfileByProviderToken`에 전달한다. 이
 - [x] 로그인 성공 시 access token과 refresh token이 함께 발급된다.
 - [x] refresh token은 DB에 저장되고 회원별 기존 token은 교체된다.
 - [x] 응답에 `personalInfoCompleted`가 포함된다.
+- [x] 응답에 `mainAccessible`가 포함된다.
 - [x] provider 고유 id가 회원 매칭 기준으로 사용된다.
 - [x] `./gradlew build`가 통과한다.
 

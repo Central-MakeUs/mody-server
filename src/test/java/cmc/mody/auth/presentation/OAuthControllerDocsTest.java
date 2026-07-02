@@ -39,6 +39,8 @@ class OAuthControllerDocsTest {
         - `AUTH409`: OAuth 프로필 조회 실패
         - `AUTH410`: OAuth 프로필 정보가 올바르지 않음
         """;
+    private static final String MAIN_ACCESSIBLE_DESCRIPTION =
+        "메인 화면 진입 가능 여부. 개인 정보 입력 완료 및 참여 그룹 1개 이상이면 true";
 
     @Autowired
     private MockMvc mockMvc;
@@ -76,7 +78,7 @@ class OAuthControllerDocsTest {
     @Test
     void callback() throws Exception {
         given(oAuthService.loginByAuthorizationCode(LoginType.KAKAO, "authorization-code"))
-            .willReturn(TokenDto.of(1L, "access-token", "refresh-token", true));
+            .willReturn(TokenDto.of(1L, "access-token", "refresh-token", true, true));
 
         mockMvc.perform(get("/api/v1/oauth/{loginType}/callback", "kakao")
                 .queryParam("code", "authorization-code"))
@@ -98,7 +100,10 @@ class OAuthControllerDocsTest {
                         fieldWithPath("result.refreshToken").type(JsonFieldType.STRING).description("refresh token"),
                         fieldWithPath("result.personalInfoCompleted")
                             .type(JsonFieldType.BOOLEAN)
-                            .description("개인 정보 입력 완료 여부")
+                            .description("개인 정보 입력 완료 여부"),
+                        fieldWithPath("result.mainAccessible")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description(MAIN_ACCESSIBLE_DESCRIPTION)
                     ))
                     .build())
             ));
@@ -107,7 +112,7 @@ class OAuthControllerDocsTest {
     @Test
     void callbackByFormPost() throws Exception {
         given(oAuthService.loginByAuthorizationCode(LoginType.APPLE, "authorization-code"))
-            .willReturn(TokenDto.of(1L, "access-token", "refresh-token", true));
+            .willReturn(TokenDto.of(1L, "access-token", "refresh-token", true, true));
 
         mockMvc.perform(post("/api/v1/oauth/{loginType}/callback", "apple")
                 .queryParam("code", "authorization-code"))
@@ -131,7 +136,10 @@ class OAuthControllerDocsTest {
                         fieldWithPath("result.refreshToken").type(JsonFieldType.STRING).description("refresh token"),
                         fieldWithPath("result.personalInfoCompleted")
                             .type(JsonFieldType.BOOLEAN)
-                            .description("개인 정보 입력 완료 여부")
+                            .description("개인 정보 입력 완료 여부"),
+                        fieldWithPath("result.mainAccessible")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description(MAIN_ACCESSIBLE_DESCRIPTION)
                     ))
                     .build())
             ));
@@ -163,7 +171,10 @@ class OAuthControllerDocsTest {
                         fieldWithPath("result.refreshToken").type(JsonFieldType.STRING).description("refresh token"),
                         fieldWithPath("result.personalInfoCompleted")
                             .type(JsonFieldType.BOOLEAN)
-                            .description("개인 정보 입력 완료 여부")
+                            .description("개인 정보 입력 완료 여부"),
+                        fieldWithPath("result.mainAccessible")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description(MAIN_ACCESSIBLE_DESCRIPTION)
                     ))
                     .build())
             ));
