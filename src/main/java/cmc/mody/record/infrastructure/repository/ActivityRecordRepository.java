@@ -1,7 +1,63 @@
 package cmc.mody.record.infrastructure.repository;
 
+import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.record.domain.ActivityRecord;
+import java.time.LocalDateTime;
+import java.util.List;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, Long> {
+    @Query("""
+        select record
+        from ActivityRecord record
+        where record.groupId = :groupId
+          and record.deletedAt is null
+          and record.uploadedAt >= :startAt
+          and record.uploadedAt < :endAt
+          and exists (
+              select 1
+              from GroupMember groupMember
+              where groupMember.groupId = record.groupId
+                and groupMember.memberId = record.memberId
+                and groupMember.groupMemberStatus = :joinedStatus
+                and groupMember.deletedAt is null
+          )
+        order by record.uploadedAt asc, record.id asc
+        """)
+    List<ActivityRecord> findActiveGroupRecordsBetween(
+        @Param("groupId") Long groupId,
+        @Param("startAt") LocalDateTime startAt,
+        @Param("endAt") LocalDateTime endAt,
+        @Param("joinedStatus") GroupMemberStatus joinedStatus
+    );
+
+    @Query("""
+        select record
+        from ActivityRecord record
+        where record.groupId = :groupId
+          and record.deletedAt is null
+          and record.uploadedAt >= :startAt
+          and record.uploadedAt < :endAt
+          and (:cursor is null or record.id < :cursor)
+          and exists (
+              select 1
+              from GroupMember groupMember
+              where groupMember.groupId = record.groupId
+                and groupMember.memberId = record.memberId
+                and groupMember.groupMemberStatus = :joinedStatus
+                and groupMember.deletedAt is null
+          )
+        order by record.id desc
+        """)
+    List<ActivityRecord> findActiveGroupRecordsByCursor(
+        @Param("groupId") Long groupId,
+        @Param("startAt") LocalDateTime startAt,
+        @Param("endAt") LocalDateTime endAt,
+        @Param("cursor") Long cursor,
+        @Param("joinedStatus") GroupMemberStatus joinedStatus,
+        Pageable pageable
+    );
 }
