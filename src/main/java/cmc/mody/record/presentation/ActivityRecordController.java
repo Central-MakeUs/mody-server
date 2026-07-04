@@ -79,8 +79,24 @@ public class ActivityRecordController {
         @Parameter(hidden = true) @CurrentMember Long memberId,
         @PathVariable Long recordId
     ) {
-        ActivityRecordService.RecordDetailResult result = activityRecordService.getRecordDetail(memberId, recordId);
+        ActivityRecordService.RecordDetailPageResult result = activityRecordService.getRecordDetail(memberId, recordId);
         return ApiResponse.ok(RecordDetailResponse.from(result));
+    }
+
+    @GetMapping("/records/{recordId}/comments")
+    public ApiResponse<CommentCursorResponse> getRecordComments(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long recordId,
+        @RequestParam(required = false) Long cursor,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        ActivityRecordService.CommentCursorResult result = activityRecordService.getRecordComments(
+            memberId,
+            recordId,
+            cursor,
+            size
+        );
+        return ApiResponse.ok(CommentCursorResponse.from(result));
     }
 
     @PostMapping("/records")
@@ -162,6 +178,22 @@ public class ActivityRecordController {
     }
 
     public record RecordDetailResponse(
+        int totalCount,
+        int currentIndex,
+        List<RecordDetailItemResponse> records
+    ) {
+        public static RecordDetailResponse from(ActivityRecordService.RecordDetailPageResult result) {
+            return new RecordDetailResponse(
+                result.totalCount(),
+                result.currentIndex(),
+                result.records().stream()
+                    .map(RecordDetailItemResponse::from)
+                    .toList()
+            );
+        }
+    }
+
+    public record RecordDetailItemResponse(
         Long recordId,
         RecordType recordType,
         Long memberId,
@@ -171,11 +203,10 @@ public class ActivityRecordController {
         String menu,
         Integer exerciseDurationMinutes,
         String exerciseName,
-        String imageUrl,
-        List<CommentResponse> comments
+        String imageUrl
     ) {
-        public static RecordDetailResponse from(ActivityRecordService.RecordDetailResult result) {
-            return new RecordDetailResponse(
+        public static RecordDetailItemResponse from(ActivityRecordService.RecordDetailResult result) {
+            return new RecordDetailItemResponse(
                 result.recordId(),
                 result.recordType(),
                 result.memberId(),
@@ -185,21 +216,35 @@ public class ActivityRecordController {
                 result.menu(),
                 result.exerciseDurationMinutes(),
                 result.exerciseName(),
-                result.imageUrl(),
-                result.comments().stream()
-                    .map(CommentResponse::from)
-                    .toList()
+                result.imageUrl()
             );
         }
     }
 
-    public record CommentResponse(Long commentId, Long memberId, String nickname, String content) {
+    public record CommentCursorResponse(List<CommentResponse> comments, Long nextCursor, boolean hasNext) {
+        public static CommentCursorResponse from(ActivityRecordService.CommentCursorResult result) {
+            return new CommentCursorResponse(result.comments().stream()
+                .map(CommentResponse::from)
+                .toList(), result.nextCursor(), result.hasNext());
+        }
+    }
+
+    public record CommentResponse(
+        Long commentId,
+        Long memberId,
+        String nickname,
+        String profileImageUrl,
+        String content,
+        boolean isMine
+    ) {
         public static CommentResponse from(ActivityRecordService.CommentResult result) {
             return new CommentResponse(
                 result.commentId(),
                 result.memberId(),
                 result.nickname(),
-                result.content()
+                result.profileImageUrl(),
+                result.content(),
+                result.isMine()
             );
         }
     }
