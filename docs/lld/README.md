@@ -24,3 +24,4 @@
 | [LLD-0016](LLD-0016-mypage-notification-setting-api.md) | 마이페이지 설정 API | Accepted | #45 |
 | [LLD-0017](LLD-0017-mypage-account-management-api.md) | 마이페이지 회원 관리 API | Accepted | #46 |
 | [LLD-0018](LLD-0018-notification-api.md) | 알림 조회 및 읽음 처리 API | Accepted | #47 |
+| [LLD-0019](LLD-0019-notification-dispatch-outbox.md) | 알림 발송 아웃박스 아키텍처 | Accepted | #52 |
