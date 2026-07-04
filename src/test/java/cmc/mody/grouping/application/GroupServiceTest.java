@@ -21,6 +21,7 @@ import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
+import cmc.mody.notification.application.NotificationRequestService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -46,6 +47,9 @@ class GroupServiceTest {
 
     @Mock
     private GroupMemberRepository groupMemberRepository;
+
+    @Mock
+    private NotificationRequestService notificationRequestService;
 
     @Captor
     private ArgumentCaptor<ModyGroup> groupCaptor;
@@ -104,6 +108,8 @@ class GroupServiceTest {
         then(groupMemberRepository).should().save(groupMemberCaptor.capture());
         assertThat(groupMemberCaptor.getValue().getGroupId()).isEqualTo(10L);
         assertThat(member.isGroupOnboardingCompleted()).isTrue();
+        then(notificationRequestService).should()
+            .requestGroupMemberJoined(10L, "모디 그룹", 1L, "민석");
     }
 
     @Test
@@ -186,7 +192,13 @@ class GroupServiceTest {
     }
 
     private GroupService service() {
-        return new GroupService(idGenerator, memberRepository, modyGroupRepository, groupMemberRepository);
+        return new GroupService(
+            idGenerator,
+            memberRepository,
+            modyGroupRepository,
+            groupMemberRepository,
+            notificationRequestService
+        );
     }
 
     private Member member() {

@@ -22,6 +22,32 @@ upload:
   base-url: ${UPLOAD_BASE_URL:https://storage.example.com}
   presigned-url-expires-in-seconds: ${UPLOAD_PRESIGNED_URL_EXPIRES_IN_SECONDS:300}
 
+notification:
+  dispatch:
+    enabled: ${NOTIFICATION_DISPATCH_ENABLED:false}
+    fixed-delay-ms: ${NOTIFICATION_DISPATCH_FIXED_DELAY_MS:10000}
+    batch-size: ${NOTIFICATION_DISPATCH_BATCH_SIZE:100}
+    max-retry: ${NOTIFICATION_DISPATCH_MAX_RETRY:3}
+  reminder:
+    enabled: ${NOTIFICATION_REMINDER_ENABLED:false}
+    cron: ${NOTIFICATION_REMINDER_CRON:0 * * * * *}
+  retention:
+    enabled: ${NOTIFICATION_RETENTION_ENABLED:false}
+    cron: ${NOTIFICATION_RETENTION_CRON:0 0 4 * * *}
+    retention-days: ${NOTIFICATION_RETENTION_DAYS:90}
+    batch-size: ${NOTIFICATION_RETENTION_BATCH_SIZE:500}
+  streak-risk:
+    enabled: ${NOTIFICATION_STREAK_RISK_ENABLED:false}
+    cron: ${NOTIFICATION_STREAK_RISK_CRON:0 0 21 * * *}
+    batch-size: ${NOTIFICATION_STREAK_RISK_BATCH_SIZE:500}
+  push:
+    provider: ${NOTIFICATION_PUSH_PROVIDER:no-op}
+    title: ${NOTIFICATION_PUSH_TITLE:Mody}
+
+fcm:
+  enabled: ${FCM_ENABLED:false}
+  credentials-path: ${FCM_CREDENTIALS_PATH:}
+
 oauth:
   kakao:
     authorization-uri: ${KAKAO_AUTHORIZATION_URI:https://kauth.kakao.com/oauth/authorize}

@@ -49,6 +49,9 @@ public class GlobalExceptionHandler {
         if (request.getRequestURI().startsWith("/api/v1/records")) {
             return ErrorStatus.RECORD_VALIDATION_FAILED;
         }
+        if (request.getRequestURI().startsWith("/api/v1/notifications")) {
+            return ErrorStatus.NOTIFICATION_VALIDATION_FAILED;
+        }
         return ErrorStatus.VALIDATION_FAILED;
     }
 

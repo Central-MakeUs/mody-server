@@ -4,6 +4,7 @@ import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> {
@@ -37,4 +38,6 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
         Long groupId,
         GroupMemberStatus status
     );
+
+    List<GroupMember> findByGroupMemberStatusAndDeletedAtIsNull(GroupMemberStatus status, Pageable pageable);
 }
