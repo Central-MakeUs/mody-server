@@ -50,6 +50,28 @@
   -> SENT 또는 PENDING retry 또는 FAILED 저장
 ```
 
+```mermaid
+flowchart TD
+    A["도메인 서비스<br/>댓글, 그룹, 챌린지, 리마인더 이벤트"] --> B["NotificationRequestedEvent 발행"]
+    B --> C["BEFORE_COMMIT 리스너"]
+    C --> D["수신자 결정"]
+    D --> E{"수신자 존재"}
+    E -- "없음" --> F["알림 생성 없이 종료"]
+    E -- "있음" --> G["템플릿 렌더링"]
+    G --> H["dedupeKey 생성"]
+    H --> I["notification row 저장<br/>delivery_status=PENDING"]
+    I --> J["DB 커밋"]
+    J --> K["NotificationDispatchScheduler"]
+    K --> L["due 알림 선점<br/>delivery_status=PROCESSING"]
+    L --> M["NotificationSender 비동기 실행"]
+    M --> N["FCM token 조회"]
+    N --> O["PushNotificationClient 발송"]
+    O --> P{"발송 결과"}
+    P -- "성공" --> Q["SENT 저장"]
+    P -- "재시도 가능 실패" --> R["PENDING 재예약"]
+    P -- "재시도 초과" --> S["FAILED 저장"]
+```
+
 도메인 서비스는 FCM을 직접 호출하지 않는다.
 도메인 트랜잭션에서는 알림 row 저장까지만 수행한다.
 
@@ -178,6 +200,19 @@ public record NotificationRequestedEvent(
 
 읽음 여부는 `read_at != null`로 판단한다.
 발송 상태와 읽음 상태는 서로 독립적이다.
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING: 알림 row 저장
+    PENDING --> PROCESSING: 스케줄러 선점
+    PROCESSING --> SENT: FCM 발송 성공
+    PROCESSING --> SENT: 활성 token 없음
+    PROCESSING --> PENDING: 재시도 가능 실패
+    PROCESSING --> FAILED: 재시도 초과
+    PENDING --> PROCESSING: next_retry_at 도달
+    SENT --> [*]
+    FAILED --> [*]
+```
 
 권장 인덱스:
 
