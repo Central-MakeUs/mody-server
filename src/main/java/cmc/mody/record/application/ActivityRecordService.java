@@ -103,12 +103,12 @@ public class ActivityRecordService {
     }
 
     @Transactional(readOnly = true)
-    public RecordDetailResult getRecordDetail(Long memberId, Long recordId) {
+    public RecordDetailPageResult getRecordDetail(Long memberId, Long recordId) {
         Member member = getMember(memberId);
         ActivityRecord record = getAccessibleRecord(memberId, recordId);
 
         if (record.getGroupId() == null) {
-            return toPersonalRecordDetail(member, record);
+            return toPersonalRecordDetailPage(member, record);
         }
 
         Map<Long, GroupMember> groupMembers = getJoinedGroupMembers(record.getGroupId());
@@ -117,19 +117,40 @@ public class ActivityRecordService {
             throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
         }
 
-        List<CommentResult> comments = recordCommentRepository
-            .findByRecordIdAndDeletedAtIsNullOrderByCreatedAtAscIdAsc(record.getId())
-            .stream()
-            .filter(comment -> groupMembers.containsKey(comment.getMemberId()))
-            .map(comment -> toCommentResult(comment, groupMembers.get(comment.getMemberId())))
-            .toList();
-
-        return toRecordDetail(
+        return toRecordDetailPage(
             record,
             recordWriter.getDisplayNickname(),
-            recordWriter.getDisplayProfileImageKey(),
-            comments
+            recordWriter.getDisplayProfileImageKey()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public CommentCursorResult getRecordComments(Long memberId, Long recordId, Long cursor, int size) {
+        Member member = getMember(memberId);
+        ActivityRecord record = getAccessibleRecord(memberId, recordId);
+        int pageSize = normalizeSize(size);
+        Map<Long, GroupMember> groupMembers = record.getGroupId() == null
+            ? Map.of()
+            : getJoinedGroupMembers(record.getGroupId());
+        if (record.getGroupId() != null && !groupMembers.containsKey(record.getMemberId())) {
+            throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
+        }
+
+        List<RecordComment> comments = recordCommentRepository.findActiveCommentsByCursor(
+            record.getId(),
+            record.getGroupId(),
+            memberId,
+            cursor,
+            GroupMemberStatus.JOINED,
+            PageRequest.of(0, pageSize + 1)
+        );
+        boolean hasNext = comments.size() > pageSize;
+        List<RecordComment> pageComments = hasNext ? comments.subList(0, pageSize) : comments;
+        List<CommentResult> results = pageComments.stream()
+            .map(comment -> toCommentResult(comment, member, groupMembers))
+            .toList();
+        Long nextCursor = hasNext ? pageComments.get(pageComments.size() - 1).getId() : null;
+        return new CommentCursorResult(results, nextCursor, hasNext);
     }
 
     @Transactional
@@ -202,28 +223,41 @@ public class ActivityRecordService {
         return record;
     }
 
-    private RecordDetailResult toPersonalRecordDetail(Member member, ActivityRecord record) {
-        List<CommentResult> comments = recordCommentRepository
-            .findByRecordIdAndDeletedAtIsNullOrderByCreatedAtAscIdAsc(record.getId())
-            .stream()
-            .filter(comment -> comment.getMemberId().equals(member.getId()))
-            .map(comment -> new CommentResult(
-                comment.getId(),
-                comment.getMemberId(),
-                member.getNickname(),
-                comment.getContent()
-            ))
-            .toList();
-
-        return toRecordDetail(record, member.getNickname(), member.getProfileImageKey(), comments);
+    private RecordDetailPageResult toPersonalRecordDetailPage(Member member, ActivityRecord record) {
+        return toRecordDetailPage(record, member.getNickname(), member.getProfileImageKey());
     }
 
-    private RecordDetailResult toRecordDetail(
+    private RecordDetailPageResult toRecordDetailPage(
         ActivityRecord record,
         String nickname,
-        String profileImageKey,
-        List<CommentResult> comments
+        String profileImageKey
     ) {
+        LocalDate recordDate = record.getUploadedAt().toLocalDate();
+        List<RecordDetailResult> records = activityRecordRepository.findActiveRecordsForDetailCarousel(
+                record.getGroupId(),
+                record.getMemberId(),
+                recordDate.atStartOfDay(),
+                recordDate.plusDays(1).atStartOfDay(),
+                GroupMemberStatus.JOINED
+            )
+            .stream()
+            .map(found -> toRecordDetail(found, nickname, profileImageKey))
+            .toList();
+
+        int currentIndex = -1;
+        for (int index = 0; index < records.size(); index++) {
+            if (records.get(index).recordId().equals(record.getId())) {
+                currentIndex = index;
+                break;
+            }
+        }
+        if (currentIndex < 0) {
+            throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
+        }
+        return new RecordDetailPageResult(records.size(), currentIndex, records);
+    }
+
+    private RecordDetailResult toRecordDetail(ActivityRecord record, String nickname, String profileImageKey) {
         return new RecordDetailResult(
             record.getId(),
             record.getRecordType(),
@@ -234,17 +268,37 @@ public class ActivityRecordService {
             record.getMenu(),
             record.getExerciseDurationMinutes(),
             record.getExerciseName(),
-            toImageUrl(record.getImageKey()),
-            comments
+            toImageUrl(record.getImageKey())
         );
     }
 
-    private CommentResult toCommentResult(RecordComment comment, GroupMember groupMember) {
+    private CommentResult toCommentResult(
+        RecordComment comment,
+        Member currentMember,
+        Map<Long, GroupMember> groupMembers
+    ) {
+        if (groupMembers.isEmpty()) {
+            return new CommentResult(
+                comment.getId(),
+                comment.getMemberId(),
+                currentMember.getNickname(),
+                toImageUrl(currentMember.getProfileImageKey()),
+                comment.getContent(),
+                true
+            );
+        }
+
+        GroupMember groupMember = groupMembers.get(comment.getMemberId());
+        if (groupMember == null) {
+            throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
+        }
         return new CommentResult(
             comment.getId(),
             comment.getMemberId(),
             groupMember.getDisplayNickname(),
-            comment.getContent()
+            toImageUrl(groupMember.getDisplayProfileImageKey()),
+            comment.getContent(),
+            comment.getMemberId().equals(currentMember.getId())
         );
     }
 
@@ -374,6 +428,13 @@ public class ActivityRecordService {
     ) {
     }
 
+    public record RecordDetailPageResult(
+        int totalCount,
+        int currentIndex,
+        List<RecordDetailResult> records
+    ) {
+    }
+
     public record RecordDetailResult(
         Long recordId,
         RecordType recordType,
@@ -384,11 +445,20 @@ public class ActivityRecordService {
         String menu,
         Integer exerciseDurationMinutes,
         String exerciseName,
-        String imageUrl,
-        List<CommentResult> comments
+        String imageUrl
     ) {
     }
 
-    public record CommentResult(Long commentId, Long memberId, String nickname, String content) {
+    public record CommentCursorResult(List<CommentResult> comments, Long nextCursor, boolean hasNext) {
+    }
+
+    public record CommentResult(
+        Long commentId,
+        Long memberId,
+        String nickname,
+        String profileImageUrl,
+        String content,
+        boolean isMine
+    ) {
     }
 }

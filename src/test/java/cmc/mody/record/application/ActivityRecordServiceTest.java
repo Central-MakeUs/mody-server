@@ -161,7 +161,7 @@ class ActivityRecordServiceTest {
     }
 
     @Test
-    @DisplayName("기록 상세는 현재 그룹원의 댓글만 포함해 반환한다.")
+    @DisplayName("기록 상세는 작성자의 해당 날짜 기록 목록과 현재 위치를 반환한다.")
     void getRecordDetail() {
         ActivityRecordService service = service();
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
@@ -180,21 +180,77 @@ class ActivityRecordServiceTest {
             new GroupMember(20L, 1L, 10L, "민석", "profiles/member-1.jpg", LocalDateTime.of(2026, 6, 1, 0, 0)),
             new GroupMember(21L, 2L, 10L, "친구", "profiles/member-2.jpg", LocalDateTime.of(2026, 6, 2, 0, 0))
         ));
-        given(recordCommentRepository.findByRecordIdAndDeletedAtIsNullOrderByCreatedAtAscIdAsc(100L))
+        given(activityRecordRepository.findActiveRecordsForDetailCarousel(
+            10L,
+            1L,
+            LocalDateTime.of(2026, 7, 1, 0, 0),
+            LocalDateTime.of(2026, 7, 2, 0, 0),
+            GroupMemberStatus.JOINED
+        ))
             .willReturn(List.of(
-                new RecordComment(200L, 100L, 2L, "좋다"),
-                new RecordComment(201L, 100L, 3L, "탈퇴 회원 댓글")
+                mealRecord(99L, LocalDateTime.of(2026, 7, 1, 8, 0)),
+                mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30)),
+                exerciseRecord(101L, LocalDateTime.of(2026, 7, 1, 20, 0))
             ));
 
-        ActivityRecordService.RecordDetailResult result = service.getRecordDetail(1L, 100L);
+        ActivityRecordService.RecordDetailPageResult result = service.getRecordDetail(1L, 100L);
 
-        assertThat(result.recordId()).isEqualTo(100L);
-        assertThat(result.nickname()).isEqualTo("민석");
-        assertThat(result.profileImageUrl()).isEqualTo("https://storage.example.com/profiles/member-1.jpg");
-        assertThat(result.imageUrl()).isEqualTo("https://storage.example.com/records/1/2026/07/meal.jpg");
-        assertThat(result.comments()).hasSize(1);
+        assertThat(result.totalCount()).isEqualTo(3);
+        assertThat(result.currentIndex()).isEqualTo(1);
+        assertThat(result.records()).hasSize(3);
+        assertThat(result.records().get(1).recordId()).isEqualTo(100L);
+        assertThat(result.records().get(1).nickname()).isEqualTo("민석");
+        assertThat(result.records().get(1).profileImageUrl())
+            .isEqualTo("https://storage.example.com/profiles/member-1.jpg");
+        assertThat(result.records().get(1).imageUrl()).isEqualTo("https://storage.example.com/records/1/2026/07/meal.jpg");
+        assertThat(result.records().get(2).recordType()).isEqualTo(RecordType.EXERCISE);
+    }
+
+    @Test
+    @DisplayName("기록 댓글은 커서 기반으로 조회하고 작성자 프로필과 내 댓글 여부를 반환한다.")
+    void getRecordComments() {
+        ActivityRecordService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(activityRecordRepository.findById(100L))
+            .willReturn(Optional.of(mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30))));
+        given(modyGroupRepository.findById(10L)).willReturn(Optional.of(group()));
+        given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            1L,
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(true);
+        given(groupMemberRepository.findByGroupIdAndGroupMemberStatusAndDeletedAtIsNullOrderByJoinedAtAsc(
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(List.of(
+            new GroupMember(20L, 1L, 10L, "민석", "profiles/member-1.jpg", LocalDateTime.of(2026, 6, 1, 0, 0)),
+            new GroupMember(21L, 2L, 10L, "친구", "profiles/member-2.jpg", LocalDateTime.of(2026, 6, 2, 0, 0))
+        ));
+        given(recordCommentRepository.findActiveCommentsByCursor(
+            org.mockito.ArgumentMatchers.eq(100L),
+            org.mockito.ArgumentMatchers.eq(10L),
+            org.mockito.ArgumentMatchers.eq(1L),
+            org.mockito.ArgumentMatchers.isNull(),
+            org.mockito.ArgumentMatchers.eq(GroupMemberStatus.JOINED),
+            any()
+        )).willReturn(List.of(
+            new RecordComment(200L, 100L, 2L, "좋다"),
+            new RecordComment(201L, 100L, 1L, "고마워"),
+            new RecordComment(202L, 100L, 2L, "또 올려줘")
+        ));
+
+        ActivityRecordService.CommentCursorResult result = service.getRecordComments(1L, 100L, null, 2);
+
+        assertThat(result.comments()).hasSize(2);
+        assertThat(result.nextCursor()).isEqualTo(201L);
+        assertThat(result.hasNext()).isTrue();
         assertThat(result.comments().get(0).memberId()).isEqualTo(2L);
         assertThat(result.comments().get(0).nickname()).isEqualTo("친구");
+        assertThat(result.comments().get(0).profileImageUrl())
+            .isEqualTo("https://storage.example.com/profiles/member-2.jpg");
+        assertThat(result.comments().get(0).isMine()).isFalse();
+        assertThat(result.comments().get(1).memberId()).isEqualTo(1L);
+        assertThat(result.comments().get(1).isMine()).isTrue();
     }
 
     @Test
