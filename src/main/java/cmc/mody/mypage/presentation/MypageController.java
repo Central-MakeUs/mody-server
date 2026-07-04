@@ -3,9 +3,15 @@ package cmc.mody.mypage.presentation;
 import cmc.mody.auth.presentation.support.CurrentMember;
 import cmc.mody.common.api.ApiResponse;
 import cmc.mody.mypage.application.MypageService;
+import cmc.mody.mypage.application.MypageService.ExerciseScheduleUpdateCommand;
 import cmc.mody.mypage.application.MypageService.ProfileUpdateCommand;
+import cmc.mody.mypage.application.MypageService.MealTimeUpdateCommand;
+import cmc.mody.mypage.application.MypageService.NotificationSettingCommand;
 import cmc.mody.mypage.application.MypageService.WeightCreateCommand;
+import cmc.mody.notification.domain.MealType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -15,8 +21,13 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -81,45 +92,47 @@ public class MypageController {
     }
 
     @GetMapping("/notification-settings")
-    public ApiResponse<NotificationSettingResponse> getNotificationSettings() {
-        return ApiResponse.ok(new NotificationSettingResponse(
-            true,
-            true,
-            true,
-            defaultMealSchedules(),
-            "20:00"
-        ));
+    public ApiResponse<NotificationSettingResponse> getNotificationSettings(
+        @Parameter(hidden = true) @CurrentMember Long memberId
+    ) {
+        MypageService.NotificationSettingResult result = mypageService.getNotificationSettings(memberId);
+        return ApiResponse.ok(NotificationSettingResponse.from(result));
     }
 
     @PatchMapping("/notification-settings")
     public ApiResponse<NotificationSettingResponse> updateNotificationSettings(
-        @RequestBody NotificationSettingRequest request
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @Valid @RequestBody NotificationSettingRequest request
     ) {
-        return ApiResponse.ok(new NotificationSettingResponse(
-            request.mealReminderEnabled(),
-            request.commentNotificationEnabled(),
-            request.challengeNotificationEnabled(),
-            request.mealSchedules(),
-            request.exerciseReminderTime()
-        ));
+        MypageService.NotificationSettingResult result = mypageService.updateNotificationSettings(
+            memberId,
+            request.toCommand()
+        );
+        return ApiResponse.ok(NotificationSettingResponse.from(result));
     }
 
     @PutMapping("/exercise-schedules")
-    public ApiResponse<ExerciseScheduleResponse> updateExerciseSchedules(@RequestBody ExerciseScheduleRequest request) {
-        return ApiResponse.ok(new ExerciseScheduleResponse(request.schedules()));
+    public ApiResponse<ExerciseScheduleResponse> updateExerciseSchedules(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @Valid @RequestBody ExerciseScheduleRequest request
+    ) {
+        MypageService.ExerciseScheduleUpdateResult result = mypageService.updateExerciseSchedules(
+            memberId,
+            request.toCommand()
+        );
+        return ApiResponse.ok(ExerciseScheduleResponse.from(result));
     }
 
     @PutMapping("/meal-times")
-    public ApiResponse<MealTimeResponse> updateMealTimes(@RequestBody MealTimeRequest request) {
-        return ApiResponse.ok(new MealTimeResponse(request.mealSchedules()));
-    }
-
-    private List<MealScheduleItem> defaultMealSchedules() {
-        return List.of(
-            new MealScheduleItem("BREAKFAST", "08:00", false),
-            new MealScheduleItem("LUNCH", null, true),
-            new MealScheduleItem("DINNER", "18:00", false)
+    public ApiResponse<MealTimeResponse> updateMealTimes(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @Valid @RequestBody MealTimeRequest request
+    ) {
+        MypageService.MealTimeUpdateResult result = mypageService.updateMealTimes(
+            memberId,
+            request.toCommand()
         );
+        return ApiResponse.ok(MealTimeResponse.from(result));
     }
 
     @GetMapping("/groups/{groupId}/members")
@@ -224,38 +237,136 @@ public class MypageController {
 
     public record NotificationSettingResponse(
         boolean mealReminderEnabled,
+        boolean exerciseReminderEnabled,
         boolean commentNotificationEnabled,
         boolean challengeNotificationEnabled,
         List<MealScheduleItem> mealSchedules,
-        String exerciseReminderTime
+        List<ExerciseScheduleItem> exerciseSchedules
     ) {
+        public static NotificationSettingResponse from(MypageService.NotificationSettingResult result) {
+            return new NotificationSettingResponse(
+                result.mealReminderEnabled(),
+                result.exerciseReminderEnabled(),
+                result.commentNotificationEnabled(),
+                result.challengeNotificationEnabled(),
+                result.mealSchedules().stream()
+                    .map(MealScheduleItem::from)
+                    .toList(),
+                result.exerciseSchedules().stream()
+                    .map(ExerciseScheduleItem::from)
+                    .toList()
+            );
+        }
     }
 
     public record NotificationSettingRequest(
         boolean mealReminderEnabled,
+        boolean exerciseReminderEnabled,
         boolean commentNotificationEnabled,
-        boolean challengeNotificationEnabled,
-        List<MealScheduleItem> mealSchedules,
-        String exerciseReminderTime
+        boolean challengeNotificationEnabled
     ) {
+        public NotificationSettingCommand toCommand() {
+            return new NotificationSettingCommand(
+                mealReminderEnabled,
+                exerciseReminderEnabled,
+                commentNotificationEnabled,
+                challengeNotificationEnabled
+            );
+        }
     }
 
-    public record ExerciseScheduleRequest(List<ExerciseScheduleItem> schedules) {
+    public record ExerciseScheduleRequest(
+        @NotNull(message = "운동 일정은 필수입니다.")
+        @Size(min = 3, message = "운동 일정은 주 3회 이상 입력해주세요.")
+        List<@Valid ExerciseScheduleItem> schedules
+    ) {
+        public ExerciseScheduleUpdateCommand toCommand() {
+            return new ExerciseScheduleUpdateCommand(schedules.stream()
+                .map(ExerciseScheduleItem::toCommand)
+                .toList());
+        }
     }
 
     public record ExerciseScheduleResponse(List<ExerciseScheduleItem> schedules) {
+        public static ExerciseScheduleResponse from(MypageService.ExerciseScheduleUpdateResult result) {
+            return new ExerciseScheduleResponse(result.schedules().stream()
+                .map(ExerciseScheduleItem::from)
+                .toList());
+        }
     }
 
-    public record ExerciseScheduleItem(String dayOfWeek, String time) {
+    public record ExerciseScheduleItem(
+        @NotNull(message = "운동 요일은 필수입니다.")
+        DayOfWeek dayOfWeek,
+        @NotNull(message = "운동 시간은 필수입니다.")
+        LocalTime time
+    ) {
+        public ExerciseScheduleItem {
+        }
+
+        public MypageService.ExerciseScheduleCommand toCommand() {
+            return new MypageService.ExerciseScheduleCommand(dayOfWeek, time);
+        }
+
+        public static ExerciseScheduleItem from(MypageService.ExerciseScheduleResult result) {
+            return new ExerciseScheduleItem(result.dayOfWeek(), result.time());
+        }
     }
 
-    public record MealScheduleItem(String mealType, String time, boolean skipped) {
+    public record MealScheduleItem(
+        @NotNull(message = "식사 타입은 필수입니다.")
+        MealType mealType,
+        LocalTime time,
+        boolean skipped
+    ) {
+        @JsonIgnore
+        @AssertTrue(
+            message = "먹지 않음이면 시간은 비워두고, 먹는 식사는 시간을 입력해주세요."
+        )
+        public boolean isTimeValid() {
+            return skipped ? time == null : time != null;
+        }
+
+        public MypageService.MealScheduleCommand toCommand() {
+            return new MypageService.MealScheduleCommand(mealType, time, skipped);
+        }
+
+        public static MealScheduleItem from(MypageService.MealScheduleResult result) {
+            return new MealScheduleItem(result.mealType(), result.time(), result.skipped());
+        }
     }
 
-    public record MealTimeRequest(List<MealScheduleItem> mealSchedules) {
+    public record MealTimeRequest(
+        @NotNull(message = "식사 설정은 필수입니다.")
+        @Size(min = 3, max = 3, message = "식사 설정은 아침, 점심, 저녁 3개를 입력해주세요.")
+        List<@Valid MealScheduleItem> mealSchedules
+    ) {
+        @JsonIgnore
+        @AssertTrue(message = "식사 설정은 아침, 점심, 저녁을 각각 1개씩 입력해주세요.")
+        public boolean isMealTypesValid() {
+            if (mealSchedules == null) {
+                return true;
+            }
+            Set<MealType> mealTypes = mealSchedules.stream()
+                .map(MealScheduleItem::mealType)
+                .filter(Objects::nonNull)
+                .collect(() -> EnumSet.noneOf(MealType.class), Set::add, Set::addAll);
+            return mealTypes.equals(EnumSet.allOf(MealType.class));
+        }
+
+        public MealTimeUpdateCommand toCommand() {
+            return new MealTimeUpdateCommand(mealSchedules.stream()
+                .map(MealScheduleItem::toCommand)
+                .toList());
+        }
     }
 
     public record MealTimeResponse(List<MealScheduleItem> mealSchedules) {
+        public static MealTimeResponse from(MypageService.MealTimeUpdateResult result) {
+            return new MealTimeResponse(result.mealSchedules().stream()
+                .map(MealScheduleItem::from)
+                .toList());
+        }
     }
 
     public record GroupMemberListResponse(List<GroupMemberResponse> members) {

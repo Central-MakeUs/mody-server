@@ -21,7 +21,16 @@ import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.config.WebConfig;
 import cmc.mody.mypage.application.MypageService;
+import cmc.mody.mypage.application.MypageService.ExerciseScheduleCommand;
+import cmc.mody.mypage.application.MypageService.ExerciseScheduleResult;
+import cmc.mody.mypage.application.MypageService.ExerciseScheduleUpdateCommand;
+import cmc.mody.mypage.application.MypageService.ExerciseScheduleUpdateResult;
+import cmc.mody.mypage.application.MypageService.MealScheduleResult;
+import cmc.mody.mypage.application.MypageService.MealTimeUpdateCommand;
+import cmc.mody.mypage.application.MypageService.MealTimeUpdateResult;
 import cmc.mody.mypage.application.MypageService.MyInfoResult;
+import cmc.mody.mypage.application.MypageService.NotificationSettingCommand;
+import cmc.mody.mypage.application.MypageService.NotificationSettingResult;
 import cmc.mody.mypage.application.MypageService.ProfileResult;
 import cmc.mody.mypage.application.MypageService.ProfileUpdateCommand;
 import cmc.mody.mypage.application.MypageService.ProfileUpdateResult;
@@ -29,9 +38,12 @@ import cmc.mody.mypage.application.MypageService.WeightCreateCommand;
 import cmc.mody.mypage.application.MypageService.WeightCreateResult;
 import cmc.mody.mypage.application.MypageService.WeightHistoryResult;
 import cmc.mody.mypage.application.MypageService.WeightRecordResult;
+import cmc.mody.notification.domain.MealType;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -46,6 +58,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.mockmvc.RestDocumentationResultHandler;
+import org.springframework.restdocs.payload.FieldDescriptor;
 import org.springframework.restdocs.payload.JsonFieldType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -386,54 +399,60 @@ class MypageControllerDocsTest {
     }
 
     @Test
+    void getNotificationSettings() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(mypageService.getNotificationSettings(1L)).willReturn(notificationSettingResult());
+
+        mockMvc.perform(get("/api/v1/mypage/notification-settings")
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isOk())
+            .andDo(document("mypage-notification-settings",
+                resource(ResourceSnippetParameters.builder()
+                    .tag("Mypage")
+                    .summary("알림 설정 조회")
+                    .description(MYPAGE_DESCRIPTION)
+                    .responseFields(commonResponseFields(
+                        notificationSettingResponseFields()
+                    ))
+                    .build())
+            ));
+    }
+
+    @Test
     void updateNotificationSettings() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(mypageService.updateNotificationSettings(eq(1L), any(NotificationSettingCommand.class)))
+            .willReturn(notificationSettingResult());
+
         mockMvc.perform(patch("/api/v1/mypage/notification-settings")
+                .header("Authorization", "Bearer access-token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
                       "mealReminderEnabled": true,
+                      "exerciseReminderEnabled": true,
                       "commentNotificationEnabled": true,
-                      "challengeNotificationEnabled": true,
-                      "mealSchedules": [
-                        {"mealType": "BREAKFAST", "time": "08:00", "skipped": false},
-                        {"mealType": "LUNCH", "time": null, "skipped": true},
-                        {"mealType": "DINNER", "time": "18:00", "skipped": false}
-                      ],
-                      "exerciseReminderTime": "20:00"
+                      "challengeNotificationEnabled": true
                     }
                     """))
             .andExpect(status().isOk())
             .andDo(document("mypage-notification-settings-update",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
-                    .summary("[미구현] 알림 설정 수정")
-                    .description("식사/운동, 코멘트, 챌린지 알림 설정을 수정한다.")
-                    .responseFields(commonResponseFields(
-                        fieldWithPath("result.mealReminderEnabled")
-                            .type(JsonFieldType.BOOLEAN)
-                            .description("식사 알림 여부"),
-                        fieldWithPath("result.commentNotificationEnabled")
+                    .summary("알림 설정 수정")
+                    .description(MYPAGE_DESCRIPTION)
+                    .requestFields(
+                        fieldWithPath("mealReminderEnabled").type(JsonFieldType.BOOLEAN).description("식사 알림 여부"),
+                        fieldWithPath("exerciseReminderEnabled").type(JsonFieldType.BOOLEAN).description("운동 알림 여부"),
+                        fieldWithPath("commentNotificationEnabled")
                             .type(JsonFieldType.BOOLEAN)
                             .description("코멘트 알림 여부"),
-                        fieldWithPath("result.challengeNotificationEnabled")
+                        fieldWithPath("challengeNotificationEnabled")
                             .type(JsonFieldType.BOOLEAN)
-                            .description("챌린지 알림 여부"),
-                        fieldWithPath("result.mealSchedules")
-                            .type(JsonFieldType.ARRAY)
-                            .description("식사 설정 목록"),
-                        fieldWithPath("result.mealSchedules[].mealType")
-                            .type(JsonFieldType.STRING)
-                            .description("식사 타입"),
-                        fieldWithPath("result.mealSchedules[].time")
-                            .type(JsonFieldType.STRING)
-                            .description("식사 알림 시간. skipped=true이면 null")
-                            .optional(),
-                        fieldWithPath("result.mealSchedules[].skipped")
-                            .type(JsonFieldType.BOOLEAN)
-                            .description("먹지 않음 여부"),
-                        fieldWithPath("result.exerciseReminderTime")
-                            .type(JsonFieldType.STRING)
-                            .description("운동 알림 시간")
+                            .description("챌린지 알림 여부")
+                    )
+                    .responseFields(commonResponseFields(
+                        notificationSettingResponseFields()
                     ))
                     .build())
             ));
@@ -441,15 +460,19 @@ class MypageControllerDocsTest {
 
     @Test
     void updateExerciseSchedules() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(mypageService.updateExerciseSchedules(eq(1L), any(ExerciseScheduleUpdateCommand.class)))
+            .willReturn(exerciseScheduleUpdateResult());
+
         mockMvc.perform(put("/api/v1/mypage/exercise-schedules")
+                .header("Authorization", "Bearer access-token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
                       "schedules": [
-                        {
-                          "dayOfWeek": "MONDAY",
-                          "time": "20:00"
-                        }
+                        {"dayOfWeek": "MONDAY", "time": "07:30"},
+                        {"dayOfWeek": "WEDNESDAY", "time": "20:00"},
+                        {"dayOfWeek": "FRIDAY", "time": "09:00"}
                       ]
                     }
                     """))
@@ -457,8 +480,13 @@ class MypageControllerDocsTest {
             .andDo(document("mypage-exercise-schedules-update",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
-                    .summary("[미구현] 운동 일정 수정")
-                    .description("요일별 운동 일정을 수정한다. 최소 3개 이상 입력한다.")
+                    .summary("운동 일정 수정")
+                    .description(MYPAGE_DESCRIPTION)
+                    .requestFields(
+                        fieldWithPath("schedules").type(JsonFieldType.ARRAY).description("운동 일정 목록. 최소 3개"),
+                        fieldWithPath("schedules[].dayOfWeek").type(JsonFieldType.STRING).description("운동 요일"),
+                        fieldWithPath("schedules[].time").type(JsonFieldType.STRING).description("운동 시간")
+                    )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.schedules[].dayOfWeek").type(JsonFieldType.STRING).description("요일"),
                         fieldWithPath("result.schedules[].time").type(JsonFieldType.STRING).description("운동 시간")
@@ -469,7 +497,12 @@ class MypageControllerDocsTest {
 
     @Test
     void updateMealTimes() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(mypageService.updateMealTimes(eq(1L), any(MealTimeUpdateCommand.class)))
+            .willReturn(mealTimeUpdateResult());
+
         mockMvc.perform(put("/api/v1/mypage/meal-times")
+                .header("Authorization", "Bearer access-token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
@@ -484,8 +517,11 @@ class MypageControllerDocsTest {
             .andDo(document("mypage-meal-times-update",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
-                    .summary("[미구현] 식사 시간 수정")
-                    .description("식사 알림 시간과 먹지 않음 여부를 수정한다.")
+                    .summary("식사 시간 수정")
+                    .description(MYPAGE_DESCRIPTION)
+                    .requestFields(
+                        mealScheduleRequestFields("mealSchedules")
+                    )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.mealSchedules")
                             .type(JsonFieldType.ARRAY)
@@ -503,6 +539,44 @@ class MypageControllerDocsTest {
                     ))
                     .build())
             ));
+    }
+
+    @Test
+    void updateExerciseSchedulesValidationError() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(put("/api/v1/mypage/exercise-schedules")
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "schedules": [
+                        {"dayOfWeek": "MONDAY", "time": "07:30"}
+                      ]
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andDo(documentError("mypage-exercise-schedules-update-validation-error", "운동 일정 수정"));
+    }
+
+    @Test
+    void updateMealTimesValidationError() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(put("/api/v1/mypage/meal-times")
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "mealSchedules": [
+                        {"mealType": "BREAKFAST", "time": null, "skipped": false},
+                        {"mealType": "LUNCH", "time": null, "skipped": true},
+                        {"mealType": "DINNER", "time": "18:00", "skipped": false}
+                      ]
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andDo(documentError("mypage-meal-times-update-validation-error", "식사 시간 수정"));
     }
 
     @Test
@@ -578,6 +652,55 @@ class MypageControllerDocsTest {
                           "birthDate": "2000-01-01"
                         }
                         """)
+            ),
+            new MypageEndpoint(
+                "mypage-notification-settings",
+                "알림 설정 조회",
+                () -> get("/api/v1/mypage/notification-settings")
+            ),
+            new MypageEndpoint(
+                "mypage-notification-settings-update",
+                "알림 설정 수정",
+                () -> patch("/api/v1/mypage/notification-settings")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "mealReminderEnabled": true,
+                          "exerciseReminderEnabled": true,
+                          "commentNotificationEnabled": true,
+                          "challengeNotificationEnabled": true
+                        }
+                        """)
+            ),
+            new MypageEndpoint(
+                "mypage-exercise-schedules-update",
+                "운동 일정 수정",
+                () -> put("/api/v1/mypage/exercise-schedules")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "schedules": [
+                            {"dayOfWeek": "MONDAY", "time": "07:30"},
+                            {"dayOfWeek": "WEDNESDAY", "time": "20:00"},
+                            {"dayOfWeek": "FRIDAY", "time": "09:00"}
+                          ]
+                        }
+                        """)
+            ),
+            new MypageEndpoint(
+                "mypage-meal-times-update",
+                "식사 시간 수정",
+                () -> put("/api/v1/mypage/meal-times")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "mealSchedules": [
+                            {"mealType": "BREAKFAST", "time": "08:00", "skipped": false},
+                            {"mealType": "LUNCH", "time": null, "skipped": true},
+                            {"mealType": "DINNER", "time": "18:00", "skipped": false}
+                          ]
+                        }
+                        """)
             )
         );
     }
@@ -599,6 +722,18 @@ class MypageControllerDocsTest {
             case "mypage-profile-update" -> willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
                 .given(mypageService)
                 .updateProfile(eq(1L), any(ProfileUpdateCommand.class));
+            case "mypage-notification-settings" -> willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
+                .given(mypageService)
+                .getNotificationSettings(1L);
+            case "mypage-notification-settings-update" -> willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
+                .given(mypageService)
+                .updateNotificationSettings(eq(1L), any(NotificationSettingCommand.class));
+            case "mypage-exercise-schedules-update" -> willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
+                .given(mypageService)
+                .updateExerciseSchedules(eq(1L), any(ExerciseScheduleUpdateCommand.class));
+            case "mypage-meal-times-update" -> willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
+                .given(mypageService)
+                .updateMealTimes(eq(1L), any(MealTimeUpdateCommand.class));
             default -> throw new IllegalArgumentException(
                 "지원하지 않는 마이페이지 문서 prefix입니다."
             );
@@ -613,6 +748,78 @@ class MypageControllerDocsTest {
                 .description(MYPAGE_DESCRIPTION)
                 .responseFields(commonResponseFields())
                 .build())
+        );
+    }
+
+    private FieldDescriptor[] notificationSettingResponseFields() {
+        return new FieldDescriptor[]{
+            fieldWithPath("result.mealReminderEnabled").type(JsonFieldType.BOOLEAN).description("식사 알림 여부"),
+            fieldWithPath("result.exerciseReminderEnabled").type(JsonFieldType.BOOLEAN).description("운동 알림 여부"),
+            fieldWithPath("result.commentNotificationEnabled")
+                .type(JsonFieldType.BOOLEAN)
+                .description("코멘트 알림 여부"),
+            fieldWithPath("result.challengeNotificationEnabled")
+                .type(JsonFieldType.BOOLEAN)
+                .description("챌린지 알림 여부"),
+            fieldWithPath("result.mealSchedules").type(JsonFieldType.ARRAY).description("식사 설정 목록"),
+            fieldWithPath("result.mealSchedules[].mealType").type(JsonFieldType.STRING).description("식사 타입"),
+            fieldWithPath("result.mealSchedules[].time")
+                .type(JsonFieldType.STRING)
+                .description("식사 알림 시간. skipped=true이면 null")
+                .optional(),
+            fieldWithPath("result.mealSchedules[].skipped")
+                .type(JsonFieldType.BOOLEAN)
+                .description("먹지 않음 여부"),
+            fieldWithPath("result.exerciseSchedules").type(JsonFieldType.ARRAY).description("운동 일정 목록"),
+            fieldWithPath("result.exerciseSchedules[].dayOfWeek").type(JsonFieldType.STRING).description("운동 요일"),
+            fieldWithPath("result.exerciseSchedules[].time").type(JsonFieldType.STRING).description("운동 시간")
+        };
+    }
+
+    private FieldDescriptor[] mealScheduleRequestFields(String prefix) {
+        return new FieldDescriptor[]{
+            fieldWithPath(prefix).type(JsonFieldType.ARRAY).description("식사 설정 목록"),
+            fieldWithPath(prefix + "[].mealType").type(JsonFieldType.STRING).description("식사 타입"),
+            fieldWithPath(prefix + "[].time")
+                .type(JsonFieldType.STRING)
+                .description("식사 알림 시간. skipped=true이면 null")
+                .optional(),
+            fieldWithPath(prefix + "[].skipped").type(JsonFieldType.BOOLEAN).description("먹지 않음 여부")
+        };
+    }
+
+    private NotificationSettingResult notificationSettingResult() {
+        return new NotificationSettingResult(
+            true,
+            true,
+            true,
+            true,
+            mealScheduleResults(),
+            exerciseScheduleResults()
+        );
+    }
+
+    private MealTimeUpdateResult mealTimeUpdateResult() {
+        return new MealTimeUpdateResult(mealScheduleResults());
+    }
+
+    private ExerciseScheduleUpdateResult exerciseScheduleUpdateResult() {
+        return new ExerciseScheduleUpdateResult(exerciseScheduleResults());
+    }
+
+    private List<MealScheduleResult> mealScheduleResults() {
+        return List.of(
+            new MealScheduleResult(MealType.BREAKFAST, LocalTime.of(8, 0), false),
+            new MealScheduleResult(MealType.LUNCH, null, true),
+            new MealScheduleResult(MealType.DINNER, LocalTime.of(18, 0), false)
+        );
+    }
+
+    private List<ExerciseScheduleResult> exerciseScheduleResults() {
+        return List.of(
+            new ExerciseScheduleResult(DayOfWeek.MONDAY, LocalTime.of(7, 30)),
+            new ExerciseScheduleResult(DayOfWeek.WEDNESDAY, LocalTime.of(20, 0)),
+            new ExerciseScheduleResult(DayOfWeek.FRIDAY, LocalTime.of(9, 0))
         );
     }
 

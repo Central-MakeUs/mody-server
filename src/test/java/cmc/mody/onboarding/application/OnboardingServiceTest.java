@@ -3,9 +3,9 @@ package cmc.mody.onboarding.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.times;
 
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
@@ -15,11 +15,9 @@ import cmc.mody.member.domain.Member;
 import cmc.mody.member.domain.WeightRecord;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.member.infrastructure.repository.WeightRecordRepository;
-import cmc.mody.notification.domain.ExerciseSchedule;
+import cmc.mody.notification.application.NotificationPreferenceService;
 import cmc.mody.notification.domain.MealType;
 import cmc.mody.notification.domain.NotificationSetting;
-import cmc.mody.notification.infrastructure.repository.ExerciseScheduleRepository;
-import cmc.mody.notification.infrastructure.repository.NotificationSettingRepository;
 import cmc.mody.onboarding.application.OnboardingService.ExerciseScheduleCommand;
 import cmc.mody.onboarding.application.OnboardingService.HealthConnectionCommand;
 import cmc.mody.onboarding.application.OnboardingService.MealScheduleCommand;
@@ -51,10 +49,7 @@ class OnboardingServiceTest {
     private WeightRecordRepository weightRecordRepository;
 
     @Mock
-    private NotificationSettingRepository notificationSettingRepository;
-
-    @Mock
-    private ExerciseScheduleRepository exerciseScheduleRepository;
+    private NotificationPreferenceService notificationPreferenceService;
 
     @Test
     void setupProfile() {
@@ -63,16 +58,13 @@ class OnboardingServiceTest {
         ProfileSetupCommand command = command();
 
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
-        given(idGenerator.nextId()).willReturn(10L, 11L, 12L, 13L, 14L);
+        given(idGenerator.nextId()).willReturn(10L);
         given(weightRecordRepository.findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(1L))
             .willReturn(Optional.empty());
-        given(notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(Optional.empty());
         given(weightRecordRepository.save(any(WeightRecord.class)))
             .willAnswer(invocation -> invocation.getArgument(0));
-        given(notificationSettingRepository.save(any(NotificationSetting.class)))
-            .willAnswer(invocation -> invocation.getArgument(0));
-        given(exerciseScheduleRepository.save(any(ExerciseSchedule.class)))
-            .willAnswer(invocation -> invocation.getArgument(0));
+        given(notificationPreferenceService.saveInitialNotificationSetting(eq(1L), eq(true), any(), eq(true), eq(null)))
+            .willReturn(new NotificationSetting(11L, 1L));
 
         ProfileSetupResult result = service.setupProfile(1L, command);
 
@@ -87,22 +79,10 @@ class OnboardingServiceTest {
         assertThat(weightCaptor.getValue().getWeightKg()).isEqualByComparingTo("72.5");
         assertThat(weightCaptor.getValue().getChangeFromPreviousKg()).isEqualByComparingTo(BigDecimal.ZERO);
 
-        ArgumentCaptor<NotificationSetting> notificationCaptor = ArgumentCaptor.forClass(NotificationSetting.class);
-        then(notificationSettingRepository).should().save(notificationCaptor.capture());
-        assertThat(notificationCaptor.getValue().getMemberId()).isEqualTo(1L);
-        assertThat(notificationCaptor.getValue().getBreakfastTime()).isEqualTo(LocalTime.of(8, 0));
-        assertThat(notificationCaptor.getValue().getLunchTime()).isNull();
-        assertThat(notificationCaptor.getValue().getDinnerTime()).isEqualTo(LocalTime.of(18, 0));
-        assertThat(notificationCaptor.getValue().getExerciseTime()).isNull();
-
-        ArgumentCaptor<ExerciseSchedule> scheduleCaptor = ArgumentCaptor.forClass(ExerciseSchedule.class);
-        then(exerciseScheduleRepository).should(times(3)).save(scheduleCaptor.capture());
-        assertThat(scheduleCaptor.getAllValues())
-            .extracting(ExerciseSchedule::getDayOfWeek)
-            .containsExactly(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY);
-        assertThat(scheduleCaptor.getAllValues())
-            .extracting(ExerciseSchedule::getScheduledTime)
-            .containsExactly(LocalTime.of(7, 30), LocalTime.of(20, 0), LocalTime.of(9, 0));
+        then(notificationPreferenceService).should()
+            .saveInitialNotificationSetting(eq(1L), eq(true), any(), eq(true), eq(null));
+        then(notificationPreferenceService).should()
+            .saveInitialExerciseSchedules(eq(1L), any());
     }
 
     @Test
@@ -118,16 +98,13 @@ class OnboardingServiceTest {
         );
 
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
-        given(idGenerator.nextId()).willReturn(10L, 11L, 12L, 13L, 14L);
+        given(idGenerator.nextId()).willReturn(10L);
         given(weightRecordRepository.findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(1L))
             .willReturn(Optional.of(previous));
-        given(notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(Optional.empty());
         given(weightRecordRepository.save(any(WeightRecord.class)))
             .willAnswer(invocation -> invocation.getArgument(0));
-        given(notificationSettingRepository.save(any(NotificationSetting.class)))
-            .willAnswer(invocation -> invocation.getArgument(0));
-        given(exerciseScheduleRepository.save(any(ExerciseSchedule.class)))
-            .willAnswer(invocation -> invocation.getArgument(0));
+        given(notificationPreferenceService.saveInitialNotificationSetting(eq(1L), eq(true), any(), eq(true), eq(null)))
+            .willReturn(new NotificationSetting(11L, 1L));
 
         service.setupProfile(1L, command());
 
@@ -169,10 +146,8 @@ class OnboardingServiceTest {
     void setupNotifications() {
         OnboardingService service = service();
         given(memberRepository.findById(1L)).willReturn(Optional.of(Member.oauthMember(1L, "temp", null)));
-        given(notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(Optional.empty());
-        given(idGenerator.nextId()).willReturn(20L);
-        given(notificationSettingRepository.save(any(NotificationSetting.class)))
-            .willAnswer(invocation -> invocation.getArgument(0));
+        given(notificationPreferenceService.saveInitialNotificationSetting(eq(1L), eq(true), any(), eq(true), any()))
+            .willReturn(new NotificationSetting(20L, 1L));
 
         OnboardingService.NotificationSetupResult result = service.setupNotifications(
             1L,
@@ -189,12 +164,8 @@ class OnboardingServiceTest {
         );
 
         assertThat(result).isEqualTo(new OnboardingService.NotificationSetupResult(20L, true));
-        ArgumentCaptor<NotificationSetting> notificationCaptor = ArgumentCaptor.forClass(NotificationSetting.class);
-        then(notificationSettingRepository).should().save(notificationCaptor.capture());
-        assertThat(notificationCaptor.getValue().getBreakfastTime()).isEqualTo(LocalTime.of(8, 0));
-        assertThat(notificationCaptor.getValue().getLunchTime()).isNull();
-        assertThat(notificationCaptor.getValue().getDinnerTime()).isEqualTo(LocalTime.of(18, 0));
-        assertThat(notificationCaptor.getValue().getExerciseTime()).isEqualTo(LocalTime.of(20, 0));
+        then(notificationPreferenceService).should()
+            .saveInitialNotificationSetting(eq(1L), eq(true), any(), eq(true), eq(LocalTime.of(20, 0)));
     }
 
     @Test
@@ -240,8 +211,7 @@ class OnboardingServiceTest {
             idGenerator,
             memberRepository,
             weightRecordRepository,
-            notificationSettingRepository,
-            exerciseScheduleRepository
+            notificationPreferenceService
         );
     }
 

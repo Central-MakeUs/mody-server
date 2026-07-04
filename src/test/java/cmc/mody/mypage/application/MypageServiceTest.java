@@ -3,6 +3,7 @@ package cmc.mody.mypage.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
@@ -20,8 +21,12 @@ import cmc.mody.mypage.application.MypageService.ProfileResult;
 import cmc.mody.mypage.application.MypageService.ProfileUpdateCommand;
 import cmc.mody.mypage.application.MypageService.WeightCreateCommand;
 import cmc.mody.mypage.application.MypageService.WeightCreateResult;
+import cmc.mody.notification.application.NotificationPreferenceService;
+import cmc.mody.notification.domain.MealType;
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -45,6 +50,9 @@ class MypageServiceTest {
 
     @Mock
     private WeightRecordRepository weightRecordRepository;
+
+    @Mock
+    private NotificationPreferenceService notificationPreferenceService;
 
     @Captor
     private ArgumentCaptor<WeightRecord> weightRecordCaptor;
@@ -141,11 +149,124 @@ class MypageServiceTest {
         assertThat(result.changeFromPreviousKg()).isEqualByComparingTo(BigDecimal.ZERO);
     }
 
+    @Test
+    @DisplayName("알림 설정 조회 시 회원 검증 후 설정을 반환한다.")
+    void getNotificationSettings() {
+        MypageService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(notificationPreferenceService.getPreferences(1L)).willReturn(preferences());
+
+        MypageService.NotificationSettingResult result = service.getNotificationSettings(1L);
+
+        assertThat(result.mealReminderEnabled()).isTrue();
+        assertThat(result.exerciseReminderEnabled()).isTrue();
+        assertThat(result.mealSchedules()).hasSize(3);
+        assertThat(result.exerciseSchedules()).hasSize(3);
+    }
+
+    @Test
+    @DisplayName("알림 on/off 수정 시 공통 설정 서비스에 위임한다.")
+    void updateNotificationSettings() {
+        MypageService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(notificationPreferenceService.updateReminderFlags(
+            eq(1L),
+            any(NotificationPreferenceService.ReminderFlagCommand.class)
+        )).willReturn(preferences());
+
+        service.updateNotificationSettings(
+            1L,
+            new MypageService.NotificationSettingCommand(true, true, false, true)
+        );
+
+        then(notificationPreferenceService).should().updateReminderFlags(
+            eq(1L),
+            any(NotificationPreferenceService.ReminderFlagCommand.class)
+        );
+    }
+
+    @Test
+    @DisplayName("식사 시간 수정 시 공통 설정 서비스에 위임한다.")
+    void updateMealTimes() {
+        MypageService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(notificationPreferenceService.updateMealTimes(
+            eq(1L),
+            any()
+        )).willReturn(preferences());
+
+        MypageService.MealTimeUpdateResult result = service.updateMealTimes(
+            1L,
+            new MypageService.MealTimeUpdateCommand(List.of(
+                new MypageService.MealScheduleCommand(MealType.BREAKFAST, LocalTime.of(8, 0), false),
+                new MypageService.MealScheduleCommand(MealType.LUNCH, null, true),
+                new MypageService.MealScheduleCommand(MealType.DINNER, LocalTime.of(18, 0), false)
+            ))
+        );
+
+        assertThat(result.mealSchedules()).hasSize(3);
+    }
+
+    @Test
+    @DisplayName("운동 일정 수정 시 공통 설정 서비스에 위임한다.")
+    void updateExerciseSchedules() {
+        MypageService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(notificationPreferenceService.updateExerciseSchedules(eq(1L), any()))
+            .willReturn(new NotificationPreferenceService.ExerciseScheduleUpdateResult(
+                preferences().exerciseSchedules()
+            ));
+
+        MypageService.ExerciseScheduleUpdateResult result = service.updateExerciseSchedules(
+            1L,
+            new MypageService.ExerciseScheduleUpdateCommand(List.of(
+                new MypageService.ExerciseScheduleCommand(DayOfWeek.MONDAY, LocalTime.of(7, 30)),
+                new MypageService.ExerciseScheduleCommand(DayOfWeek.WEDNESDAY, LocalTime.of(20, 0)),
+                new MypageService.ExerciseScheduleCommand(DayOfWeek.FRIDAY, LocalTime.of(9, 0))
+            ))
+        );
+
+        assertThat(result.schedules()).hasSize(3);
+    }
+
     private MypageService service() {
-        return new MypageService(idGenerator, memberRepository, socialAccountRepository, weightRecordRepository);
+        return new MypageService(
+            idGenerator,
+            memberRepository,
+            socialAccountRepository,
+            weightRecordRepository,
+            notificationPreferenceService
+        );
     }
 
     private Member member() {
         return new Member(1L, "민석", LocalDate.of(2000, 1, 1), BigDecimal.valueOf(68.0));
+    }
+
+    private NotificationPreferenceService.NotificationPreferenceResult preferences() {
+        return new NotificationPreferenceService.NotificationPreferenceResult(
+            true,
+            true,
+            true,
+            true,
+            List.of(
+                new NotificationPreferenceService.MealScheduleResult(
+                    MealType.BREAKFAST,
+                    LocalTime.of(8, 0),
+                    false
+                ),
+                new NotificationPreferenceService.MealScheduleResult(MealType.LUNCH, null, true),
+                new NotificationPreferenceService.MealScheduleResult(
+                    MealType.DINNER,
+                    LocalTime.of(18, 0),
+                    false
+                )
+            ),
+            List.of(
+                new NotificationPreferenceService.ExerciseScheduleResult(DayOfWeek.MONDAY, LocalTime.of(7, 30)),
+                new NotificationPreferenceService.ExerciseScheduleResult(DayOfWeek.WEDNESDAY, LocalTime.of(20, 0)),
+                new NotificationPreferenceService.ExerciseScheduleResult(DayOfWeek.FRIDAY, LocalTime.of(9, 0))
+            )
+        );
     }
 }

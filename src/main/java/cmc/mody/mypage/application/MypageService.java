@@ -9,8 +9,12 @@ import cmc.mody.member.domain.WeightRecord;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.member.infrastructure.repository.SocialAccountRepository;
 import cmc.mody.member.infrastructure.repository.WeightRecordRepository;
+import cmc.mody.notification.application.NotificationPreferenceService;
+import cmc.mody.notification.domain.MealType;
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +28,7 @@ public class MypageService {
     private final MemberRepository memberRepository;
     private final SocialAccountRepository socialAccountRepository;
     private final WeightRecordRepository weightRecordRepository;
+    private final NotificationPreferenceService notificationPreferenceService;
 
     @Transactional(readOnly = true)
     public MyInfoResult getMyInfo(Long memberId) {
@@ -83,6 +88,67 @@ public class MypageService {
             changeFromPreviousKg
         ));
         return WeightCreateResult.from(weightRecord);
+    }
+
+    @Transactional(readOnly = true)
+    public NotificationSettingResult getNotificationSettings(Long memberId) {
+        getMember(memberId);
+        return NotificationSettingResult.from(notificationPreferenceService.getPreferences(memberId));
+    }
+
+    @Transactional
+    public NotificationSettingResult updateNotificationSettings(
+        Long memberId,
+        NotificationSettingCommand command
+    ) {
+        getMember(memberId);
+        NotificationPreferenceService.NotificationPreferenceResult result =
+            notificationPreferenceService.updateReminderFlags(
+                memberId,
+                new NotificationPreferenceService.ReminderFlagCommand(
+                    command.mealReminderEnabled(),
+                    command.exerciseReminderEnabled(),
+                    command.commentNotificationEnabled(),
+                    command.challengeNotificationEnabled()
+                )
+            );
+        return NotificationSettingResult.from(result);
+    }
+
+    @Transactional
+    public ExerciseScheduleUpdateResult updateExerciseSchedules(
+        Long memberId,
+        ExerciseScheduleUpdateCommand command
+    ) {
+        getMember(memberId);
+        NotificationPreferenceService.ExerciseScheduleUpdateResult result =
+            notificationPreferenceService.updateExerciseSchedules(
+                memberId,
+                command.schedules().stream()
+                    .map(schedule -> new NotificationPreferenceService.ExerciseScheduleCommand(
+                        schedule.dayOfWeek(),
+                        schedule.time()
+                    ))
+                    .toList()
+            );
+        return ExerciseScheduleUpdateResult.from(result);
+    }
+
+    @Transactional
+    public MealTimeUpdateResult updateMealTimes(Long memberId, MealTimeUpdateCommand command) {
+        getMember(memberId);
+        NotificationPreferenceService.NotificationPreferenceResult result =
+            notificationPreferenceService.updateMealTimes(
+                memberId,
+                command.mealSchedules().stream()
+                    .map(schedule -> new NotificationPreferenceService.MealScheduleCommand(
+                        schedule.mealType(),
+                        schedule.time(),
+                        schedule.skipped()
+                    ))
+                    .toList()
+            );
+        return MealTimeUpdateResult.from(result);
     }
 
     private Member getMember(Long memberId) {
@@ -151,6 +217,96 @@ public class MypageService {
                 weightRecord.getWeightKg(),
                 weightRecord.getChangeFromPreviousKg()
             );
+        }
+    }
+
+    public record NotificationSettingCommand(
+        boolean mealReminderEnabled,
+        boolean exerciseReminderEnabled,
+        boolean commentNotificationEnabled,
+        boolean challengeNotificationEnabled
+    ) {
+    }
+
+    public record NotificationSettingResult(
+        boolean mealReminderEnabled,
+        boolean exerciseReminderEnabled,
+        boolean commentNotificationEnabled,
+        boolean challengeNotificationEnabled,
+        List<MealScheduleResult> mealSchedules,
+        List<ExerciseScheduleResult> exerciseSchedules
+    ) {
+        public static NotificationSettingResult from(
+            NotificationPreferenceService.NotificationPreferenceResult result
+        ) {
+            return new NotificationSettingResult(
+                result.mealReminderEnabled(),
+                result.exerciseReminderEnabled(),
+                result.commentNotificationEnabled(),
+                result.challengeNotificationEnabled(),
+                result.mealSchedules().stream()
+                    .map(MealScheduleResult::from)
+                    .toList(),
+                result.exerciseSchedules().stream()
+                    .map(ExerciseScheduleResult::from)
+                    .toList()
+            );
+        }
+    }
+
+    public record MealScheduleCommand(
+        MealType mealType,
+        LocalTime time,
+        boolean skipped
+    ) {
+    }
+
+    public record MealScheduleResult(
+        MealType mealType,
+        LocalTime time,
+        boolean skipped
+    ) {
+        public static MealScheduleResult from(NotificationPreferenceService.MealScheduleResult result) {
+            return new MealScheduleResult(result.mealType(), result.time(), result.skipped());
+        }
+    }
+
+    public record ExerciseScheduleCommand(
+        DayOfWeek dayOfWeek,
+        LocalTime time
+    ) {
+    }
+
+    public record ExerciseScheduleResult(
+        DayOfWeek dayOfWeek,
+        LocalTime time
+    ) {
+        public static ExerciseScheduleResult from(NotificationPreferenceService.ExerciseScheduleResult result) {
+            return new ExerciseScheduleResult(result.dayOfWeek(), result.time());
+        }
+    }
+
+    public record ExerciseScheduleUpdateCommand(List<ExerciseScheduleCommand> schedules) {
+    }
+
+    public record ExerciseScheduleUpdateResult(List<ExerciseScheduleResult> schedules) {
+        public static ExerciseScheduleUpdateResult from(
+            NotificationPreferenceService.ExerciseScheduleUpdateResult result
+        ) {
+            return new ExerciseScheduleUpdateResult(result.schedules().stream()
+                .map(ExerciseScheduleResult::from)
+                .toList());
+        }
+    }
+
+    public record MealTimeUpdateCommand(List<MealScheduleCommand> mealSchedules) {
+    }
+
+    public record MealTimeUpdateResult(List<MealScheduleResult> mealSchedules) {
+        public static MealTimeUpdateResult from(NotificationPreferenceService.NotificationPreferenceResult result) {
+            return new MealTimeUpdateResult(result.mealSchedules().stream()
+                .map(MealScheduleResult::from)
+                .toList());
         }
     }
 }
