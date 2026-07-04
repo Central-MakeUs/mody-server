@@ -9,4 +9,6 @@ public interface WeightRecordRepository extends JpaRepository<WeightRecord, Long
     Optional<WeightRecord> findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(Long memberId);
 
     List<WeightRecord> findByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(Long memberId);
+
+    List<WeightRecord> findByMemberIdAndDeletedAtIsNull(Long memberId);
 }

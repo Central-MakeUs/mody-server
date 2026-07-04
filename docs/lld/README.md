@@ -22,3 +22,4 @@
 | [LLD-0014](LLD-0014-record-detail-comment-api.md) | 기록 상세 및 댓글 API | Accepted | #43 |
 | [LLD-0015](LLD-0015-onboarding-api.md) | 온보딩 개별 API | Accepted | #44 |
 | [LLD-0016](LLD-0016-mypage-notification-setting-api.md) | 마이페이지 설정 API | Accepted | #45 |
+| [LLD-0017](LLD-0017-mypage-account-management-api.md) | 마이페이지 회원 관리 API | Accepted | #46 |

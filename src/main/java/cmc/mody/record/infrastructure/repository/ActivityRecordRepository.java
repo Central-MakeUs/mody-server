@@ -60,4 +60,8 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
         @Param("joinedStatus") GroupMemberStatus joinedStatus,
         Pageable pageable
     );
+
+    List<ActivityRecord> findByMemberIdAndDeletedAtIsNull(Long memberId);
+
+    List<ActivityRecord> findByMemberIdAndGroupIdAndDeletedAtIsNull(Long memberId, Long groupId);
 }

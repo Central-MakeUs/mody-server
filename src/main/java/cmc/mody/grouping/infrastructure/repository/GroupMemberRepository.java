@@ -28,6 +28,11 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
         GroupMemberStatus status
     );
 
+    List<GroupMember> findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(
+        Long memberId,
+        GroupMemberStatus status
+    );
+
     List<GroupMember> findByGroupIdAndGroupMemberStatusAndDeletedAtIsNullOrderByJoinedAtAsc(
         Long groupId,
         GroupMemberStatus status

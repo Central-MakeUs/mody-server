@@ -3,6 +3,13 @@ package cmc.mody.mypage.application;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.grouping.domain.GroupMember;
+import cmc.mody.grouping.domain.GroupMemberStatus;
+import cmc.mody.grouping.domain.ModyGroup;
+import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
+import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
+import cmc.mody.auth.domain.RefreshToken;
+import cmc.mody.auth.infrastructure.repository.RefreshTokenRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.domain.SocialAccount;
 import cmc.mody.member.domain.WeightRecord;
@@ -10,10 +17,21 @@ import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.member.infrastructure.repository.SocialAccountRepository;
 import cmc.mody.member.infrastructure.repository.WeightRecordRepository;
 import cmc.mody.notification.application.NotificationPreferenceService;
+import cmc.mody.notification.domain.ExerciseSchedule;
 import cmc.mody.notification.domain.MealType;
+import cmc.mody.notification.domain.Notification;
+import cmc.mody.notification.domain.NotificationSetting;
+import cmc.mody.notification.infrastructure.repository.ExerciseScheduleRepository;
+import cmc.mody.notification.infrastructure.repository.NotificationRepository;
+import cmc.mody.notification.infrastructure.repository.NotificationSettingRepository;
+import cmc.mody.record.domain.ActivityRecord;
+import cmc.mody.record.domain.RecordComment;
+import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
+import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -29,6 +47,14 @@ public class MypageService {
     private final SocialAccountRepository socialAccountRepository;
     private final WeightRecordRepository weightRecordRepository;
     private final NotificationPreferenceService notificationPreferenceService;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final GroupMemberRepository groupMemberRepository;
+    private final ModyGroupRepository modyGroupRepository;
+    private final NotificationSettingRepository notificationSettingRepository;
+    private final ExerciseScheduleRepository exerciseScheduleRepository;
+    private final NotificationRepository notificationRepository;
+    private final ActivityRecordRepository activityRecordRepository;
+    private final RecordCommentRepository recordCommentRepository;
 
     @Transactional(readOnly = true)
     public MyInfoResult getMyInfo(Long memberId) {
@@ -88,6 +114,18 @@ public class MypageService {
             changeFromPreviousKg
         ));
         return WeightCreateResult.from(weightRecord);
+    }
+
+    @Transactional
+    public void deleteMe(Long memberId) {
+        Member member = getMember(memberId);
+        deleteRefreshTokens(memberId);
+        deleteSocialAccounts(memberId);
+        deleteWeightRecords(memberId);
+        deleteNotificationData(memberId);
+        deleteJoinedGroupMemberships(memberId);
+        deleteMemberRecordsAndComments(memberId);
+        member.delete();
     }
 
     @Transactional(readOnly = true)
@@ -151,10 +189,110 @@ public class MypageService {
         return MealTimeUpdateResult.from(result);
     }
 
+    @Transactional(readOnly = true)
+    public GroupMemberListResult getGroupMembers(Long memberId, Long groupId) {
+        getMember(memberId);
+        validateGroupMembership(memberId, groupId);
+        List<GroupMemberResult> members = groupMemberRepository
+            .findByGroupIdAndGroupMemberStatusAndDeletedAtIsNullOrderByJoinedAtAsc(groupId, GroupMemberStatus.JOINED)
+            .stream()
+            .map(groupMember -> new GroupMemberResult(
+                groupMember.getMemberId(),
+                groupMember.getDisplayNickname(),
+                groupMember.getDisplayProfileImageKey()
+            ))
+            .toList();
+        return new GroupMemberListResult(members);
+    }
+
+    @Transactional
+    public void leaveGroup(Long memberId, Long groupId) {
+        getMember(memberId);
+        GroupMember groupMember = groupMemberRepository
+            .findByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(memberId, groupId, GroupMemberStatus.JOINED)
+            .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND));
+        deleteGroupRecordsAndComments(memberId, groupId);
+        groupMember.leave(LocalDateTime.now());
+    }
+
     private Member getMember(Long memberId) {
         return memberRepository.findById(memberId)
             .filter(Member::isActive)
             .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
+    }
+
+    private void validateGroupMembership(Long memberId, Long groupId) {
+        modyGroupRepository.findById(groupId)
+            .filter(ModyGroup::isActive)
+            .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
+        boolean joined = groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            memberId,
+            groupId,
+            GroupMemberStatus.JOINED
+        );
+        if (!joined) {
+            throw new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND);
+        }
+    }
+
+    private void deleteRefreshTokens(Long memberId) {
+        refreshTokenRepository.findAllByMemberIdAndDeletedAtIsNull(memberId)
+            .forEach(RefreshToken::delete);
+    }
+
+    private void deleteSocialAccounts(Long memberId) {
+        socialAccountRepository.findAllByMemberIdAndDeletedAtIsNull(memberId)
+            .forEach(SocialAccount::delete);
+    }
+
+    private void deleteWeightRecords(Long memberId) {
+        weightRecordRepository.findByMemberIdAndDeletedAtIsNull(memberId)
+            .forEach(WeightRecord::delete);
+    }
+
+    private void deleteNotificationData(Long memberId) {
+        notificationSettingRepository.findAllByMemberIdAndDeletedAtIsNull(memberId)
+            .forEach(NotificationSetting::delete);
+        exerciseScheduleRepository.findByMemberIdAndDeletedAtIsNull(memberId)
+            .forEach(ExerciseSchedule::delete);
+        notificationRepository.findByReceiverMemberIdAndDeletedAtIsNull(memberId)
+            .forEach(Notification::delete);
+    }
+
+    private void deleteJoinedGroupMemberships(Long memberId) {
+        LocalDateTime leftAt = LocalDateTime.now();
+        groupMemberRepository.findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(memberId, GroupMemberStatus.JOINED)
+            .forEach(groupMember -> groupMember.leave(leftAt));
+    }
+
+    private void deleteMemberRecordsAndComments(Long memberId) {
+        List<ActivityRecord> records = activityRecordRepository.findByMemberIdAndDeletedAtIsNull(memberId);
+        deleteCommentsOnRecords(records);
+        recordCommentRepository.findByMemberIdAndDeletedAtIsNull(memberId)
+            .forEach(RecordComment::delete);
+        records.forEach(ActivityRecord::delete);
+    }
+
+    private void deleteGroupRecordsAndComments(Long memberId, Long groupId) {
+        List<ActivityRecord> records = activityRecordRepository.findByMemberIdAndGroupIdAndDeletedAtIsNull(
+            memberId,
+            groupId
+        );
+        deleteCommentsOnRecords(records);
+        recordCommentRepository.findActiveCommentsByMemberIdAndGroupId(memberId, groupId)
+            .forEach(RecordComment::delete);
+        records.forEach(ActivityRecord::delete);
+    }
+
+    private void deleteCommentsOnRecords(List<ActivityRecord> records) {
+        List<Long> recordIds = records.stream()
+            .map(ActivityRecord::getId)
+            .toList();
+        if (recordIds.isEmpty()) {
+            return;
+        }
+        recordCommentRepository.findByRecordIdInAndDeletedAtIsNull(recordIds)
+            .forEach(RecordComment::delete);
     }
 
     private int calculateDaysTogether(Member member) {
@@ -308,5 +446,11 @@ public class MypageService {
                 .map(MealScheduleResult::from)
                 .toList());
         }
+    }
+
+    public record GroupMemberListResult(List<GroupMemberResult> members) {
+    }
+
+    public record GroupMemberResult(Long memberId, String nickname, String profileImageUrl) {
     }
 }

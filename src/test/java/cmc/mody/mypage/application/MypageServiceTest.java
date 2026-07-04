@@ -7,9 +7,17 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
+import cmc.mody.auth.domain.RefreshToken;
+import cmc.mody.auth.infrastructure.repository.RefreshTokenRepository;
 import cmc.mody.common.api.exception.GeneralException;
+import cmc.mody.common.domain.Status;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.grouping.domain.GroupMember;
+import cmc.mody.grouping.domain.GroupMemberStatus;
+import cmc.mody.grouping.domain.ModyGroup;
+import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
+import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.LoginType;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.domain.SocialAccount;
@@ -22,10 +30,22 @@ import cmc.mody.mypage.application.MypageService.ProfileUpdateCommand;
 import cmc.mody.mypage.application.MypageService.WeightCreateCommand;
 import cmc.mody.mypage.application.MypageService.WeightCreateResult;
 import cmc.mody.notification.application.NotificationPreferenceService;
+import cmc.mody.notification.domain.ExerciseSchedule;
 import cmc.mody.notification.domain.MealType;
+import cmc.mody.notification.domain.Notification;
+import cmc.mody.notification.domain.NotificationSetting;
+import cmc.mody.notification.domain.NotificationType;
+import cmc.mody.notification.infrastructure.repository.ExerciseScheduleRepository;
+import cmc.mody.notification.infrastructure.repository.NotificationRepository;
+import cmc.mody.notification.infrastructure.repository.NotificationSettingRepository;
+import cmc.mody.record.domain.ActivityRecord;
+import cmc.mody.record.domain.RecordComment;
+import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
+import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
@@ -53,6 +73,30 @@ class MypageServiceTest {
 
     @Mock
     private NotificationPreferenceService notificationPreferenceService;
+
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @Mock
+    private GroupMemberRepository groupMemberRepository;
+
+    @Mock
+    private ModyGroupRepository modyGroupRepository;
+
+    @Mock
+    private NotificationSettingRepository notificationSettingRepository;
+
+    @Mock
+    private ExerciseScheduleRepository exerciseScheduleRepository;
+
+    @Mock
+    private NotificationRepository notificationRepository;
+
+    @Mock
+    private ActivityRecordRepository activityRecordRepository;
+
+    @Mock
+    private RecordCommentRepository recordCommentRepository;
 
     @Captor
     private ArgumentCaptor<WeightRecord> weightRecordCaptor;
@@ -229,13 +273,121 @@ class MypageServiceTest {
         assertThat(result.schedules()).hasSize(3);
     }
 
+    @Test
+    @DisplayName("회원 탈퇴 시 회원 관련 활성 데이터를 논리 삭제한다.")
+    void deleteMe() {
+        MypageService service = service();
+        Member member = member();
+        RefreshToken refreshToken = new RefreshToken(10L, 1L, "refresh-token");
+        SocialAccount socialAccount = new SocialAccount(11L, 1L, LoginType.KAKAO, "provider-id");
+        WeightRecord weightRecord = new WeightRecord(12L, 1L, LocalDate.now(), BigDecimal.valueOf(72.5), BigDecimal.ZERO);
+        NotificationSetting notificationSetting = new NotificationSetting(13L, 1L);
+        ExerciseSchedule exerciseSchedule = new ExerciseSchedule(14L, 1L, DayOfWeek.MONDAY, LocalTime.of(7, 30));
+        Notification notification = new Notification(15L, 1L, NotificationType.COMMENT, "title", "content");
+        GroupMember groupMember = new GroupMember(16L, 1L, 100L, LocalDateTime.now());
+        ActivityRecord record = mealRecord(17L, 1L, 100L);
+        RecordComment myComment = new RecordComment(18L, 200L, 1L, "내 댓글");
+        RecordComment recordComment = new RecordComment(19L, 17L, 2L, "기록 댓글");
+
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+        given(refreshTokenRepository.findAllByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(refreshToken));
+        given(socialAccountRepository.findAllByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(socialAccount));
+        given(weightRecordRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(weightRecord));
+        given(notificationSettingRepository.findAllByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(notificationSetting));
+        given(exerciseScheduleRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(exerciseSchedule));
+        given(notificationRepository.findByReceiverMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(notification));
+        given(groupMemberRepository.findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
+            .willReturn(List.of(groupMember));
+        given(activityRecordRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(record));
+        given(recordCommentRepository.findByRecordIdInAndDeletedAtIsNull(List.of(17L))).willReturn(List.of(recordComment));
+        given(recordCommentRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(myComment));
+
+        service.deleteMe(1L);
+
+        assertThat(member.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(refreshToken.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(socialAccount.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(weightRecord.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(notificationSetting.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(exerciseSchedule.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(notification.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(groupMember.getGroupMemberStatus()).isEqualTo(GroupMemberStatus.LEFT);
+        assertThat(record.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(myComment.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(recordComment.getStatus()).isEqualTo(Status.INACTIVE);
+    }
+
+    @Test
+    @DisplayName("그룹 구성원 조회 시 참여 중인 회원만 반환한다.")
+    void getGroupMembers() {
+        MypageService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(modyGroupRepository.findById(100L)).willReturn(Optional.of(new ModyGroup(100L, "ABC123", "모디")));
+        given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            1L,
+            100L,
+            GroupMemberStatus.JOINED
+        )).willReturn(true);
+        given(groupMemberRepository.findByGroupIdAndGroupMemberStatusAndDeletedAtIsNullOrderByJoinedAtAsc(
+            100L,
+            GroupMemberStatus.JOINED
+        )).willReturn(List.of(new GroupMember(
+            20L,
+            2L,
+            100L,
+            "도윤",
+            "profiles/member-2.jpg",
+            LocalDateTime.now()
+        )));
+
+        MypageService.GroupMemberListResult result = service.getGroupMembers(1L, 100L);
+
+        assertThat(result.members()).hasSize(1);
+        assertThat(result.members().get(0).nickname()).isEqualTo("도윤");
+    }
+
+    @Test
+    @DisplayName("그룹 나가기 시 멤버십과 해당 그룹 안의 기록/댓글을 논리 삭제한다.")
+    void leaveGroup() {
+        MypageService service = service();
+        GroupMember groupMember = new GroupMember(20L, 1L, 100L, LocalDateTime.now());
+        ActivityRecord record = mealRecord(30L, 1L, 100L);
+        RecordComment myComment = new RecordComment(31L, 200L, 1L, "내 댓글");
+        RecordComment recordComment = new RecordComment(32L, 30L, 2L, "기록 댓글");
+
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(groupMemberRepository.findByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            1L,
+            100L,
+            GroupMemberStatus.JOINED
+        )).willReturn(Optional.of(groupMember));
+        given(activityRecordRepository.findByMemberIdAndGroupIdAndDeletedAtIsNull(1L, 100L)).willReturn(List.of(record));
+        given(recordCommentRepository.findByRecordIdInAndDeletedAtIsNull(List.of(30L))).willReturn(List.of(recordComment));
+        given(recordCommentRepository.findActiveCommentsByMemberIdAndGroupId(1L, 100L)).willReturn(List.of(myComment));
+
+        service.leaveGroup(1L, 100L);
+
+        assertThat(groupMember.getGroupMemberStatus()).isEqualTo(GroupMemberStatus.LEFT);
+        assertThat(record.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(myComment.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(recordComment.getStatus()).isEqualTo(Status.INACTIVE);
+    }
+
     private MypageService service() {
         return new MypageService(
             idGenerator,
             memberRepository,
             socialAccountRepository,
             weightRecordRepository,
-            notificationPreferenceService
+            notificationPreferenceService,
+            refreshTokenRepository,
+            groupMemberRepository,
+            modyGroupRepository,
+            notificationSettingRepository,
+            exerciseScheduleRepository,
+            notificationRepository,
+            activityRecordRepository,
+            recordCommentRepository
         );
     }
 
@@ -267,6 +419,18 @@ class MypageServiceTest {
                 new NotificationPreferenceService.ExerciseScheduleResult(DayOfWeek.WEDNESDAY, LocalTime.of(20, 0)),
                 new NotificationPreferenceService.ExerciseScheduleResult(DayOfWeek.FRIDAY, LocalTime.of(9, 0))
             )
+        );
+    }
+
+    private ActivityRecord mealRecord(Long id, Long memberId, Long groupId) {
+        return ActivityRecord.meal(
+            id,
+            memberId,
+            groupId,
+            LocalTime.of(8, 0),
+            "샐러드",
+            "records/meal.jpg",
+            LocalDateTime.now()
         );
     }
 }
