@@ -72,7 +72,8 @@ public class MypageController {
     }
 
     @DeleteMapping("/me")
-    public ApiResponse<Void> deleteMe() {
+    public ApiResponse<Void> deleteMe(@Parameter(hidden = true) @CurrentMember Long memberId) {
+        mypageService.deleteMe(memberId);
         return ApiResponse.ok();
     }
 
@@ -136,14 +137,20 @@ public class MypageController {
     }
 
     @GetMapping("/groups/{groupId}/members")
-    public ApiResponse<GroupMemberListResponse> getGroupMembers(@PathVariable Long groupId) {
-        return ApiResponse.ok(new GroupMemberListResponse(List.of(
-            new GroupMemberResponse(1L, "민석", "profiles/member-1.jpg")
-        )));
+    public ApiResponse<GroupMemberListResponse> getGroupMembers(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long groupId
+    ) {
+        MypageService.GroupMemberListResult result = mypageService.getGroupMembers(memberId, groupId);
+        return ApiResponse.ok(GroupMemberListResponse.from(result));
     }
 
     @DeleteMapping("/groups/{groupId}/members/me")
-    public ApiResponse<Void> leaveGroup(@PathVariable Long groupId) {
+    public ApiResponse<Void> leaveGroup(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long groupId
+    ) {
+        mypageService.leaveGroup(memberId, groupId);
         return ApiResponse.ok();
     }
 
@@ -370,8 +377,16 @@ public class MypageController {
     }
 
     public record GroupMemberListResponse(List<GroupMemberResponse> members) {
+        public static GroupMemberListResponse from(MypageService.GroupMemberListResult result) {
+            return new GroupMemberListResponse(result.members().stream()
+                .map(GroupMemberResponse::from)
+                .toList());
+        }
     }
 
     public record GroupMemberResponse(Long memberId, String nickname, String profileImageUrl) {
+        public static GroupMemberResponse from(MypageService.GroupMemberResult result) {
+            return new GroupMemberResponse(result.memberId(), result.nickname(), result.profileImageUrl());
+        }
     }
 }

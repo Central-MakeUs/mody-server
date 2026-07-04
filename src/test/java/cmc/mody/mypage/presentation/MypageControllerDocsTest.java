@@ -25,6 +25,8 @@ import cmc.mody.mypage.application.MypageService.ExerciseScheduleCommand;
 import cmc.mody.mypage.application.MypageService.ExerciseScheduleResult;
 import cmc.mody.mypage.application.MypageService.ExerciseScheduleUpdateCommand;
 import cmc.mody.mypage.application.MypageService.ExerciseScheduleUpdateResult;
+import cmc.mody.mypage.application.MypageService.GroupMemberListResult;
+import cmc.mody.mypage.application.MypageService.GroupMemberResult;
 import cmc.mody.mypage.application.MypageService.MealScheduleResult;
 import cmc.mody.mypage.application.MypageService.MealTimeUpdateCommand;
 import cmc.mody.mypage.application.MypageService.MealTimeUpdateResult;
@@ -386,13 +388,16 @@ class MypageControllerDocsTest {
 
     @Test
     void deleteMe() throws Exception {
-        mockMvc.perform(delete("/api/v1/mypage/me"))
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(delete("/api/v1/mypage/me")
+                .header("Authorization", "Bearer access-token"))
             .andExpect(status().isOk())
             .andDo(document("mypage-delete-me",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
-                    .summary("[미구현] 회원 탈퇴")
-                    .description("현재 회원을 탈퇴 처리한다.")
+                    .summary("회원 탈퇴")
+                    .description(MYPAGE_DESCRIPTION)
                     .responseFields(commonResponseFields())
                     .build())
             ));
@@ -581,13 +586,20 @@ class MypageControllerDocsTest {
 
     @Test
     void getGroupMembers() throws Exception {
-        mockMvc.perform(get("/api/v1/mypage/groups/{groupId}/members", 1L))
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(mypageService.getGroupMembers(1L, 100L))
+            .willReturn(new GroupMemberListResult(List.of(
+                new GroupMemberResult(2L, "도윤", "profiles/member-2.jpg")
+            )));
+
+        mockMvc.perform(get("/api/v1/mypage/groups/{groupId}/members", 100L)
+                .header("Authorization", "Bearer access-token"))
             .andExpect(status().isOk())
             .andDo(document("mypage-group-members",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
-                    .summary("[미구현] 그룹 구성원 조회")
-                    .description("마이페이지에서 그룹 구성원 정보를 조회한다.")
+                    .summary("그룹 구성원 조회")
+                    .description(MYPAGE_DESCRIPTION)
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.members[].memberId").type(JsonFieldType.NUMBER).description("회원 id"),
                         fieldWithPath("result.members[].nickname").type(JsonFieldType.STRING).description("닉네임"),
@@ -601,16 +613,58 @@ class MypageControllerDocsTest {
 
     @Test
     void leaveGroup() throws Exception {
-        mockMvc.perform(delete("/api/v1/mypage/groups/{groupId}/members/me", 1L))
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(delete("/api/v1/mypage/groups/{groupId}/members/me", 100L)
+                .header("Authorization", "Bearer access-token"))
             .andExpect(status().isOk())
             .andDo(document("mypage-group-leave",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
-                    .summary("[미구현] 그룹 나가기")
-                    .description("마이페이지에서 현재 회원이 그룹을 나간다.")
+                    .summary("그룹 나가기")
+                    .description(MYPAGE_DESCRIPTION)
                     .responseFields(commonResponseFields())
                     .build())
             ));
+    }
+
+    @Test
+    void getGroupMembersGroupNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_NOT_FOUND))
+            .given(mypageService)
+            .getGroupMembers(1L, 100L);
+
+        mockMvc.perform(get("/api/v1/mypage/groups/{groupId}/members", 100L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("mypage-group-members-group-not-found", "그룹 구성원 조회"));
+    }
+
+    @Test
+    void getGroupMembersGroupMemberNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND))
+            .given(mypageService)
+            .getGroupMembers(1L, 100L);
+
+        mockMvc.perform(get("/api/v1/mypage/groups/{groupId}/members", 100L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("mypage-group-members-member-not-found", "그룹 구성원 조회"));
+    }
+
+    @Test
+    void leaveGroupGroupMemberNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND))
+            .given(mypageService)
+            .leaveGroup(1L, 100L);
+
+        mockMvc.perform(delete("/api/v1/mypage/groups/{groupId}/members/me", 100L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("mypage-group-leave-member-not-found", "그룹 나가기"));
     }
 
     private static Stream<MypageEndpoint> authenticatedMypageEndpoints() {
@@ -701,6 +755,21 @@ class MypageControllerDocsTest {
                           ]
                         }
                         """)
+            ),
+            new MypageEndpoint(
+                "mypage-delete-me",
+                "회원 탈퇴",
+                () -> delete("/api/v1/mypage/me")
+            ),
+            new MypageEndpoint(
+                "mypage-group-members",
+                "그룹 구성원 조회",
+                () -> get("/api/v1/mypage/groups/{groupId}/members", 100L)
+            ),
+            new MypageEndpoint(
+                "mypage-group-leave",
+                "그룹 나가기",
+                () -> delete("/api/v1/mypage/groups/{groupId}/members/me", 100L)
             )
         );
     }
@@ -734,6 +803,15 @@ class MypageControllerDocsTest {
             case "mypage-meal-times-update" -> willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
                 .given(mypageService)
                 .updateMealTimes(eq(1L), any(MealTimeUpdateCommand.class));
+            case "mypage-delete-me" -> willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
+                .given(mypageService)
+                .deleteMe(1L);
+            case "mypage-group-members" -> willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
+                .given(mypageService)
+                .getGroupMembers(1L, 100L);
+            case "mypage-group-leave" -> willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
+                .given(mypageService)
+                .leaveGroup(1L, 100L);
             default -> throw new IllegalArgumentException(
                 "지원하지 않는 마이페이지 문서 prefix입니다."
             );
