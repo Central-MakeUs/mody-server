@@ -6,7 +6,7 @@
 | --- | --- |
 | 상태 | Accepted |
 | Issue | #42 |
-| 관련 ADR | ADR-0007 |
+| 관련 ADR | ADR-0007, ADR-0014 |
 | 작성자 | Codex |
 | 작성일 | 2026-07-01 |
 
@@ -21,6 +21,7 @@
 
 - 월 단위 식사/운동 기록 존재 여부 조회.
 - 날짜별 식사/운동 기록 커서 페이징 조회.
+- 날짜별 기록 조회에서 작성자별 현재 연속 기록 일수 응답.
 - 그룹 참여 여부 검증.
 - 삭제 처리된 기록과 그룹에서 나간 회원의 기록 제외.
 - Swagger 성공/예외 응답 명세 보강.
@@ -43,6 +44,7 @@ GET /api/v1/groups/{groupId}/records?date=2026-07-01&cursor=100&size=20
 
 기록 목록 응답은 최신순이며 `nextCursor`는 마지막 record id다.
 다음 페이지는 `cursor={nextCursor}`로 요청한다.
+각 기록에는 해당 작성자의 `recordingStreakDays`를 함께 응답한다.
 
 ## 4. 데이터 모델
 
@@ -66,6 +68,7 @@ GET /api/v1/groups/{groupId}/records?date=2026-07-01&cursor=100&size=20
    정렬은 `id desc`를 사용한다.
 6. 커서가 있으면 `record.id < cursor` 조건을 추가한다.
 7. `size + 1`개를 조회해 `hasNext`와 `nextCursor`를 계산한다.
+8. 응답에 포함된 작성자별로 조회 기준일 이전 기록 날짜를 확인해 현재 연속 기록 일수를 계산한다.
 
 ## 6. 예외 / 에러 처리
 
@@ -79,6 +82,7 @@ GET /api/v1/groups/{groupId}/records?date=2026-07-01&cursor=100&size=20
 
 - [x] 그룹 참여 회원이 월 단위 활동 여부를 조회할 수 있다.
 - [x] 그룹 참여 회원이 날짜별 기록 목록을 커서 기반으로 조회할 수 있다.
+- [x] 날짜별 기록 목록에서 작성자별 현재 연속 기록 일수를 확인할 수 있다.
 - [x] 삭제 처리된 기록과 현재 그룹원이 아닌 작성자의 기록은 조회되지 않는다.
 - [x] Swagger에 성공/주요 예외 응답이 반영된다.
 - [x] 서비스 단위 테스트가 주요 분기를 검증한다.
@@ -86,6 +90,7 @@ GET /api/v1/groups/{groupId}/records?date=2026-07-01&cursor=100&size=20
 ## 8. 영향 범위 / 마이그레이션
 
 - `ActivityRecordService`에 조회 기능이 추가된다.
+- 기록 목록 응답에 `recordingStreakDays`가 추가된다.
 - `ActivityRecordRepository`에 피드 조회용 JPQL query가 추가된다.
 - 기존 기록 상세/댓글 API stub은 이번 범위에서 유지한다.
 
@@ -99,4 +104,5 @@ GET /api/v1/groups/{groupId}/records?date=2026-07-01&cursor=100&size=20
 ## 10. 참고
 
 - `docs/adr/ADR-0007-cursor-pagination-strategy.md`
+- `docs/adr/ADR-0014-record-streak-calculation.md`
 - `docs/lld/LLD-0012-activity-record-create-api.md`

@@ -144,8 +144,7 @@ public class MypageService {
             notificationPreferenceService.updateReminderFlags(
                 memberId,
                 new NotificationPreferenceService.ReminderFlagCommand(
-                    command.mealReminderEnabled(),
-                    command.exerciseReminderEnabled(),
+                    command.recordReminderEnabled(),
                     command.commentNotificationEnabled(),
                     command.challengeNotificationEnabled()
                 )
@@ -359,16 +358,14 @@ public class MypageService {
     }
 
     public record NotificationSettingCommand(
-        boolean mealReminderEnabled,
-        boolean exerciseReminderEnabled,
+        boolean recordReminderEnabled,
         boolean commentNotificationEnabled,
         boolean challengeNotificationEnabled
     ) {
     }
 
     public record NotificationSettingResult(
-        boolean mealReminderEnabled,
-        boolean exerciseReminderEnabled,
+        boolean recordReminderEnabled,
         boolean commentNotificationEnabled,
         boolean challengeNotificationEnabled,
         List<MealScheduleResult> mealSchedules,
@@ -378,8 +375,7 @@ public class MypageService {
             NotificationPreferenceService.NotificationPreferenceResult result
         ) {
             return new NotificationSettingResult(
-                result.mealReminderEnabled(),
-                result.exerciseReminderEnabled(),
+                result.recordReminderEnabled(),
                 result.commentNotificationEnabled(),
                 result.challengeNotificationEnabled(),
                 result.mealSchedules().stream()

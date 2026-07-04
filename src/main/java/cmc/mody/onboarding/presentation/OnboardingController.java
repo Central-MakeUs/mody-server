@@ -258,40 +258,15 @@ public class OnboardingController {
     }
 
     public record NotificationSetupRequest(
-        boolean mealReminderEnabled,
-        @NotNull(message = "식사 설정은 필수입니다.")
-        @Size(min = 3, max = 3, message = "식사 설정은 아침, 점심, 저녁 3개를 입력해주세요.")
-        List<@Valid MealScheduleRequest> mealSchedules,
-        boolean exerciseReminderEnabled,
-        LocalTime exerciseReminderTime
+        boolean recordReminderEnabled,
+        boolean commentNotificationEnabled,
+        boolean challengeNotificationEnabled
     ) {
-        @JsonIgnore
-        @AssertTrue(message = "식사 설정은 아침, 점심, 저녁을 각각 1개씩 입력해주세요.")
-        public boolean isMealTypesValid() {
-            if (mealSchedules == null) {
-                return true;
-            }
-            Set<MealType> mealTypes = mealSchedules.stream()
-                .map(MealScheduleRequest::mealType)
-                .filter(Objects::nonNull)
-                .collect(() -> EnumSet.noneOf(MealType.class), Set::add, Set::addAll);
-            return mealTypes.equals(EnumSet.allOf(MealType.class));
-        }
-
-        @JsonIgnore
-        @AssertTrue(message = "운동 알림을 켜면 운동 알림 시간을 입력해주세요.")
-        public boolean isExerciseReminderTimeValid() {
-            return !exerciseReminderEnabled || exerciseReminderTime != null;
-        }
-
         public NotificationSetupCommand toCommand() {
             return new NotificationSetupCommand(
-                mealReminderEnabled,
-                mealSchedules.stream()
-                    .map(MealScheduleRequest::toCommand)
-                    .toList(),
-                exerciseReminderEnabled,
-                exerciseReminderTime
+                recordReminderEnabled,
+                commentNotificationEnabled,
+                challengeNotificationEnabled
             );
         }
     }

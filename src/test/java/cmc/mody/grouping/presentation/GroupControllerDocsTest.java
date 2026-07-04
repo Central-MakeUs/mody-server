@@ -210,8 +210,8 @@ class GroupControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(groupService.getGroupMembers(1L, 10L))
             .willReturn(new GroupMemberListResult(List.of(
-                new GroupMemberResult(1L, "민석", "profiles/member-1.jpg"),
-                new GroupMemberResult(2L, "친구", "profiles/member-2.jpg")
+                new GroupMemberResult(1L, "민석", "profiles/member-1.jpg", 0),
+                new GroupMemberResult(2L, "친구", "profiles/member-2.jpg", 3)
             )));
 
         mockMvc.perform(get("/api/v1/groups/{groupId}/members", 10L)
@@ -230,7 +230,10 @@ class GroupControllerDocsTest {
                         fieldWithPath("result.members[].nickname").type(JsonFieldType.STRING).description("닉네임"),
                         fieldWithPath("result.members[].profileImageUrl")
                             .type(JsonFieldType.STRING)
-                            .description("프로필 이미지 URL")
+                            .description("프로필 이미지 URL"),
+                        fieldWithPath("result.members[].unreadRecordCount")
+                            .type(JsonFieldType.NUMBER)
+                            .description("현재 로그인 회원 기준 미확인 기록 수")
                     ))
                     .build())
             ));

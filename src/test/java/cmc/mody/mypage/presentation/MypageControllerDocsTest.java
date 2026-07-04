@@ -434,8 +434,7 @@ class MypageControllerDocsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "mealReminderEnabled": true,
-                      "exerciseReminderEnabled": true,
+                      "recordReminderEnabled": true,
                       "commentNotificationEnabled": true,
                       "challengeNotificationEnabled": true
                     }
@@ -447,8 +446,9 @@ class MypageControllerDocsTest {
                     .summary("알림 설정 수정")
                     .description(MYPAGE_DESCRIPTION)
                     .requestFields(
-                        fieldWithPath("mealReminderEnabled").type(JsonFieldType.BOOLEAN).description("식사 알림 여부"),
-                        fieldWithPath("exerciseReminderEnabled").type(JsonFieldType.BOOLEAN).description("운동 알림 여부"),
+                        fieldWithPath("recordReminderEnabled")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("식사/운동 기록 알림 여부"),
                         fieldWithPath("commentNotificationEnabled")
                             .type(JsonFieldType.BOOLEAN)
                             .description("코멘트 알림 여부"),
@@ -719,8 +719,7 @@ class MypageControllerDocsTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("""
                         {
-                          "mealReminderEnabled": true,
-                          "exerciseReminderEnabled": true,
+                          "recordReminderEnabled": true,
                           "commentNotificationEnabled": true,
                           "challengeNotificationEnabled": true
                         }
@@ -831,8 +830,9 @@ class MypageControllerDocsTest {
 
     private FieldDescriptor[] notificationSettingResponseFields() {
         return new FieldDescriptor[]{
-            fieldWithPath("result.mealReminderEnabled").type(JsonFieldType.BOOLEAN).description("식사 알림 여부"),
-            fieldWithPath("result.exerciseReminderEnabled").type(JsonFieldType.BOOLEAN).description("운동 알림 여부"),
+            fieldWithPath("result.recordReminderEnabled")
+                .type(JsonFieldType.BOOLEAN)
+                .description("식사/운동 기록 알림 여부"),
             fieldWithPath("result.commentNotificationEnabled")
                 .type(JsonFieldType.BOOLEAN)
                 .description("코멘트 알림 여부"),
@@ -868,7 +868,6 @@ class MypageControllerDocsTest {
 
     private NotificationSettingResult notificationSettingResult() {
         return new NotificationSettingResult(
-            true,
             true,
             true,
             true,

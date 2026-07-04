@@ -39,7 +39,7 @@
 모든 API는 `Authorization: Bearer {accessToken}`을 사용한다.
 
 ```http
-GET /api/v1/notifications
+GET /api/v1/notifications?cursor=100&size=20
 PATCH /api/v1/notifications/{notificationId}/read
 ```
 
@@ -56,7 +56,9 @@ PATCH /api/v1/notifications/{notificationId}/read
       "createdAt": "2026-07-04T10:00:00",
       "read": false
     }
-  ]
+  ],
+  "nextCursor": null,
+  "hasNext": false
 }
 ```
 
@@ -78,8 +80,9 @@ PATCH /api/v1/notifications/{notificationId}/read
 1. `@CurrentMember`가 access token에서 회원 id를 추출한다.
 2. 활성 회원인지 검증한다.
 3. `receiver_member_id`가 현재 회원이고 `deletedAt is null`인 알림을 조회한다.
-4. 최신 생성 순으로 응답한다.
+4. `id desc` 커서 기반으로 `size + 1`개를 조회한다.
 5. `notification_status == READ`이면 `read=true`로 응답한다.
+6. 다음 페이지가 있으면 마지막 알림 id를 `nextCursor`로 응답한다.
 
 ### 알림 읽음 처리
 

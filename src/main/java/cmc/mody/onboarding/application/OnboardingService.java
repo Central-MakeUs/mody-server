@@ -62,16 +62,15 @@ public class OnboardingService {
     @Transactional
     public NotificationSetupResult setupNotifications(Long memberId, NotificationSetupCommand command) {
         getMember(memberId);
-        NotificationSetting notificationSetting = notificationPreferenceService.saveInitialNotificationSetting(
+        NotificationSetting notificationSetting = notificationPreferenceService.saveInitialReminderFlags(
             memberId,
-            command.mealReminderEnabled(),
-            command.mealSchedules().stream()
-                .map(MealScheduleCommand::toPreferenceCommand)
-                .toList(),
-            command.exerciseReminderEnabled(),
-            command.exerciseReminderTime()
+            new NotificationPreferenceService.ReminderFlagCommand(
+                command.recordReminderEnabled(),
+                command.commentNotificationEnabled(),
+                command.challengeNotificationEnabled()
+            )
         );
-        return new NotificationSetupResult(notificationSetting.getId(), true);
+        return new NotificationSetupResult(notificationSetting.getId(), command.recordReminderEnabled());
     }
 
     @Transactional
@@ -152,10 +151,9 @@ public class OnboardingService {
     }
 
     public record NotificationSetupCommand(
-        boolean mealReminderEnabled,
-        List<MealScheduleCommand> mealSchedules,
-        boolean exerciseReminderEnabled,
-        LocalTime exerciseReminderTime
+        boolean recordReminderEnabled,
+        boolean commentNotificationEnabled,
+        boolean challengeNotificationEnabled
     ) {
     }
 

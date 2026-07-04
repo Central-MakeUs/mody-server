@@ -49,8 +49,7 @@ PUT /api/v1/mypage/exercise-schedules
 
 ```json
 {
-  "mealReminderEnabled": true,
-  "exerciseReminderEnabled": true,
+  "recordReminderEnabled": true,
   "commentNotificationEnabled": true,
   "challengeNotificationEnabled": true
 }
@@ -84,6 +83,7 @@ PUT /api/v1/mypage/exercise-schedules
 
 - `notification_setting`
   - `meal_reminder_enabled`, `exercise_reminder_enabled`
+    - API에서는 `recordReminderEnabled` 하나로 노출하고 두 DB 필드에 같은 값을 저장한다.
   - `comment_notification_enabled`, `challenge_notification_enabled`
   - `breakfast_time`, `lunch_time`, `dinner_time`
 - `exercise_schedule`
@@ -96,7 +96,7 @@ PUT /api/v1/mypage/exercise-schedules
 1. `@CurrentMember`가 access token에서 회원 id를 추출한다.
 2. 마이페이지 서비스는 활성 회원인지 검증한다.
 3. `NotificationPreferenceService`가 알림 설정과 운동 일정을 조회/저장한다.
-4. 알림 on/off 수정은 시간표를 변경하지 않는다.
+4. 알림 on/off 수정은 시간표를 변경하지 않고 기록 알림 수신 여부를 하나의 값으로 저장한다.
 5. 식사 시간 수정은 아침/점심/저녁 3개를 모두 받아 `notification_setting`의 식사 시간만 갱신한다.
 6. 운동 일정 수정은 기존 활성 운동 일정을 soft delete 후 새 일정 목록을 저장한다.
 
