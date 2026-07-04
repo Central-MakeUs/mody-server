@@ -115,6 +115,7 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
           and record.deletedAt is null
           and record.uploadedAt >= :startAt
           and record.uploadedAt < :endAt
+          and (:cursor is null or record.id > :cursor)
           and (
               (:groupId is null and record.groupId is null)
               or record.groupId = :groupId
@@ -130,9 +131,42 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
                     and groupMember.deletedAt is null
               )
           )
-        order by record.uploadedAt asc, record.id asc
+        order by record.id asc
         """)
     List<ActivityRecord> findActiveRecordsForDetailCarousel(
+        @Param("groupId") Long groupId,
+        @Param("memberId") Long memberId,
+        @Param("startAt") LocalDateTime startAt,
+        @Param("endAt") LocalDateTime endAt,
+        @Param("cursor") Long cursor,
+        @Param("joinedStatus") GroupMemberStatus joinedStatus,
+        org.springframework.data.domain.Pageable pageable
+    );
+
+    @Query("""
+        select count(record)
+        from ActivityRecord record
+        where record.memberId = :memberId
+          and record.deletedAt is null
+          and record.uploadedAt >= :startAt
+          and record.uploadedAt < :endAt
+          and (
+              (:groupId is null and record.groupId is null)
+              or record.groupId = :groupId
+          )
+          and (
+              :groupId is null
+              or exists (
+                  select 1
+                  from GroupMember groupMember
+                  where groupMember.groupId = record.groupId
+                    and groupMember.memberId = record.memberId
+                    and groupMember.groupMemberStatus = :joinedStatus
+                    and groupMember.deletedAt is null
+              )
+          )
+        """)
+    long countActiveRecordsForDetailCarousel(
         @Param("groupId") Long groupId,
         @Param("memberId") Long memberId,
         @Param("startAt") LocalDateTime startAt,

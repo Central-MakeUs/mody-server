@@ -115,12 +115,12 @@ public class ActivityRecordService {
     }
 
     @Transactional
-    public RecordDetailPageResult getRecordDetail(Long memberId, Long recordId) {
+    public RecordDetailPageResult getRecordDetail(Long memberId, Long recordId, Long cursor, int size) {
         Member member = getMember(memberId);
         ActivityRecord record = getAccessibleRecord(memberId, recordId);
 
         if (record.getGroupId() == null) {
-            return toPersonalRecordDetailPage(member, record);
+            return toPersonalRecordDetailPage(member, record, cursor, size);
         }
 
         Map<Long, GroupMember> groupMembers = getJoinedGroupMembers(record.getGroupId());
@@ -132,6 +132,8 @@ public class ActivityRecordService {
 
         return toRecordDetailPage(
             record,
+            cursor,
+            size,
             recordWriter.getDisplayNickname(),
             recordWriter.getDisplayProfileImageKey()
         );
@@ -235,26 +237,45 @@ public class ActivityRecordService {
         return record;
     }
 
-    private RecordDetailPageResult toPersonalRecordDetailPage(Member member, ActivityRecord record) {
-        return toRecordDetailPage(record, member.getNickname(), member.getProfileImageKey());
+    private RecordDetailPageResult toPersonalRecordDetailPage(Member member, ActivityRecord record, Long cursor, int size) {
+        return toRecordDetailPage(record, cursor, size, member.getNickname(), member.getProfileImageKey());
     }
 
     private RecordDetailPageResult toRecordDetailPage(
         ActivityRecord record,
+        Long cursor,
+        int size,
         String nickname,
         String profileImageKey
     ) {
         LocalDate recordDate = record.getUploadedAt().toLocalDate();
-        List<RecordDetailResult> records = activityRecordRepository.findActiveRecordsForDetailCarousel(
-                record.getGroupId(),
-                record.getMemberId(),
-                recordDate.atStartOfDay(),
-                recordDate.plusDays(1).atStartOfDay(),
-                GroupMemberStatus.JOINED
-            )
-            .stream()
+        int pageSize = normalizeSize(size);
+        Long queryCursor = (cursor == null) ? record.getId() - 1 : cursor;
+
+        List<ActivityRecord> foundRecords = activityRecordRepository.findActiveRecordsForDetailCarousel(
+            record.getGroupId(),
+            record.getMemberId(),
+            recordDate.atStartOfDay(),
+            recordDate.plusDays(1).atStartOfDay(),
+            queryCursor,
+            GroupMemberStatus.JOINED,
+            PageRequest.of(0, pageSize + 1)
+        );
+
+        boolean hasNext = foundRecords.size() > pageSize;
+        List<ActivityRecord> pageRecords = hasNext ? foundRecords.subList(0, pageSize) : foundRecords;
+
+        List<RecordDetailResult> records = pageRecords.stream()
             .map(found -> toRecordDetail(found, nickname, profileImageKey))
             .toList();
+
+        long totalCount = activityRecordRepository.countActiveRecordsForDetailCarousel(
+            record.getGroupId(),
+            record.getMemberId(),
+            recordDate.atStartOfDay(),
+            recordDate.plusDays(1).atStartOfDay(),
+            GroupMemberStatus.JOINED
+        );
 
         int currentIndex = -1;
         for (int index = 0; index < records.size(); index++) {
@@ -264,9 +285,12 @@ public class ActivityRecordService {
             }
         }
         if (currentIndex < 0) {
-            throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
+            currentIndex = 0;
         }
-        return new RecordDetailPageResult(records.size(), currentIndex, records);
+
+        Long nextCursor = hasNext ? records.get(records.size() - 1).recordId() : null;
+
+        return new RecordDetailPageResult((int) totalCount, currentIndex, records, nextCursor, hasNext);
     }
 
     private RecordDetailResult toRecordDetail(ActivityRecord record, String nickname, String profileImageKey) {
@@ -495,7 +519,9 @@ public class ActivityRecordService {
     public record RecordDetailPageResult(
         int totalCount,
         int currentIndex,
-        List<RecordDetailResult> records
+        List<RecordDetailResult> records,
+        Long nextCursor,
+        boolean hasNext
     ) {
     }
 

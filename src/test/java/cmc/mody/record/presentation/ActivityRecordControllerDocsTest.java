@@ -4,6 +4,8 @@ import static cmc.mody.docs.ApiDocumentUtils.commonResponseFields;
 import static com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.document;
 import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
@@ -256,7 +258,7 @@ class ActivityRecordControllerDocsTest {
     @Test
     void getRecordDetail() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
-        given(activityRecordService.getRecordDetail(1L, 1L))
+        given(activityRecordService.getRecordDetail(1L, 1L, null, 20))
             .willReturn(new RecordDetailPageResult(
                 2,
                 0,
@@ -285,47 +287,56 @@ class ActivityRecordControllerDocsTest {
                         "러닝",
                         "https://storage.example.com/records/1/2026/07/exercise.jpg"
                     )
-                )
+                ),
+                2L,
+                false
             ));
 
         mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+                .param("size", "20")
                 .header("Authorization", "Bearer access-token"))
             .andExpect(status().isOk())
             .andDo(document("record-detail",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
                     .summary("기록 상세 조회")
-                    .description("선택한 기록 작성자의 해당 날짜 기록 목록을 조회한다. 앱은 records와 currentIndex로 캐러셀을 구성한다.")
+                    .description("선택한 기록 작성자의 해당 날짜 기록 목록을 커서 페이징으로 조회한다. 앱은 records와 currentIndex로 캐러셀을 구성한다.")
+                    .queryParameters(
+                        parameterWithName("cursor").optional().description("이전 페이지의 마지막 기록 id (최초 조회 시 생략)"),
+                        parameterWithName("size").optional().description("페이지 크기 (기본값: 20)")
+                    )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.totalCount").type(JsonFieldType.NUMBER).description("캐러셀 전체 기록 수"),
                         fieldWithPath("result.currentIndex")
-                            .type(JsonFieldType.NUMBER)
-                            .description("현재 선택된 기록의 0-based 인덱스"),
+                             .type(JsonFieldType.NUMBER)
+                             .description("현재 선택된 기록의 0-based 인덱스"),
                         fieldWithPath("result.records[].recordId").type(JsonFieldType.NUMBER).description("기록 id"),
                         fieldWithPath("result.records[].recordType")
-                            .type(JsonFieldType.STRING)
-                            .description("기록 타입: MEAL, EXERCISE"),
+                             .type(JsonFieldType.STRING)
+                             .description("기록 타입: MEAL, EXERCISE"),
                         fieldWithPath("result.records[].memberId").type(JsonFieldType.NUMBER).description("작성자 id"),
                         fieldWithPath("result.records[].nickname").type(JsonFieldType.STRING).description("작성자 닉네임"),
                         fieldWithPath("result.records[].profileImageUrl")
-                            .type(JsonFieldType.STRING)
-                            .description("작성자 프로필 이미지"),
+                             .type(JsonFieldType.STRING)
+                             .description("작성자 프로필 이미지"),
                         fieldWithPath("result.records[].recordedTime").type(JsonFieldType.STRING).description("기록 시간"),
                         fieldWithPath("result.records[].menu")
-                            .type(JsonFieldType.VARIES)
-                            .optional()
-                            .description("메뉴명. 운동 기록이면 null"),
+                             .type(JsonFieldType.VARIES)
+                             .optional()
+                             .description("메뉴명. 운동 기록이면 null"),
                         fieldWithPath("result.records[].exerciseDurationMinutes")
-                            .type(JsonFieldType.VARIES)
-                            .optional()
-                            .description("운동 시간(분). 식사 기록이면 null"),
+                             .type(JsonFieldType.VARIES)
+                             .optional()
+                             .description("운동 시간(분). 식사 기록이면 null"),
                         fieldWithPath("result.records[].exerciseName")
-                            .type(JsonFieldType.VARIES)
-                            .optional()
-                            .description("운동명. 식사 기록이면 null"),
+                             .type(JsonFieldType.VARIES)
+                             .optional()
+                             .description("운동명. 식사 기록이면 null"),
                         fieldWithPath("result.records[].imageUrl")
-                            .type(JsonFieldType.STRING)
-                            .description("기록 이미지 URL")
+                             .type(JsonFieldType.STRING)
+                             .description("기록 이미지 URL"),
+                        fieldWithPath("result.nextCursor").type(JsonFieldType.NUMBER).optional().description("다음 페이지용 커서 id (더 이상 없으면 null)"),
+                        fieldWithPath("result.hasNext").type(JsonFieldType.BOOLEAN).description("다음 페이지 존재 여부")
                     ))
                     .build())
             ));
@@ -402,7 +413,7 @@ class ActivityRecordControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.RECORD_NOT_FOUND))
             .given(activityRecordService)
-            .getRecordDetail(1L, 1L);
+            .getRecordDetail(anyLong(), anyLong(), any(), anyInt());
 
         mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
                 .header("Authorization", "Bearer access-token"))
@@ -415,7 +426,7 @@ class ActivityRecordControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
             .given(activityRecordService)
-            .getRecordDetail(1L, 1L);
+            .getRecordDetail(anyLong(), anyLong(), any(), anyInt());
 
         mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
                 .header("Authorization", "Bearer access-token"))
@@ -428,7 +439,7 @@ class ActivityRecordControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.GROUP_NOT_FOUND))
             .given(activityRecordService)
-            .getRecordDetail(1L, 1L);
+            .getRecordDetail(anyLong(), anyLong(), any(), anyInt());
 
         mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
                 .header("Authorization", "Bearer access-token"))
@@ -441,7 +452,7 @@ class ActivityRecordControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND))
             .given(activityRecordService)
-            .getRecordDetail(1L, 1L);
+            .getRecordDetail(anyLong(), anyLong(), any(), anyInt());
 
         mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
                 .header("Authorization", "Bearer access-token"))

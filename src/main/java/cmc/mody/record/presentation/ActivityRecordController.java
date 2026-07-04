@@ -77,9 +77,11 @@ public class ActivityRecordController {
     @GetMapping("/records/{recordId}")
     public ApiResponse<RecordDetailResponse> getRecordDetail(
         @Parameter(hidden = true) @CurrentMember Long memberId,
-        @PathVariable Long recordId
+        @PathVariable Long recordId,
+        @RequestParam(required = false) Long cursor,
+        @RequestParam(defaultValue = "20") int size
     ) {
-        ActivityRecordService.RecordDetailPageResult result = activityRecordService.getRecordDetail(memberId, recordId);
+        ActivityRecordService.RecordDetailPageResult result = activityRecordService.getRecordDetail(memberId, recordId, cursor, size);
         return ApiResponse.ok(RecordDetailResponse.from(result));
     }
 
@@ -182,7 +184,9 @@ public class ActivityRecordController {
     public record RecordDetailResponse(
         int totalCount,
         int currentIndex,
-        List<RecordDetailItemResponse> records
+        List<RecordDetailItemResponse> records,
+        Long nextCursor,
+        boolean hasNext
     ) {
         public static RecordDetailResponse from(ActivityRecordService.RecordDetailPageResult result) {
             return new RecordDetailResponse(
@@ -190,7 +194,9 @@ public class ActivityRecordController {
                 result.currentIndex(),
                 result.records().stream()
                     .map(RecordDetailItemResponse::from)
-                    .toList()
+                    .toList(),
+                result.nextCursor(),
+                result.hasNext()
             );
         }
     }

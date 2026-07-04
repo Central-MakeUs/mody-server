@@ -26,6 +26,7 @@ import cmc.mody.record.domain.RecordViewHistory;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
 import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
+import org.springframework.data.domain.PageRequest;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -199,13 +200,22 @@ class ActivityRecordServiceTest {
             1L,
             LocalDateTime.of(2026, 7, 1, 0, 0),
             LocalDateTime.of(2026, 7, 2, 0, 0),
-            GroupMemberStatus.JOINED
+            99L,
+            GroupMemberStatus.JOINED,
+            PageRequest.of(0, 21)
         ))
             .willReturn(List.of(
                 mealRecord(99L, LocalDateTime.of(2026, 7, 1, 8, 0)),
                 mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30)),
                 exerciseRecord(101L, LocalDateTime.of(2026, 7, 1, 20, 0))
             ));
+        given(activityRecordRepository.countActiveRecordsForDetailCarousel(
+            10L,
+            1L,
+            LocalDateTime.of(2026, 7, 1, 0, 0),
+            LocalDateTime.of(2026, 7, 2, 0, 0),
+            GroupMemberStatus.JOINED
+        )).willReturn(3L);
         given(recordViewHistoryRepository.findByViewerMemberIdAndGroupIdAndWriterMemberIdAndDeletedAtIsNull(
             1L,
             10L,
@@ -215,7 +225,7 @@ class ActivityRecordServiceTest {
         given(recordViewHistoryRepository.save(any(RecordViewHistory.class)))
             .willAnswer(invocation -> invocation.getArgument(0));
 
-        ActivityRecordService.RecordDetailPageResult result = service.getRecordDetail(1L, 100L);
+        ActivityRecordService.RecordDetailPageResult result = service.getRecordDetail(1L, 100L, null, 20);
 
         assertThat(result.totalCount()).isEqualTo(3);
         assertThat(result.currentIndex()).isEqualTo(1);
@@ -297,7 +307,7 @@ class ActivityRecordServiceTest {
             GroupMemberStatus.JOINED
         )).willReturn(List.of());
 
-        assertThatThrownBy(() -> service.getRecordDetail(1L, 100L))
+        assertThatThrownBy(() -> service.getRecordDetail(1L, 100L, null, 20))
             .isInstanceOfSatisfying(GeneralException.class, exception ->
                 assertThat(exception.getStatus()).isEqualTo(ErrorStatus.RECORD_NOT_FOUND));
     }
