@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 @Table(
         name = "mody_group",
         indexes = {
-                @Index(name = "idx_mody_group_code", columnList = "code")
+                @Index(name = "idx_mody_group_code", columnList = "code", unique = true)
         }
 )
 public class ModyGroup extends BaseEntity {

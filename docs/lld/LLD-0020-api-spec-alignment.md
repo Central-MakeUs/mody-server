@@ -119,6 +119,16 @@ GET /api/v1/groups/{groupId}/members
 현재 로그인 회원이 해당 구성원의 기록 상세에 마지막으로 진입한 시각 이후 올라온 기록 수다.
 본인 행은 `0`으로 응답한다.
 
+### 기록 상세 캐러셀 조회
+
+```http
+GET /api/v1/records/{recordId}?cursor=100&size=20
+```
+
+응답은 `totalCount`, `currentIndex`, `records`, `nextCursor`, `hasNext`를 포함한다.
+최초 조회 시(`cursor == null`), 타겟 `recordId`가 첫 페이지의 맨 처음 인덱스(`currentIndex = 0`)로 노출되도록 `record.id >= recordId` 조건으로 쿼리한다.
+이후 `nextCursor`를 사용해 다음 페이지 목록을 연속으로 캐러셀 스크롤할 수 있다.
+
 ### 알림 목록 조회
 
 ```http
@@ -149,6 +159,7 @@ GET /api/v1/notifications?cursor=100&size=20
 4. 기록 상세 진입 시 그룹 기록이면 `record_view_history`를 생성하거나 `last_viewed_at`을 갱신한다.
 5. 그룹원 조회는 `record_view_history.last_viewed_at` 이후의 활성 기록 수를 `unreadRecordCount`로 응답한다.
 6. 알림 목록은 `size + 1`개를 조회해 `hasNext`와 `nextCursor`를 계산한다.
+7. 기록 상세 캐러셀 조회는 `size + 1`개를 조회해 `hasNext`와 `nextCursor`를 계산한다. 최초 조회(`cursor == null`) 시에는 타겟 `recordId`가 첫 페이지의 맨 처음(`currentIndex = 0`)에 위치하도록 `record.id >= recordId`로 필터링하며, `totalCount`는 해당 날짜 전체 글 수를 별도 쿼리한다.
 
 ### 5.1 연속 기록 일수 계산
 
