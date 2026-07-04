@@ -1,4 +1,4 @@
-# ADR-0013: 알림 배치와 스케줄러 운영 전략
+# ADR-0016: 알림 배치와 스케줄러 운영 전략
 
 ## 상태
 
@@ -27,7 +27,8 @@ Accepted
 - 그룹 연속 기록 위험 알림 생성은 `notification.streak-risk.*` 설정을 사용한다.
 - 알림 보관 기간 정리는 `notification.retention.*` 설정을 사용한다.
 - 중복 생성은 notification row의 `dedupeKey`로 방지한다.
-- 다중 인스턴스 발송 중복은 `PROCESSING`, `pickedBy`, `pickedAt` 선점 상태로 방지한다.
+- 다중 인스턴스 발송 중복은 `FOR UPDATE SKIP LOCKED`로 due 알림을 선점한 뒤
+  `PROCESSING`, `pickedBy`, `pickedAt` 상태를 저장해 방지한다.
 - FCM token 단위 응답에서 `UNREGISTERED` 또는 token 단위 `INVALID_ARGUMENT`가 오면 해당 token을 비활성화한다.
 - 운영 부하가 커지면 외부 큐/워커 또는 외부 스케줄러로 분리한다.
 
@@ -56,6 +57,7 @@ Accepted
 - 알림 발송과 생성 배치를 API 응답 흐름에서 분리할 수 있다.
 - 배치별 환경변수로 dev/prod에서 점진적으로 켤 수 있다.
 - dedupe key와 선점 상태로 중복 생성/중복 발송을 제어할 수 있다.
+- 여러 워커가 동시에 실행되어도 이미 잠긴 알림 row를 기다리지 않고 건너뛰므로 락 대기를 줄일 수 있다.
 - FCM invalid token을 즉시 비활성화해 불필요한 재발송을 줄일 수 있다.
 - 현재 단일 애플리케이션 배포 구조와 맞아 초기 운영 부담이 낮다.
 

@@ -15,8 +15,10 @@ import cmc.mody.notification.application.NotificationRequestService;
 import cmc.mody.record.domain.ActivityRecord;
 import cmc.mody.record.domain.RecordComment;
 import cmc.mody.record.domain.RecordType;
+import cmc.mody.record.domain.RecordViewHistory;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
+import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -44,6 +46,7 @@ public class ActivityRecordService {
     private final GroupMemberRepository groupMemberRepository;
     private final ActivityRecordRepository activityRecordRepository;
     private final RecordCommentRepository recordCommentRepository;
+    private final RecordViewHistoryRepository recordViewHistoryRepository;
     private final UploadProperties uploadProperties;
     private final NotificationRequestService notificationRequestService;
 
@@ -95,14 +98,25 @@ public class ActivityRecordService {
         boolean hasNext = records.size() > pageSize;
         List<ActivityRecord> pageRecords = hasNext ? records.subList(0, pageSize) : records;
         Map<Long, GroupMember> groupMembers = getJoinedGroupMembers(groupId);
+        Map<Long, Integer> streakDaysByMember = pageRecords.stream()
+            .map(ActivityRecord::getMemberId)
+            .distinct()
+            .collect(Collectors.toMap(
+                Function.identity(),
+                writerId -> calculateRecordingStreakDays(groupId, writerId, date)
+            ));
         List<RecordSummaryResult> summaries = pageRecords.stream()
-            .map(record -> toRecordSummary(record, groupMembers.get(record.getMemberId())))
+            .map(record -> toRecordSummary(
+                record,
+                groupMembers.get(record.getMemberId()),
+                streakDaysByMember.getOrDefault(record.getMemberId(), 0)
+            ))
             .toList();
         Long nextCursor = hasNext ? pageRecords.get(pageRecords.size() - 1).getId() : null;
         return new RecordCursorResult(summaries, nextCursor, hasNext);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public RecordDetailPageResult getRecordDetail(Long memberId, Long recordId) {
         Member member = getMember(memberId);
         ActivityRecord record = getAccessibleRecord(memberId, recordId);
@@ -116,6 +130,7 @@ public class ActivityRecordService {
         if (recordWriter == null) {
             throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
         }
+        updateRecordViewHistory(memberId, record);
 
         return toRecordDetailPage(
             record,
@@ -327,7 +342,57 @@ public class ActivityRecordService {
             .collect(Collectors.toMap(GroupMember::getMemberId, Function.identity(), (left, right) -> left));
     }
 
-    private RecordSummaryResult toRecordSummary(ActivityRecord record, GroupMember groupMember) {
+    private int calculateRecordingStreakDays(Long groupId, Long writerMemberId, LocalDate baseDate) {
+        List<LocalDate> recordedDates = activityRecordRepository.findActiveGroupRecordsByMemberBefore(
+                groupId,
+                writerMemberId,
+                baseDate.plusDays(1).atStartOfDay(),
+                GroupMemberStatus.JOINED
+            )
+            .stream()
+            .map(found -> found.getUploadedAt().toLocalDate())
+            .distinct()
+            .toList();
+
+        int streakDays = 0;
+        LocalDate expectedDate = baseDate;
+        for (LocalDate recordedDate : recordedDates) {
+            if (recordedDate.isAfter(expectedDate)) {
+                continue;
+            }
+            if (!recordedDate.equals(expectedDate)) {
+                break;
+            }
+            streakDays++;
+            expectedDate = expectedDate.minusDays(1);
+        }
+        return streakDays;
+    }
+
+    private void updateRecordViewHistory(Long viewerMemberId, ActivityRecord record) {
+        recordViewHistoryRepository
+            .findByViewerMemberIdAndGroupIdAndWriterMemberIdAndDeletedAtIsNull(
+                viewerMemberId,
+                record.getGroupId(),
+                record.getMemberId()
+            )
+            .ifPresentOrElse(
+                history -> history.updateLastViewedAt(LocalDateTime.now()),
+                () -> recordViewHistoryRepository.save(new RecordViewHistory(
+                    idGenerator.nextId(),
+                    viewerMemberId,
+                    record.getGroupId(),
+                    record.getMemberId(),
+                    LocalDateTime.now()
+                ))
+            );
+    }
+
+    private RecordSummaryResult toRecordSummary(
+        ActivityRecord record,
+        GroupMember groupMember,
+        int recordingStreakDays
+    ) {
         return new RecordSummaryResult(
             record.getId(),
             record.getRecordType(),
@@ -338,7 +403,8 @@ public class ActivityRecordService {
             record.getMenu(),
             record.getExerciseDurationMinutes(),
             record.getExerciseName(),
-            toImageUrl(record.getImageKey())
+            toImageUrl(record.getImageKey()),
+            recordingStreakDays
         );
     }
 
@@ -424,7 +490,8 @@ public class ActivityRecordService {
         String menu,
         Integer exerciseDurationMinutes,
         String exerciseName,
-        String imageUrl
+        String imageUrl,
+        int recordingStreakDays
     ) {
     }
 

@@ -146,26 +146,24 @@ class OnboardingServiceTest {
     void setupNotifications() {
         OnboardingService service = service();
         given(memberRepository.findById(1L)).willReturn(Optional.of(Member.oauthMember(1L, "temp", null)));
-        given(notificationPreferenceService.saveInitialNotificationSetting(eq(1L), eq(true), any(), eq(true), any()))
+        given(notificationPreferenceService.saveInitialReminderFlags(
+            eq(1L),
+            any(NotificationPreferenceService.ReminderFlagCommand.class)
+        ))
             .willReturn(new NotificationSetting(20L, 1L));
 
         OnboardingService.NotificationSetupResult result = service.setupNotifications(
             1L,
             new NotificationSetupCommand(
                 true,
-                List.of(
-                    new MealScheduleCommand(MealType.BREAKFAST, LocalTime.of(8, 0), false),
-                    new MealScheduleCommand(MealType.LUNCH, null, true),
-                    new MealScheduleCommand(MealType.DINNER, LocalTime.of(18, 0), false)
-                ),
-                true,
-                LocalTime.of(20, 0)
+                false,
+                true
             )
         );
 
         assertThat(result).isEqualTo(new OnboardingService.NotificationSetupResult(20L, true));
         then(notificationPreferenceService).should()
-            .saveInitialNotificationSetting(eq(1L), eq(true), any(), eq(true), eq(LocalTime.of(20, 0)));
+            .saveInitialReminderFlags(eq(1L), any(NotificationPreferenceService.ReminderFlagCommand.class));
     }
 
     @Test

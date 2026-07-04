@@ -23,8 +23,10 @@ import cmc.mody.record.application.ActivityRecordService.RecordCreateResult;
 import cmc.mody.record.domain.ActivityRecord;
 import cmc.mody.record.domain.RecordComment;
 import cmc.mody.record.domain.RecordType;
+import cmc.mody.record.domain.RecordViewHistory;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
+import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -63,11 +65,17 @@ class ActivityRecordServiceTest {
     @Mock
     private NotificationRequestService notificationRequestService;
 
+    @Mock
+    private RecordViewHistoryRepository recordViewHistoryRepository;
+
     @Captor
     private ArgumentCaptor<ActivityRecord> activityRecordCaptor;
 
     @Captor
     private ArgumentCaptor<RecordComment> recordCommentCaptor;
+
+    @Captor
+    private ArgumentCaptor<RecordViewHistory> recordViewHistoryCaptor;
 
     @Test
     @DisplayName("월별 활동 여부는 해당 월 전체 날짜의 기록 여부를 반환한다.")
@@ -141,6 +149,15 @@ class ActivityRecordServiceTest {
             "profiles/member-1.jpg",
             LocalDateTime.of(2026, 6, 1, 0, 0)
         )));
+        given(activityRecordRepository.findActiveGroupRecordsByMemberBefore(
+            10L,
+            1L,
+            LocalDateTime.of(2026, 7, 2, 0, 0),
+            GroupMemberStatus.JOINED
+        )).willReturn(List.of(
+            mealRecord(103L, LocalDateTime.of(2026, 7, 1, 12, 30)),
+            exerciseRecord(90L, LocalDateTime.of(2026, 6, 30, 20, 0))
+        ));
 
         ActivityRecordService.RecordCursorResult result = service.getRecords(
             1L,
@@ -158,6 +175,7 @@ class ActivityRecordServiceTest {
         assertThat(firstRecord.nickname()).isEqualTo("민석");
         assertThat(firstRecord.profileImageUrl()).isEqualTo("https://storage.example.com/profiles/member-1.jpg");
         assertThat(firstRecord.imageUrl()).isEqualTo("https://storage.example.com/records/1/2026/07/meal.jpg");
+        assertThat(firstRecord.recordingStreakDays()).isEqualTo(2);
     }
 
     @Test
@@ -192,6 +210,14 @@ class ActivityRecordServiceTest {
                 mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30)),
                 exerciseRecord(101L, LocalDateTime.of(2026, 7, 1, 20, 0))
             ));
+        given(recordViewHistoryRepository.findByViewerMemberIdAndGroupIdAndWriterMemberIdAndDeletedAtIsNull(
+            1L,
+            10L,
+            1L
+        )).willReturn(Optional.empty());
+        given(idGenerator.nextId()).willReturn(300L);
+        given(recordViewHistoryRepository.save(any(RecordViewHistory.class)))
+            .willAnswer(invocation -> invocation.getArgument(0));
 
         ActivityRecordService.RecordDetailPageResult result = service.getRecordDetail(1L, 100L);
 
@@ -204,6 +230,10 @@ class ActivityRecordServiceTest {
             .isEqualTo("https://storage.example.com/profiles/member-1.jpg");
         assertThat(result.records().get(1).imageUrl()).isEqualTo("https://storage.example.com/records/1/2026/07/meal.jpg");
         assertThat(result.records().get(2).recordType()).isEqualTo(RecordType.EXERCISE);
+        then(recordViewHistoryRepository).should().save(recordViewHistoryCaptor.capture());
+        assertThat(recordViewHistoryCaptor.getValue().getViewerMemberId()).isEqualTo(1L);
+        assertThat(recordViewHistoryCaptor.getValue().getGroupId()).isEqualTo(10L);
+        assertThat(recordViewHistoryCaptor.getValue().getWriterMemberId()).isEqualTo(1L);
     }
 
     @Test
@@ -452,6 +482,7 @@ class ActivityRecordServiceTest {
             groupMemberRepository,
             activityRecordRepository,
             recordCommentRepository,
+            recordViewHistoryRepository,
             new UploadProperties(),
             notificationRequestService
         );

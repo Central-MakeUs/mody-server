@@ -6,7 +6,7 @@
 | --- | --- |
 | 상태 | Accepted |
 | Issue | #52 |
-| 관련 ADR | ADR-0012, ADR-0013 |
+| 관련 ADR | ADR-0012, ADR-0016 |
 | 작성자 | Codex |
 | 작성일 | 2026-07-04 |
 
@@ -277,8 +277,8 @@ BUDDY_NUDGE:DATE:senderMemberId:receiverMemberId:yyyyMMdd
 
 처리:
 
-1. due 알림을 `PROCESSING`으로 변경한다.
-2. `picked_by`, `picked_at`을 현재 서버 id와 시각으로 저장한다.
+1. due 알림을 `FOR UPDATE SKIP LOCKED`로 조회해 현재 트랜잭션에서 잠근다.
+2. 잠근 알림을 `PROCESSING`, `picked_by`, `picked_at`으로 변경한 뒤 커밋한다.
 3. 선점한 알림 id를 `NotificationSender.sendAsync(id)`로 넘긴다.
 
 MySQL 8.0에서는 `FOR UPDATE SKIP LOCKED` 기반 선점 쿼리를 사용한다.

@@ -20,7 +20,7 @@
 ### In scope
 
 - 체중 입력 API 실제 저장.
-- 식사/운동 알림 설정 API 실제 저장.
+- 기록/댓글/챌린지 알림 수신 여부 실제 저장.
 - 건강 앱 연동 상태 저장.
 - 온보딩 그룹 참여/생성 API를 기존 `GroupService`로 위임.
 - Swagger 성공/주요 예외 응답 명세 보강.
@@ -55,8 +55,10 @@ POST /api/v1/onboarding/groups
 - `weight_record`
   - 현재 체중과 이전 기록 대비 증감 값을 저장한다.
 - `notification_setting`
-  - 식사 알림 enabled 및 아침/점심/저녁 시간을 저장한다.
-  - 운동 알림 enabled 및 단일 운동 알림 시간을 저장한다.
+  - 기록 알림 수신 여부는 API에서 `recordReminderEnabled` 하나로 받고,
+    내부 `meal_reminder_enabled`, `exercise_reminder_enabled`에는 같은 값을 저장한다.
+  - 댓글/챌린지 알림 수신 여부를 저장한다.
+  - 식사 시간은 통합 프로필 입력 또는 마이페이지 식사 시간 수정 API에서 저장한다.
 - `exercise_schedule`
   - 통합 프로필 입력 시 요일별 운동 일정을 저장한다.
 
@@ -67,7 +69,7 @@ POST /api/v1/onboarding/groups
 1. `@CurrentMember`가 access token에서 회원 id를 추출한다.
 2. 활성 회원을 조회한다.
 3. 체중 입력은 `member.target_weight_kg`를 갱신하고 `weight_record`를 추가한다.
-4. 알림 설정은 기존 `notification_setting`이 있으면 갱신하고, 없으면 생성한다.
+4. 알림 설정은 수신 여부만 변경하고 식사 시간/운동 일정은 변경하지 않는다.
 5. 건강 앱 연동은 `member.health_connection_status`를 갱신한다.
 6. 그룹 참여/생성은 `GroupService`에 위임한다.
 

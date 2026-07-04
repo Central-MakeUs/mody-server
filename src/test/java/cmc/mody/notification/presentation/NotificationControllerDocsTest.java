@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
 import static org.springframework.restdocs.payload.PayloadDocumentation.requestFields;
+import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -80,7 +81,7 @@ class NotificationControllerDocsTest {
     @Test
     void getNotifications() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
-        given(notificationService.getNotifications(1L)).willReturn(new NotificationListResult(List.of(
+        given(notificationService.getNotifications(1L, null, 20)).willReturn(new NotificationListResult(List.of(
             new NotificationResult(
                 10L,
                 NotificationType.COMMENT,
@@ -89,23 +90,30 @@ class NotificationControllerDocsTest {
                 LocalDateTime.of(2026, 7, 4, 10, 0),
                 false
             )
-        )));
+        ), 10L, true));
 
         mockMvc.perform(get("/api/v1/notifications")
-                .header("Authorization", "Bearer access-token"))
+                .header("Authorization", "Bearer access-token")
+                .param("size", "20"))
             .andExpect(status().isOk())
             .andDo(document("notification-list",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Notification")
                     .summary("알림 리스트 조회")
                     .description(NOTIFICATION_DESCRIPTION)
+                    .queryParameters(
+                        parameterWithName("cursor").optional().description("다음 페이지 커서"),
+                        parameterWithName("size").description("조회 개수")
+                    )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.notifications[].notificationId").type(JsonFieldType.NUMBER).description("알림 id"),
                         fieldWithPath("result.notifications[].type").type(JsonFieldType.STRING).description("알림 종류"),
                         fieldWithPath("result.notifications[].title").type(JsonFieldType.STRING).description("제목"),
                         fieldWithPath("result.notifications[].description").type(JsonFieldType.STRING).description("설명"),
                         fieldWithPath("result.notifications[].createdAt").type(JsonFieldType.STRING).description("생성 일시"),
-                        fieldWithPath("result.notifications[].read").type(JsonFieldType.BOOLEAN).description("읽음 여부")
+                        fieldWithPath("result.notifications[].read").type(JsonFieldType.BOOLEAN).description("읽음 여부"),
+                        fieldWithPath("result.nextCursor").type(JsonFieldType.NUMBER).description("다음 커서"),
+                        fieldWithPath("result.hasNext").type(JsonFieldType.BOOLEAN).description("다음 페이지 존재 여부")
                     ))
                     .build())
             ));
@@ -152,10 +160,11 @@ class NotificationControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
             .given(notificationService)
-            .getNotifications(1L);
+            .getNotifications(1L, null, 20);
 
         mockMvc.perform(get("/api/v1/notifications")
-                .header("Authorization", "Bearer access-token"))
+                .header("Authorization", "Bearer access-token")
+                .param("size", "20"))
             .andExpect(status().isNotFound())
             .andDo(documentError("notification-list-member-not-found", "알림 리스트 조회"));
     }

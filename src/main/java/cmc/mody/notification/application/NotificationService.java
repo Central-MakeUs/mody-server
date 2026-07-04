@@ -10,24 +10,33 @@ import cmc.mody.notification.infrastructure.repository.NotificationRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 50;
+
     private final MemberRepository memberRepository;
     private final NotificationRepository notificationRepository;
 
     @Transactional(readOnly = true)
-    public NotificationListResult getNotifications(Long memberId) {
+    public NotificationListResult getNotifications(Long memberId, Long cursor, int size) {
         getMember(memberId);
-        List<NotificationResult> notifications = notificationRepository
-            .findByReceiverMemberIdAndDeletedAtIsNullOrderByCreatedAtDescIdDesc(memberId)
+        int pageSize = normalizeSize(size);
+        List<Notification> notifications = notificationRepository
+            .findByReceiverMemberIdByCursor(memberId, cursor, PageRequest.of(0, pageSize + 1));
+        boolean hasNext = notifications.size() > pageSize;
+        List<Notification> pageNotifications = hasNext ? notifications.subList(0, pageSize) : notifications;
+        List<NotificationResult> results = pageNotifications
             .stream()
             .map(NotificationResult::from)
             .toList();
-        return new NotificationListResult(notifications);
+        Long nextCursor = hasNext ? pageNotifications.get(pageNotifications.size() - 1).getId() : null;
+        return new NotificationListResult(results, nextCursor, hasNext);
     }
 
     @Transactional
@@ -45,7 +54,14 @@ public class NotificationService {
             .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
     }
 
-    public record NotificationListResult(List<NotificationResult> notifications) {
+    private int normalizeSize(int size) {
+        if (size <= 0) {
+            return DEFAULT_PAGE_SIZE;
+        }
+        return Math.min(size, MAX_PAGE_SIZE);
+    }
+
+    public record NotificationListResult(List<NotificationResult> notifications, Long nextCursor, boolean hasNext) {
     }
 
     public record NotificationResult(

@@ -202,8 +202,7 @@ class MypageServiceTest {
 
         MypageService.NotificationSettingResult result = service.getNotificationSettings(1L);
 
-        assertThat(result.mealReminderEnabled()).isTrue();
-        assertThat(result.exerciseReminderEnabled()).isTrue();
+        assertThat(result.recordReminderEnabled()).isTrue();
         assertThat(result.mealSchedules()).hasSize(3);
         assertThat(result.exerciseSchedules()).hasSize(3);
     }
@@ -220,7 +219,7 @@ class MypageServiceTest {
 
         service.updateNotificationSettings(
             1L,
-            new MypageService.NotificationSettingCommand(true, true, false, true)
+            new MypageService.NotificationSettingCommand(true, false, true)
         );
 
         then(notificationPreferenceService).should().updateReminderFlags(
@@ -397,7 +396,6 @@ class MypageServiceTest {
 
     private NotificationPreferenceService.NotificationPreferenceResult preferences() {
         return new NotificationPreferenceService.NotificationPreferenceResult(
-            true,
             true,
             true,
             true,

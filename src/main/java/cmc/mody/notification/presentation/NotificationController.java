@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -34,9 +35,11 @@ public class NotificationController {
 
     @GetMapping
     public ApiResponse<NotificationListResponse> getNotifications(
-        @Parameter(hidden = true) @CurrentMember Long memberId
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @RequestParam(required = false) Long cursor,
+        @RequestParam(defaultValue = "20") int size
     ) {
-        NotificationService.NotificationListResult result = notificationService.getNotifications(memberId);
+        NotificationService.NotificationListResult result = notificationService.getNotifications(memberId, cursor, size);
         return ApiResponse.ok(NotificationListResponse.from(result));
     }
 
@@ -92,11 +95,11 @@ public class NotificationController {
         }
     }
 
-    public record NotificationListResponse(List<NotificationResponse> notifications) {
+    public record NotificationListResponse(List<NotificationResponse> notifications, Long nextCursor, boolean hasNext) {
         public static NotificationListResponse from(NotificationService.NotificationListResult result) {
             return new NotificationListResponse(result.notifications().stream()
                 .map(NotificationResponse::from)
-                .toList());
+                .toList(), result.nextCursor(), result.hasNext());
         }
     }
 
