@@ -64,6 +64,53 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
     @Query("""
         select record
         from ActivityRecord record
+        where record.groupId = :groupId
+          and record.memberId = :memberId
+          and record.deletedAt is null
+          and record.uploadedAt < :endAt
+          and exists (
+              select 1
+              from GroupMember groupMember
+              where groupMember.groupId = record.groupId
+                and groupMember.memberId = record.memberId
+                and groupMember.groupMemberStatus = :joinedStatus
+                and groupMember.deletedAt is null
+          )
+        order by record.uploadedAt desc, record.id desc
+        """)
+    List<ActivityRecord> findActiveGroupRecordsByMemberBefore(
+        @Param("groupId") Long groupId,
+        @Param("memberId") Long memberId,
+        @Param("endAt") LocalDateTime endAt,
+        @Param("joinedStatus") GroupMemberStatus joinedStatus
+    );
+
+    @Query("""
+        select count(record)
+        from ActivityRecord record
+        where record.groupId = :groupId
+          and record.memberId = :memberId
+          and record.deletedAt is null
+          and record.uploadedAt > :after
+          and exists (
+              select 1
+              from GroupMember groupMember
+              where groupMember.groupId = record.groupId
+                and groupMember.memberId = record.memberId
+                and groupMember.groupMemberStatus = :joinedStatus
+                and groupMember.deletedAt is null
+          )
+        """)
+    long countActiveGroupRecordsAfter(
+        @Param("groupId") Long groupId,
+        @Param("memberId") Long memberId,
+        @Param("after") LocalDateTime after,
+        @Param("joinedStatus") GroupMemberStatus joinedStatus
+    );
+
+    @Query("""
+        select record
+        from ActivityRecord record
         where record.memberId = :memberId
           and record.deletedAt is null
           and record.uploadedAt >= :startAt

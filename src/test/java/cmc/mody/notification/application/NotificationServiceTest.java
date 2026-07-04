@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.PageRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,20 +36,49 @@ class NotificationServiceTest {
     void getNotifications() {
         NotificationService service = service();
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
-        given(notificationRepository.findByReceiverMemberIdAndDeletedAtIsNullOrderByCreatedAtDescIdDesc(1L))
-            .willReturn(List.of(new Notification(
-                10L,
-                1L,
-                NotificationType.COMMENT,
-                "새 댓글",
-                "친구가 기록에 댓글을 남겼어요."
-            )));
+        given(notificationRepository.findByReceiverMemberIdByCursor(1L, null, PageRequest.of(0, 3)))
+            .willReturn(List.of(
+                new Notification(
+                    12L,
+                    1L,
+                    NotificationType.COMMENT,
+                    "새 댓글",
+                    "친구가 기록에 댓글을 남겼어요."
+                ),
+                new Notification(
+                    11L,
+                    1L,
+                    NotificationType.CHALLENGE,
+                    "챌린지",
+                    "이번주 챌린지를 완료했어요."
+                ),
+                new Notification(
+                    10L,
+                    1L,
+                    NotificationType.COMMENT,
+                    "새 댓글",
+                    "친구가 기록에 댓글을 남겼어요."
+                )
+            ));
 
-        NotificationService.NotificationListResult result = service.getNotifications(1L);
+        NotificationService.NotificationListResult result = service.getNotifications(1L, null, 2);
 
-        assertThat(result.notifications()).hasSize(1);
-        assertThat(result.notifications().get(0).notificationId()).isEqualTo(10L);
+        assertThat(result.notifications()).hasSize(2);
+        assertThat(result.notifications().get(0).notificationId()).isEqualTo(12L);
+        assertThat(result.nextCursor()).isEqualTo(11L);
+        assertThat(result.hasNext()).isTrue();
         assertThat(result.notifications().get(0).read()).isFalse();
+    }
+
+    @Test
+    @DisplayName("회원이 없으면 알림을 조회할 수 없다.")
+    void getNotificationsMemberNotFound() {
+        NotificationService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getNotifications(1L, null, 20))
+            .isInstanceOfSatisfying(GeneralException.class, exception ->
+                assertThat(exception.getStatus()).isEqualTo(ErrorStatus.MEMBER_NOT_FOUND));
     }
 
     @Test
@@ -56,11 +86,11 @@ class NotificationServiceTest {
     void readNotification() {
         NotificationService service = service();
         Notification notification = new Notification(
-            10L,
-            1L,
-            NotificationType.COMMENT,
-            "새 댓글",
-            "친구가 기록에 댓글을 남겼어요."
+                10L,
+                1L,
+                NotificationType.COMMENT,
+                "새 댓글",
+                "친구가 기록에 댓글을 남겼어요."
         );
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
         given(notificationRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(notification));
@@ -88,17 +118,6 @@ class NotificationServiceTest {
         assertThatThrownBy(() -> service.readNotification(1L, 10L))
             .isInstanceOfSatisfying(GeneralException.class, exception ->
                 assertThat(exception.getStatus()).isEqualTo(ErrorStatus.NOTIFICATION_NOT_FOUND));
-    }
-
-    @Test
-    @DisplayName("회원이 없으면 알림을 조회할 수 없다.")
-    void getNotificationsMemberNotFound() {
-        NotificationService service = service();
-        given(memberRepository.findById(1L)).willReturn(Optional.empty());
-
-        assertThatThrownBy(() -> service.getNotifications(1L))
-            .isInstanceOfSatisfying(GeneralException.class, exception ->
-                assertThat(exception.getStatus()).isEqualTo(ErrorStatus.MEMBER_NOT_FOUND));
     }
 
     private NotificationService service() {

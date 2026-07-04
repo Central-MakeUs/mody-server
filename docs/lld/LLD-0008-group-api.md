@@ -6,7 +6,7 @@
 | --- | --- |
 | 상태 | Accepted |
 | Issue | #30 |
-| 관련 ADR | ADR-0003 |
+| 관련 ADR | ADR-0003, ADR-0015 |
 | 작성자 | Codex |
 | 작성일 | 2026-06-28 |
 
@@ -26,6 +26,7 @@
 - 그룹당 참여 회원 최대 12명 제한.
 - 그룹 나가기는 `GroupMember` 논리 삭제로 처리.
 - 그룹 생성 또는 참여 성공 시 회원의 그룹 온보딩 완료 이력을 저장.
+- 그룹 구성원 조회 시 현재 로그인 회원 기준으로 각 구성원의 미확인 기록 수를 함께 응답.
 
 ### Out of scope
 
@@ -70,6 +71,11 @@ DELETE /api/v1/groups/{groupId}/members/me
   - `group_member_status`: `JOINED`, `LEFT`.
   - `display_nickname`, `display_profile_image_key`: 그룹 내 노출용 회원 정보 스냅샷.
   - `joined_at`, `left_at`: 그룹 참여/탈퇴 시각.
+- `record_view_history`
+  - `viewer_member_id`: 기록을 확인한 회원 id.
+  - `group_id`: 그룹 id.
+  - `writer_member_id`: 기록 작성자 회원 id.
+  - `last_viewed_at`: 해당 작성자의 그룹 기록 상세에 마지막으로 진입한 시각.
 - `member`
   - `group_onboarding_completed`: 그룹 생성 또는 참여를 한 번이라도 완료했는지 여부.
     그룹을 모두 나가도 유지해 로그인 후 라우팅 분기에 사용한다.
@@ -88,6 +94,8 @@ DELETE /api/v1/groups/{groupId}/members/me
 8. 그룹 생성 또는 참여 성공 시 `member.group_onboarding_completed=true`로 변경한다.
 9. 그룹 나가기는 `group_member_status=LEFT`, `left_at`, `deleted_at`, `status=INACTIVE`로 처리한다.
    `group_onboarding_completed`는 변경하지 않는다.
+10. 그룹 구성원 조회 시 각 구성원별로 `record_view_history.last_viewed_at` 이후 생성된 활성 기록 수를 계산한다.
+    본인 행은 읽음 배지 대상이 아니므로 `unreadRecordCount=0`으로 응답한다.
 
 ## 6. 예외 / 에러 처리
 
@@ -107,6 +115,7 @@ DELETE /api/v1/groups/{groupId}/members/me
 - [x] 인증 회원이 그룹을 생성하면 생성자가 그룹 구성원으로 저장된다.
 - [x] 인증 회원이 그룹 코드로 그룹에 참여할 수 있다.
 - [x] 인증 회원이 참여 중인 그룹 목록과 구성원 목록을 조회할 수 있다.
+- [x] 구성원 목록에서 현재 로그인 회원 기준 미확인 기록 수를 확인할 수 있다.
 - [x] 인증 회원이 그룹에서 나갈 수 있다.
 - [x] 그룹 생성 또는 참여 성공 시 그룹 온보딩 완료 이력이 저장된다.
 - [x] 회원당 참여 그룹은 최대 4개로 제한된다.
@@ -117,8 +126,9 @@ DELETE /api/v1/groups/{groupId}/members/me
 ## 8. 영향 범위 / 마이그레이션
 
 - `grouping` 패키지에 service/repository가 추가된다.
+- 그룹원 조회 응답에 `unreadRecordCount`가 추가된다.
 - 기존 그룹 API stub 응답은 DB 기반 구현으로 교체된다.
-- 새 테이블은 기존 엔티티 `mody_group`, `group_member`를 사용한다.
+- 새 테이블은 기존 엔티티 `mody_group`, `group_member`와 `record_view_history`를 사용한다.
 
 ## 9. 미결정 사항 (Open Questions)
 
@@ -127,3 +137,4 @@ DELETE /api/v1/groups/{groupId}/members/me
 ## 10. 참고
 
 - `docs/erd/ERD-0001-initial-domain-model.md`
+- `docs/adr/ADR-0015-group-member-unread-record-count.md`

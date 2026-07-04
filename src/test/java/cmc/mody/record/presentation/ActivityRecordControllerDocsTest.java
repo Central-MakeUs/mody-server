@@ -130,7 +130,8 @@ class ActivityRecordControllerDocsTest {
                     "샐러드",
                     null,
                     null,
-                    "https://storage.example.com/records/1/2026/07/meal.jpg"
+                    "https://storage.example.com/records/1/2026/07/meal.jpg",
+                    4
                 )),
                 null,
                 false
@@ -178,6 +179,9 @@ class ActivityRecordControllerDocsTest {
                         fieldWithPath("result.records[].imageUrl")
                             .type(JsonFieldType.STRING)
                             .description("기록 이미지 URL"),
+                        fieldWithPath("result.records[].recordingStreakDays")
+                            .type(JsonFieldType.NUMBER)
+                            .description("작성자의 기준 날짜 연속 기록 일수"),
                         fieldWithPath("result.nextCursor").type(JsonFieldType.NULL).description("다음 커서"),
                         fieldWithPath("result.hasNext")
                             .type(JsonFieldType.BOOLEAN)
@@ -653,14 +657,18 @@ class ActivityRecordControllerDocsTest {
                             .type(JsonFieldType.STRING)
                             .optional()
                             .description("식사 시간. MEAL일 때 필수"),
-                        fieldWithPath("menu")
-                            .type(JsonFieldType.STRING)
-                            .optional()
-                            .description("메뉴명. MEAL일 때 필수"),
-                        fieldWithPath("exerciseDurationMinutes")
-                            .type(JsonFieldType.NUMBER)
-                            .optional()
-                            .description("운동 시간(분). EXERCISE일 때 필수"),
+	                        fieldWithPath("menu")
+	                            .type(JsonFieldType.STRING)
+	                            .optional()
+	                            .description("메뉴명. MEAL일 때 필수"),
+	                        fieldWithPath("exerciseDurationHours")
+	                            .type(JsonFieldType.NUMBER)
+	                            .optional()
+	                            .description("운동 시간(시). EXERCISE일 때 분과 합산해 1분 이상 필요"),
+	                        fieldWithPath("exerciseDurationMinutes")
+	                            .type(JsonFieldType.NUMBER)
+	                            .optional()
+	                            .description("운동 시간(분). 0~59"),
                         fieldWithPath("exerciseName")
                             .type(JsonFieldType.STRING)
                             .optional()
@@ -685,12 +693,13 @@ class ActivityRecordControllerDocsTest {
                 .content("""
                     {
                       "groupId": 1,
-                      "recordType": "EXERCISE",
-                      "imageKey": "records/1/2026/07/4111584723969.jpg",
-                      "mealTime": null,
-                      "menu": null,
-                      "exerciseDurationMinutes": 40,
-                      "exerciseName": "러닝"
+	                      "recordType": "EXERCISE",
+	                      "imageKey": "records/1/2026/07/4111584723969.jpg",
+	                      "mealTime": null,
+	                      "menu": null,
+	                      "exerciseDurationHours": 0,
+	                      "exerciseDurationMinutes": 40,
+	                      "exerciseName": "러닝"
                     }
                     """))
             .andExpect(status().isCreated())
@@ -738,10 +747,13 @@ class ActivityRecordControllerDocsTest {
                 .content("""
                     {
                       "groupId": 1,
-                      "recordType": "UNKNOWN",
-                      "imageKey": "records/1/2026/07/4111584723968.jpg",
-                      "mealTime": "12:30",
-                      "menu": "샐러드"
+	                      "recordType": "UNKNOWN",
+	                      "imageKey": "records/1/2026/07/4111584723968.jpg",
+	                      "mealTime": "12:30",
+	                      "menu": "샐러드",
+	                      "exerciseDurationHours": null,
+	                      "exerciseDurationMinutes": null,
+	                      "exerciseName": null
                     }
                     """))
             .andExpect(status().isBadRequest())
@@ -941,6 +953,7 @@ class ActivityRecordControllerDocsTest {
                   "imageKey": "records/1/2026/07/4111584723968.jpg",
                   "mealTime": "12:30",
                   "menu": "샐러드",
+                  "exerciseDurationHours": null,
                   "exerciseDurationMinutes": null,
                   "exerciseName": null
                 }

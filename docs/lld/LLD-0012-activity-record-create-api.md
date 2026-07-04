@@ -47,6 +47,7 @@ POST /api/v1/records
   "imageKey": "records/1/2026/07/4111584723968.jpg",
   "mealTime": "12:30",
   "menu": "샐러드",
+  "exerciseDurationHours": null,
   "exerciseDurationMinutes": null,
   "exerciseName": null
 }
@@ -61,6 +62,7 @@ POST /api/v1/records
   "imageKey": "records/1/2026/07/4111584723969.jpg",
   "mealTime": null,
   "menu": null,
+  "exerciseDurationHours": 0,
   "exerciseDurationMinutes": 40,
   "exerciseName": "러닝"
 }
@@ -74,6 +76,7 @@ POST /api/v1/records
   - `record_type`: `MEAL`, `EXERCISE`.
   - `meal_time`, `menu`: 식사 기록 전용 필드.
   - `exercise_duration_minutes`, `exercise_name`: 운동 기록 전용 필드.
+    API에서는 시간/분을 분리해 받고 서버는 총 분으로 환산해 저장한다.
   - `image_key`: Presigned URL 발급 결과로 받은 스토리지 객체 키.
   - `uploaded_at`: 서버 저장 시각.
 
