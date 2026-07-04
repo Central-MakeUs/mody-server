@@ -7,11 +7,9 @@ import cmc.mody.member.domain.Member;
 import cmc.mody.member.domain.WeightRecord;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.member.infrastructure.repository.WeightRecordRepository;
-import cmc.mody.notification.domain.ExerciseSchedule;
+import cmc.mody.notification.application.NotificationPreferenceService;
 import cmc.mody.notification.domain.MealType;
 import cmc.mody.notification.domain.NotificationSetting;
-import cmc.mody.notification.infrastructure.repository.ExerciseScheduleRepository;
-import cmc.mody.notification.infrastructure.repository.NotificationSettingRepository;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -27,8 +25,7 @@ public class OnboardingService {
     private final IdGenerator idGenerator;
     private final MemberRepository memberRepository;
     private final WeightRecordRepository weightRecordRepository;
-    private final NotificationSettingRepository notificationSettingRepository;
-    private final ExerciseScheduleRepository exerciseScheduleRepository;
+    private final NotificationPreferenceService notificationPreferenceService;
 
     @Transactional
     public ProfileSetupResult setupProfile(Long memberId, ProfileSetupCommand command) {
@@ -40,10 +37,12 @@ public class OnboardingService {
 
         member.completeProfile(command.nickname(), command.birthDate(), command.targetWeightKg());
         WeightRecord weightRecord = saveWeightRecord(memberId, command.currentWeightKg());
-        saveNotificationSetting(
+        notificationPreferenceService.saveInitialNotificationSetting(
             memberId,
             hasMealReminder(command.mealSchedules()),
-            command.mealSchedules(),
+            command.mealSchedules().stream()
+                .map(MealScheduleCommand::toPreferenceCommand)
+                .toList(),
             true,
             null
         );
@@ -63,10 +62,12 @@ public class OnboardingService {
     @Transactional
     public NotificationSetupResult setupNotifications(Long memberId, NotificationSetupCommand command) {
         getMember(memberId);
-        NotificationSetting notificationSetting = saveNotificationSetting(
+        NotificationSetting notificationSetting = notificationPreferenceService.saveInitialNotificationSetting(
             memberId,
             command.mealReminderEnabled(),
-            command.mealSchedules(),
+            command.mealSchedules().stream()
+                .map(MealScheduleCommand::toPreferenceCommand)
+                .toList(),
             command.exerciseReminderEnabled(),
             command.exerciseReminderTime()
         );
@@ -101,54 +102,18 @@ public class OnboardingService {
         ));
     }
 
-    private NotificationSetting saveNotificationSetting(
-        Long memberId,
-        boolean mealReminderEnabled,
-        List<MealScheduleCommand> mealSchedules,
-        boolean exerciseReminderEnabled,
-        LocalTime exerciseReminderTime
-    ) {
-        LocalTime breakfastTime = findMealTime(mealSchedules, MealType.BREAKFAST);
-        LocalTime lunchTime = findMealTime(mealSchedules, MealType.LUNCH);
-        LocalTime dinnerTime = findMealTime(mealSchedules, MealType.DINNER);
-
-        NotificationSetting notificationSetting = notificationSettingRepository
-            .findByMemberIdAndDeletedAtIsNull(memberId)
-            .orElseGet(() -> new NotificationSetting(idGenerator.nextId(), memberId));
-        notificationSetting.updateMealAndExercise(
-            mealReminderEnabled,
-            breakfastTime,
-            lunchTime,
-            dinnerTime,
-            exerciseReminderEnabled,
-            exerciseReminderTime
-        );
-        return notificationSettingRepository.save(notificationSetting);
-    }
-
-    private LocalTime findMealTime(List<MealScheduleCommand> mealSchedules, MealType mealType) {
-        return mealSchedules.stream()
-            .filter(schedule -> schedule.mealType() == mealType)
-            .findFirst()
-            .filter(schedule -> !schedule.skipped())
-            .map(MealScheduleCommand::time)
-            .orElse(null);
-    }
-
     private boolean hasMealReminder(List<MealScheduleCommand> mealSchedules) {
         return mealSchedules.stream()
             .anyMatch(schedule -> !schedule.skipped() && schedule.time() != null);
     }
 
     private void saveExerciseSchedules(Long memberId, List<ExerciseScheduleCommand> exerciseSchedules) {
-        exerciseSchedules.stream()
-            .map(schedule -> new ExerciseSchedule(
-                idGenerator.nextId(),
-                memberId,
-                schedule.dayOfWeek(),
-                schedule.time()
-            ))
-            .forEach(exerciseScheduleRepository::save);
+        notificationPreferenceService.saveInitialExerciseSchedules(
+            memberId,
+            exerciseSchedules.stream()
+                .map(ExerciseScheduleCommand::toPreferenceCommand)
+                .toList()
+        );
     }
 
     public record ProfileSetupCommand(
@@ -166,12 +131,18 @@ public class OnboardingService {
         LocalTime time,
         boolean skipped
     ) {
+        private NotificationPreferenceService.MealScheduleCommand toPreferenceCommand() {
+            return new NotificationPreferenceService.MealScheduleCommand(mealType, time, skipped);
+        }
     }
 
     public record ExerciseScheduleCommand(
         DayOfWeek dayOfWeek,
         LocalTime time
     ) {
+        private NotificationPreferenceService.ExerciseScheduleCommand toPreferenceCommand() {
+            return new NotificationPreferenceService.ExerciseScheduleCommand(dayOfWeek, time);
+        }
     }
 
     public record WeightSetupCommand(
