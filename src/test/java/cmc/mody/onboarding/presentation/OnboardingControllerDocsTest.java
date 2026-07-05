@@ -1,5 +1,9 @@
 package cmc.mody.onboarding.presentation;
 
+import static cmc.mody.docs.ApiDocumentDescriptions.AUTHENTICATED_API;
+import static cmc.mody.docs.ApiDocumentDescriptions.GROUP_ACCESS_RULES;
+import static cmc.mody.docs.ApiDocumentDescriptions.ONBOARDING_FLOW_RULES;
+import static cmc.mody.docs.ApiDocumentDescriptions.SCHEDULE_OWNERSHIP_RULES;
 import static cmc.mody.docs.ApiDocumentUtils.commonResponseFields;
 import static com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.document;
 import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
@@ -53,6 +57,12 @@ class OnboardingControllerDocsTest {
     private static final String PROFILE_DESCRIPTION = """
         소셜 로그인 후 발급받은 access token의 회원 id로 닉네임, 생년월일, 체중, 식사/운동 알림 정보를 저장한다.
 
+        %s
+
+        %s
+
+        %s
+
         발생 가능한 예외 코드:
         - AUTH401: Authorization 헤더가 없거나 비어있음
         - AUTH402: Bearer 뒤 JWT 값이 비어있음
@@ -62,7 +72,16 @@ class OnboardingControllerDocsTest {
         - MEMBER301: 회원 가입 입력값 검증 실패
         - MEMBER302: 토큰의 회원 id에 해당하는 회원 없음
         - MEMBER303: 이미 개인 정보 입력이 완료된 회원
-        """;
+        """.formatted(AUTHENTICATED_API, ONBOARDING_FLOW_RULES, SCHEDULE_OWNERSHIP_RULES);
+    private static final String ONBOARDING_GROUP_DESCRIPTION = """
+        온보딩 중 그룹 생성/참여에 사용하는 API다.
+
+        %s
+
+        %s
+
+        %s
+        """.formatted(AUTHENTICATED_API, ONBOARDING_FLOW_RULES, GROUP_ACCESS_RULES);
 
     @Autowired
     private MockMvc mockMvc;
@@ -118,22 +137,24 @@ class OnboardingControllerDocsTest {
                     .summary("개인 정보 입력")
                     .description(PROFILE_DESCRIPTION)
                     .requestFields(
-                        fieldWithPath("nickname").type(JsonFieldType.STRING).description("닉네임"),
+                        fieldWithPath("nickname").type(JsonFieldType.STRING).description("닉네임. 그룹 내 중복 허용"),
                         fieldWithPath("birthDate").type(JsonFieldType.STRING).description("생년월일(yyyy-MM-dd)"),
                         fieldWithPath("currentWeightKg").type(JsonFieldType.NUMBER).description("현재 체중 kg"),
                         fieldWithPath("targetWeightKg").type(JsonFieldType.NUMBER).description("목표 체중 kg"),
                         fieldWithPath("mealSchedules").type(JsonFieldType.ARRAY).description("식사 설정 목록. 아침/점심/저녁 3개 입력"),
-                        fieldWithPath("mealSchedules[].mealType").type(JsonFieldType.STRING).description("식사 타입(BREAKFAST, LUNCH, DINNER)"),
+                        fieldWithPath("mealSchedules[].mealType").type(JsonFieldType.STRING).description("식사 타입: BREAKFAST, LUNCH, DINNER"),
                         fieldWithPath("mealSchedules[].time").type(JsonFieldType.STRING).description("식사 알림 시간(HH:mm). skipped=true이면 null").optional(),
                         fieldWithPath("mealSchedules[].skipped").type(JsonFieldType.BOOLEAN).description("먹지 않음 여부"),
                         fieldWithPath("exerciseSchedules").type(JsonFieldType.ARRAY).description("운동 일정 목록. 주 3회 이상 입력"),
-                        fieldWithPath("exerciseSchedules[].dayOfWeek").type(JsonFieldType.STRING).description("운동 요일"),
+                        fieldWithPath("exerciseSchedules[].dayOfWeek").type(JsonFieldType.STRING).description("운동 요일: MONDAY~SUNDAY"),
                         fieldWithPath("exerciseSchedules[].time").type(JsonFieldType.STRING).description("운동 시간(HH:mm)")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.memberId").type(JsonFieldType.NUMBER).description("회원 id"),
                         fieldWithPath("result.weightRecordId").type(JsonFieldType.NUMBER).description("생성된 체중 기록 id"),
-                        fieldWithPath("result.personalInfoCompleted").type(JsonFieldType.BOOLEAN).description("개인 정보 입력 완료 여부")
+                        fieldWithPath("result.personalInfoCompleted")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("개인 정보 입력 완료 여부. true이면 온보딩 개인 정보 입력 단계 재진입 불가")
                     ))
                     .build())
             ));
@@ -348,7 +369,10 @@ class OnboardingControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("Onboarding")
                     .summary("체중 입력")
-                    .description("현재 체중과 목표 체중을 저장한다.")
+                    .description("""
+                        현재 체중과 목표 체중을 저장한다.
+                        체중 기록은 마이페이지 체중 변화 조회의 기준 데이터로 사용된다.
+                        """)
                     .requestFields(
                         fieldWithPath("currentWeightKg").type(JsonFieldType.NUMBER).description("현재 체중 kg"),
                         fieldWithPath("targetWeightKg").type(JsonFieldType.NUMBER).description("목표 체중 kg")
@@ -435,7 +459,21 @@ class OnboardingControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("Onboarding")
                     .summary("알림 설정")
-                    .description("기록/댓글/챌린지 알림 수신 여부를 저장한다. 식사 시간과 운동 일정은 별도 API에서 관리한다.")
+                    .description("""
+                        기록/댓글/챌린지 알림 수신 여부를 저장한다.
+                        식사 시간과 운동 일정은 개인 정보 입력 또는 마이페이지 시간표 API에서만 관리한다.
+                        """)
+                    .requestFields(
+                        fieldWithPath("recordReminderEnabled")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("식사와 운동 기록 알림 통합 수신 여부"),
+                        fieldWithPath("commentNotificationEnabled")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("댓글 알림 수신 여부"),
+                        fieldWithPath("challengeNotificationEnabled")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("챌린지 알림 수신 여부")
+                    )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.notificationSettingId")
                             .type(JsonFieldType.NUMBER)
@@ -488,7 +526,7 @@ class OnboardingControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("Onboarding")
                     .summary("건강 앱 연동 상태 저장")
-                    .description("HealthKit 또는 Health Connect 연동 상태를 저장한다.")
+                    .description("HealthKit 또는 Health Connect 연동 상태를 저장한다. 실제 걸음 수 수집은 클라이언트 연동 상태에 따라 별도 처리한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.connected").type(JsonFieldType.BOOLEAN).description("건강 앱 연동 여부")
                     ))
@@ -515,7 +553,10 @@ class OnboardingControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("Onboarding")
                     .summary("그룹 코드 입력")
-                    .description("그룹 코드로 온보딩 중 그룹에 참여한다.")
+                    .description(ONBOARDING_GROUP_DESCRIPTION)
+                    .requestFields(
+                        fieldWithPath("code").type(JsonFieldType.STRING).description("그룹 코드. 영문/숫자 6자리")
+                    )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.groupId").type(JsonFieldType.NUMBER).description("그룹 id"),
                         fieldWithPath("result.code").type(JsonFieldType.STRING).description("그룹 코드"),
@@ -571,7 +612,10 @@ class OnboardingControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("Onboarding")
                     .summary("그룹 생성")
-                    .description("그룹명을 입력해 그룹을 생성하고 초대 코드를 응답한다.")
+                    .description(ONBOARDING_GROUP_DESCRIPTION)
+                    .requestFields(
+                        fieldWithPath("name").type(JsonFieldType.STRING).description("그룹명. 최대 30자이며 실제 앱 화면에 노출")
+                    )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.groupId").type(JsonFieldType.NUMBER).description("그룹 id"),
                         fieldWithPath("result.code").type(JsonFieldType.STRING).description("그룹 코드"),

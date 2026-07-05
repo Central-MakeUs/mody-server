@@ -1,5 +1,9 @@
 package cmc.mody.record.presentation;
 
+import static cmc.mody.docs.ApiDocumentDescriptions.AUTHENTICATED_API;
+import static cmc.mody.docs.ApiDocumentDescriptions.CURSOR_PAGING;
+import static cmc.mody.docs.ApiDocumentDescriptions.IMAGE_UPLOAD_FLOW;
+import static cmc.mody.docs.ApiDocumentDescriptions.RECORD_CREATE_RULES;
 import static cmc.mody.docs.ApiDocumentUtils.commonResponseFields;
 import static com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.document;
 import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
@@ -52,8 +56,14 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 class ActivityRecordControllerDocsTest {
     private static final String RECORD_DESCRIPTION = """
         구현된 기록 API는 access token의 회원 id 기준으로 처리한다.
-        이미지 파일은 먼저 Presigned URL로 직접 업로드한다.
-        이 API에는 발급받은 imageKey만 전달한다.
+
+        %s
+
+        %s
+
+        %s
+
+        %s
 
         발생 가능한 예외 코드:
         - AUTH401: Authorization 헤더가 없거나 비어있음
@@ -66,7 +76,7 @@ class ActivityRecordControllerDocsTest {
         - GROUP306: 그룹 참여 정보 없음
         - RECORD301: 기록 입력값 검증 실패
         - RECORD302: 기록 없음 또는 접근할 수 없는 기록
-        """;
+        """.formatted(AUTHENTICATED_API, IMAGE_UPLOAD_FLOW, CURSOR_PAGING, RECORD_CREATE_RULES);
 
     @Autowired
     private MockMvc mockMvc;
@@ -102,16 +112,19 @@ class ActivityRecordControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
                     .summary("월/주차별 활동 유무 조회")
-                    .description("월 단위로 식사/운동 기록 존재 여부를 조회한다.")
+                    .description("""
+                        월 단위로 식사/운동 기록 존재 여부를 조회한다.
+                        yearMonth에 포함된 날짜만 응답하며, 클라이언트는 달력 UI의 표시 여부에 사용한다.
+                        """)
                     .queryParameters(parameterWithName("yearMonth").description("조회 월, yyyy-MM"))
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.days[].date").type(JsonFieldType.STRING).description("날짜"),
                         fieldWithPath("result.days[].mealRecorded")
                             .type(JsonFieldType.BOOLEAN)
-                            .description("식사 기록 여부"),
+                            .description("해당 날짜에 식사 기록이 1개 이상 있으면 true"),
                         fieldWithPath("result.days[].exerciseRecorded")
                             .type(JsonFieldType.BOOLEAN)
-                            .description("운동 기록 여부")
+                            .description("해당 날짜에 운동 기록이 1개 이상 있으면 true")
                     ))
                     .build())
             ));
@@ -148,11 +161,14 @@ class ActivityRecordControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
                     .summary("날짜별 식사/운동 기록 조회")
-                    .description("날짜별 기록을 커서 기반으로 조회한다.")
+                    .description("""
+                        날짜별 식사/운동 기록을 커서 기반으로 조회한다.
+                        그룹에 참여 중인 회원의 활성 기록만 응답하며, recordingStreakDays는 각 작성자의 기준 날짜 연속 기록 일수다.
+                        """)
                     .queryParameters(
                         parameterWithName("date").description("조회 날짜, yyyy-MM-dd"),
-                        parameterWithName("cursor").optional().description("다음 페이지 커서"),
-                        parameterWithName("size").description("조회 개수")
+                        parameterWithName("cursor").optional().description("다음 페이지 커서. 최초 조회 시 생략"),
+                        parameterWithName("size").description("조회 개수. 기본 UI 페이지 크기에 맞춰 전달")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.records[].recordId").type(JsonFieldType.NUMBER).description("기록 id"),
@@ -183,8 +199,8 @@ class ActivityRecordControllerDocsTest {
                             .description("기록 이미지 URL"),
                         fieldWithPath("result.records[].recordingStreakDays")
                             .type(JsonFieldType.NUMBER)
-                            .description("작성자의 기준 날짜 연속 기록 일수"),
-                        fieldWithPath("result.nextCursor").type(JsonFieldType.NULL).description("다음 커서"),
+                            .description("작성자의 기준 날짜 연속 기록 일수. 같은 날짜에 여러 기록이 있어도 1일로 계산"),
+                        fieldWithPath("result.nextCursor").type(JsonFieldType.NULL).description("다음 페이지 조회용 커서. 마지막 페이지면 null"),
                         fieldWithPath("result.hasNext")
                             .type(JsonFieldType.BOOLEAN)
                             .description("다음 페이지 존재 여부")
@@ -300,7 +316,11 @@ class ActivityRecordControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
                     .summary("기록 상세 조회")
-                    .description("선택한 기록 작성자의 해당 날짜 기록 목록을 커서 페이징으로 조회한다. 앱은 records와 currentIndex로 캐러셀을 구성한다.")
+                    .description("""
+                        선택한 기록 작성자의 해당 날짜 기록 목록을 커서 페이징으로 조회한다.
+                        앱은 totalCount, currentIndex, records로 닷 인디케이터와 좌우 스와이프 캐러셀을 구성한다.
+                        상세 진입 시 현재 로그인 회원 기준의 미확인 기록 기준 시각이 갱신된다.
+                        """)
                     .queryParameters(
                         parameterWithName("cursor").optional().description("이전 페이지의 마지막 기록 id (최초 조회 시 생략)"),
                         parameterWithName("size").optional().description("페이지 크기 (기본값: 20)")
@@ -309,7 +329,7 @@ class ActivityRecordControllerDocsTest {
                         fieldWithPath("result.totalCount").type(JsonFieldType.NUMBER).description("캐러셀 전체 기록 수"),
                         fieldWithPath("result.currentIndex")
                              .type(JsonFieldType.NUMBER)
-                             .description("현재 선택된 기록의 0-based 인덱스"),
+                             .description("현재 선택된 기록의 0-based 인덱스. 최초 조회는 요청 recordId가 0번"),
                         fieldWithPath("result.records[].recordId").type(JsonFieldType.NUMBER).description("기록 id"),
                         fieldWithPath("result.records[].recordType")
                              .type(JsonFieldType.STRING)
@@ -335,7 +355,7 @@ class ActivityRecordControllerDocsTest {
                         fieldWithPath("result.records[].imageUrl")
                              .type(JsonFieldType.STRING)
                              .description("기록 이미지 URL"),
-                        fieldWithPath("result.nextCursor").type(JsonFieldType.NUMBER).optional().description("다음 페이지용 커서 id (더 이상 없으면 null)"),
+                        fieldWithPath("result.nextCursor").type(JsonFieldType.NUMBER).optional().description("다음 페이지용 커서 id. 더 이상 없으면 null"),
                         fieldWithPath("result.hasNext").type(JsonFieldType.BOOLEAN).description("다음 페이지 존재 여부")
                     ))
                     .build())
@@ -377,9 +397,12 @@ class ActivityRecordControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
                     .summary("기록 댓글 목록 조회")
-                    .description("기록 댓글을 커서 기반으로 조회한다.")
+                    .description("""
+                        기록 댓글을 커서 기반으로 조회한다.
+                        isMine은 댓글 말풍선 정렬 등 현재 로그인 회원이 작성한 댓글 UI 처리에 사용한다.
+                        """)
                     .queryParameters(
-                        parameterWithName("cursor").optional().description("다음 페이지 커서"),
+                        parameterWithName("cursor").optional().description("다음 페이지 커서. 최초 조회 시 생략"),
                         parameterWithName("size").description("조회 개수")
                     )
                     .responseFields(commonResponseFields(
@@ -399,7 +422,7 @@ class ActivityRecordControllerDocsTest {
                         fieldWithPath("result.comments[].isMine")
                             .type(JsonFieldType.BOOLEAN)
                             .description("현재 로그인한 회원이 작성한 댓글 여부"),
-                        fieldWithPath("result.nextCursor").type(JsonFieldType.NUMBER).description("다음 커서"),
+                        fieldWithPath("result.nextCursor").type(JsonFieldType.NUMBER).description("다음 페이지 조회용 커서"),
                         fieldWithPath("result.hasNext")
                             .type(JsonFieldType.BOOLEAN)
                             .description("다음 페이지 존재 여부")
@@ -663,7 +686,7 @@ class ActivityRecordControllerDocsTest {
                             .description("기록 타입: MEAL, EXERCISE"),
                         fieldWithPath("imageKey")
                             .type(JsonFieldType.STRING)
-                            .description("records 도메인으로 발급받은 업로드 이미지 키"),
+                            .description("record 도메인으로 발급받은 업로드 이미지 key"),
                         fieldWithPath("mealTime")
                             .type(JsonFieldType.STRING)
                             .optional()
@@ -873,7 +896,10 @@ class ActivityRecordControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
                     .summary("기록 댓글 작성")
-                    .description("식사/운동 기록에 댓글을 작성한다.")
+                    .description("""
+                        식사/운동 기록에 댓글을 작성한다.
+                        댓글 작성자는 access token의 회원이며, 댓글 목록에서는 isMine으로 본인 댓글 여부를 확인한다.
+                        """)
                     .requestFields(
                         fieldWithPath("content")
                             .type(JsonFieldType.STRING)

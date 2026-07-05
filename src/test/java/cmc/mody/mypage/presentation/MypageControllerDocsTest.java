@@ -1,5 +1,7 @@
 package cmc.mody.mypage.presentation;
 
+import static cmc.mody.docs.ApiDocumentDescriptions.AUTHENTICATED_API;
+import static cmc.mody.docs.ApiDocumentDescriptions.SCHEDULE_OWNERSHIP_RULES;
 import static cmc.mody.docs.ApiDocumentUtils.commonResponseFields;
 import static com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.document;
 import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
@@ -73,6 +75,10 @@ class MypageControllerDocsTest {
     private static final String MYPAGE_DESCRIPTION = """
         구현된 마이페이지 API는 access token의 회원 id 기준으로 처리한다.
 
+        %s
+
+        %s
+
         발생 가능한 예외 코드:
         - AUTH401: Authorization 헤더가 없거나 비어있음
         - AUTH402: Bearer 뒤 JWT 값이 비어있음
@@ -82,7 +88,7 @@ class MypageControllerDocsTest {
         - MEMBER302: 토큰의 회원 id에 해당하는 회원 없음
         - MYPAGE301: 마이페이지 입력값 검증 실패
         - MYPAGE302: 소셜 계정 정보 없음
-        """;
+        """.formatted(AUTHENTICATED_API, SCHEDULE_OWNERSHIP_RULES);
 
     @Autowired
     private MockMvc mockMvc;
@@ -132,7 +138,7 @@ class MypageControllerDocsTest {
                         fieldWithPath("result.weights[].weightKg").type(JsonFieldType.NUMBER).description("체중 kg"),
                         fieldWithPath("result.weights[].changeFromPreviousKg")
                             .type(JsonFieldType.NUMBER)
-                            .description("이전 기록 대비 증감 kg")
+                            .description("이전 체중 기록 대비 증감 kg. 이전 기록이 없으면 0")
                     ))
                     .build())
             ));
@@ -164,7 +170,7 @@ class MypageControllerDocsTest {
                     .summary("체중 추가")
                     .description(MYPAGE_DESCRIPTION)
                     .requestFields(
-                        fieldWithPath("weightKg").type(JsonFieldType.NUMBER).description("체중 kg")
+                        fieldWithPath("weightKg").type(JsonFieldType.NUMBER).description("체중 kg. 당일 체중 기록으로 저장")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.weightRecordId")
@@ -174,7 +180,7 @@ class MypageControllerDocsTest {
                         fieldWithPath("result.weightKg").type(JsonFieldType.NUMBER).description("체중 kg"),
                         fieldWithPath("result.changeFromPreviousKg")
                             .type(JsonFieldType.NUMBER)
-                            .description("이전 기록 대비 증감 kg")
+                            .description("이전 체중 기록 대비 증감 kg. 이전 기록이 없으면 0")
                     ))
                     .build())
             ));
@@ -200,7 +206,9 @@ class MypageControllerDocsTest {
                         fieldWithPath("result.profileImageUrl")
                             .type(JsonFieldType.STRING)
                             .description("프로필 이미지 URL"),
-                        fieldWithPath("result.daysTogether").type(JsonFieldType.NUMBER).description("함께한 일수")
+                        fieldWithPath("result.daysTogether")
+                            .type(JsonFieldType.NUMBER)
+                            .description("회원 가입일 기준 서비스와 함께한 일수")
                     ))
                     .build())
             ));
@@ -251,8 +259,10 @@ class MypageControllerDocsTest {
                     .summary("프로필 수정")
                     .description(MYPAGE_DESCRIPTION)
                     .requestFields(
-                        fieldWithPath("nickname").type(JsonFieldType.STRING).description("닉네임"),
-                        fieldWithPath("birthDate").type(JsonFieldType.STRING).description("생년월일")
+                        fieldWithPath("nickname")
+                            .type(JsonFieldType.STRING)
+                            .description("닉네임. 그룹 내 중복 허용"),
+                        fieldWithPath("birthDate").type(JsonFieldType.STRING).description("생년월일(yyyy-MM-dd)")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.nickname").type(JsonFieldType.STRING).description("닉네임"),
@@ -448,7 +458,7 @@ class MypageControllerDocsTest {
                     .requestFields(
                         fieldWithPath("recordReminderEnabled")
                             .type(JsonFieldType.BOOLEAN)
-                            .description("식사/운동 기록 알림 여부"),
+                            .description("식사와 운동 기록 알림 통합 수신 여부. 시간표 값은 변경하지 않음"),
                         fieldWithPath("commentNotificationEnabled")
                             .type(JsonFieldType.BOOLEAN)
                             .description("코멘트 알림 여부"),
@@ -489,12 +499,14 @@ class MypageControllerDocsTest {
                     .description(MYPAGE_DESCRIPTION)
                     .requestFields(
                         fieldWithPath("schedules").type(JsonFieldType.ARRAY).description("운동 일정 목록. 최소 3개"),
-                        fieldWithPath("schedules[].dayOfWeek").type(JsonFieldType.STRING).description("운동 요일"),
-                        fieldWithPath("schedules[].time").type(JsonFieldType.STRING).description("운동 시간")
+                        fieldWithPath("schedules[].dayOfWeek")
+                            .type(JsonFieldType.STRING)
+                            .description("운동 요일. MONDAY~SUNDAY"),
+                        fieldWithPath("schedules[].time").type(JsonFieldType.STRING).description("운동 시간(HH:mm)")
                     )
                     .responseFields(commonResponseFields(
-                        fieldWithPath("result.schedules[].dayOfWeek").type(JsonFieldType.STRING).description("요일"),
-                        fieldWithPath("result.schedules[].time").type(JsonFieldType.STRING).description("운동 시간")
+                        fieldWithPath("result.schedules[].dayOfWeek").type(JsonFieldType.STRING).description("운동 요일"),
+                        fieldWithPath("result.schedules[].time").type(JsonFieldType.STRING).description("운동 시간(HH:mm)")
                     ))
                     .build())
             ));
@@ -832,7 +844,7 @@ class MypageControllerDocsTest {
         return new FieldDescriptor[]{
             fieldWithPath("result.recordReminderEnabled")
                 .type(JsonFieldType.BOOLEAN)
-                .description("식사/운동 기록 알림 여부"),
+                .description("식사와 운동 기록 알림 통합 수신 여부"),
             fieldWithPath("result.commentNotificationEnabled")
                 .type(JsonFieldType.BOOLEAN)
                 .description("코멘트 알림 여부"),
@@ -843,24 +855,26 @@ class MypageControllerDocsTest {
             fieldWithPath("result.mealSchedules[].mealType").type(JsonFieldType.STRING).description("식사 타입"),
             fieldWithPath("result.mealSchedules[].time")
                 .type(JsonFieldType.STRING)
-                .description("식사 알림 시간. skipped=true이면 null")
+                .description("식사 알림 시간(HH:mm). skipped=true이면 null")
                 .optional(),
             fieldWithPath("result.mealSchedules[].skipped")
                 .type(JsonFieldType.BOOLEAN)
                 .description("먹지 않음 여부"),
             fieldWithPath("result.exerciseSchedules").type(JsonFieldType.ARRAY).description("운동 일정 목록"),
             fieldWithPath("result.exerciseSchedules[].dayOfWeek").type(JsonFieldType.STRING).description("운동 요일"),
-            fieldWithPath("result.exerciseSchedules[].time").type(JsonFieldType.STRING).description("운동 시간")
+            fieldWithPath("result.exerciseSchedules[].time").type(JsonFieldType.STRING).description("운동 시간(HH:mm)")
         };
     }
 
     private FieldDescriptor[] mealScheduleRequestFields(String prefix) {
         return new FieldDescriptor[]{
             fieldWithPath(prefix).type(JsonFieldType.ARRAY).description("식사 설정 목록"),
-            fieldWithPath(prefix + "[].mealType").type(JsonFieldType.STRING).description("식사 타입"),
+            fieldWithPath(prefix + "[].mealType")
+                .type(JsonFieldType.STRING)
+                .description("식사 타입. BREAKFAST, LUNCH, DINNER"),
             fieldWithPath(prefix + "[].time")
                 .type(JsonFieldType.STRING)
-                .description("식사 알림 시간. skipped=true이면 null")
+                .description("식사 알림 시간(HH:mm). skipped=true이면 null")
                 .optional(),
             fieldWithPath(prefix + "[].skipped").type(JsonFieldType.BOOLEAN).description("먹지 않음 여부")
         };
