@@ -19,4 +19,5 @@
 | [ADR-0013](ADR-0013-api-state-ownership.md) | API 상태 소유권 분리 | Accepted | 2026-07-04 |
 | [ADR-0014](ADR-0014-record-streak-calculation.md) | 연속 기록 일수 계산 전략 | Accepted | 2026-07-04 |
 | [ADR-0015](ADR-0015-group-member-unread-record-count.md) | 그룹원별 미확인 기록 수 계산 전략 | Accepted | 2026-07-04 |
-| [ADR-0016](ADR-0016-notification-batch-scheduler.md) | 알림 배치와 스케줄러 운영 전략 | Accepted | 2026-07-04 |
+| [ADR-0016](ADR-0016-record-detail-carousel-paging.md) | 기록 상세 캐러셀 API 페이징 전략 | Accepted | 2026-07-04 |
+| [ADR-0018](ADR-0018-notification-batch-scheduler.md) | 알림 배치와 스케줄러 운영 전략 | Accepted | 2026-07-04 |
