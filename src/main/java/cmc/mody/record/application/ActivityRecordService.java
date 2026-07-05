@@ -11,6 +11,7 @@ import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
+import cmc.mody.notification.application.NotificationRequestService;
 import cmc.mody.record.domain.ActivityRecord;
 import cmc.mody.record.domain.RecordComment;
 import cmc.mody.record.domain.RecordType;
@@ -47,6 +48,7 @@ public class ActivityRecordService {
     private final RecordCommentRepository recordCommentRepository;
     private final RecordViewHistoryRepository recordViewHistoryRepository;
     private final UploadProperties uploadProperties;
+    private final NotificationRequestService notificationRequestService;
 
     @Transactional(readOnly = true)
     public ActivityCalendarResult getActivityCalendar(Long memberId, Long groupId, YearMonth yearMonth) {
@@ -218,6 +220,7 @@ public class ActivityRecordService {
             memberId,
             command.content().trim()
         ));
+        notificationRequestService.requestCommentCreated(recordId, memberId);
         return new CommentCreateResult(savedComment.getId(), recordId);
     }
 
