@@ -6,7 +6,7 @@
 | --- | --- |
 | 상태 | Accepted |
 | Issue | #18 |
-| 관련 ADR | ADR-0003 |
+| 관련 ADR | ADR-0003, ADR-0005, ADR-0017 |
 | 작성자 | msk226 |
 | 작성일 | 2026-06-27 |
 
@@ -37,6 +37,7 @@
 - 소셜 계정이 없으면 회원과 소셜 계정을 생성한다.
 - 토큰 발급: 기존 `TokenProvider`로 access/refresh token을 발급한다.
 - refresh token 저장: 회원별 기존 refresh token을 비활성화 또는 교체 후 DB에 저장한다.
+- Apple 클라이언트 로그인은 identity token의 issuer, audience, 만료, RSA 서명을 검증한다.
 
 ### Out of scope
 
@@ -44,7 +45,7 @@
 - Spring Security 필터 체인 적용.
 - 회원 온보딩 상세 입력 API 구현.
 - Spring Security 필터 체인 기반 인증 적용.
-- Apple id token 공개키 서명 검증.
+- Apple authorization code 기반 client secret 생성 자동화.
 
 ## 3. 인터페이스 / API
 
@@ -62,6 +63,7 @@ GET /api/v1/oauth/client/{loginType}?accessToken={providerToken}
 Apple authorization redirect는 `response_mode=form_post`를 사용하므로 POST callback도 지원한다.
 `client/{loginType}`은 클라이언트가 provider SDK로 받은 token을 서버 JWT로 교환한다.
 Kakao/Google은 access token, Apple은 identity token을 `accessToken` query parameter로 전달한다.
+Apple identity token은 Apple 공개키(JWKS)와 환경별 Bundle ID audience로 검증한다.
 
 응답 예시:
 
@@ -129,6 +131,7 @@ interface OAuthMemberService {
 
 클라이언트 provider token 흐름은 1~3단계 대신 `GET /api/v1/oauth/client/{loginType}`로 받은
 provider token을 각 전략의 `getProfileByProviderToken`에 전달한다. 이후 회원 보장과 JWT 발급 흐름은 동일하다.
+Apple은 provider token을 외부 user info API로 조회하지 않고, identity token 자체를 검증해 `sub`를 provider user id로 사용한다.
 
 ## 6. 예외 / 에러 처리
 
@@ -136,6 +139,8 @@ provider token을 각 전략의 `getProfileByProviderToken`에 전달한다. 이
 - 클라이언트용 API의 `accessToken` 누락 → `BAD_REQUEST`.
 - provider token 교환 실패 → `INVALID_OAUTH_TOKEN`.
 - provider 프로필 조회 실패 → `OAUTH_PROFILE_REQUEST_FAILED`.
+- Apple identity token 서명/issuer/audience/만료 검증 실패 → `INVALID_OAUTH_TOKEN`.
+- Apple 공개키 조회 실패 → `OAUTH_PROFILE_REQUEST_FAILED`.
 - provider 고유 id 누락 → `INVALID_OAUTH_PROFILE`.
 - refresh token 저장 실패 → 공통 서버 오류.
 
@@ -152,6 +157,7 @@ provider token을 각 전략의 `getProfileByProviderToken`에 전달한다. 이
 - [x] 응답에 `mainAccessible`가 포함된다.
 - [x] 응답에 `groupOnboardingCompleted`가 포함된다.
 - [x] provider 고유 id가 회원 매칭 기준으로 사용된다.
+- [x] Apple identity token은 Apple 공개키와 Bundle ID audience로 검증된다.
 - [x] `./gradlew build`가 통과한다.
 
 ## 8. 영향 범위 / 마이그레이션
@@ -169,11 +175,11 @@ provider token을 각 전략의 `getProfileByProviderToken`에 전달한다. 이
 
 - [ ] 이메일이 없는 provider 프로필을 허용할지.
 - [ ] 소셜 프로필 닉네임/이미지를 온보딩 전 임시값으로 저장할지.
-- [ ] Apple id token 서명 검증을 어느 단계에서 적용할지.
-- [ ] Apple client secret 생성/회전 방식을 서버 내부 생성으로 바꿀지, 운영 환경변수 주입으로 둘지.
+- [ ] 서버 callback용 Apple client secret 자동 생성/회전이 필요한지.
 
 ## 10. 참고
 
 - provider별 구현은 전략 패턴으로 분리한다.
 - 회원 매칭은 이메일이 아니라 `loginType + providerUserId` 기준이다.
 - 외부 provider API 차이는 infrastructure client와 DTO 안에 가둔다.
+- Apple Team ID는 개발자 계정 추적용 설정으로 보관하고, identity token 신뢰 판단은 `iss`, `aud`, `exp`, 서명 검증으로 수행한다.
