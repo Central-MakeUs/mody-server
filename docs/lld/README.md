@@ -27,3 +27,4 @@
 | [LLD-0019](LLD-0019-notification-dispatch-outbox.md) | 알림 발송 아웃박스 아키텍처 | Accepted | #52 |
 | [LLD-0020](LLD-0020-api-spec-alignment.md) | 온보딩 및 피드 API 스펙 정리 | Accepted | #64 |
 | [LLD-0021](LLD-0021-step-challenge-api.md) | 걸음수 챌린지 API | Accepted | #49 |
+| [LLD-0022](LLD-0022-weekly-challenge-api.md) | 주간 챌린지 API | Accepted | #50 |

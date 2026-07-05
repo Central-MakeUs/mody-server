@@ -2,18 +2,22 @@ package cmc.mody.challenge.presentation;
 
 import cmc.mody.auth.presentation.support.CurrentMember;
 import cmc.mody.challenge.application.StepChallengeService;
+import cmc.mody.challenge.application.WeeklyChallengeService;
 import cmc.mody.common.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -21,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1")
 public class ChallengeController {
     private final StepChallengeService stepChallengeService;
+    private final WeeklyChallengeService weeklyChallengeService;
 
     @GetMapping("/groups/{groupId}/challenges/summary")
     public ApiResponse<ChallengeSummaryResponse> getChallengeSummary(@PathVariable Long groupId) {
@@ -40,10 +45,15 @@ public class ChallengeController {
     }
 
     @GetMapping("/groups/{groupId}/challenges/weekly")
-    public ApiResponse<WeeklyChallengeListResponse> getWeeklyChallenges(@PathVariable Long groupId) {
-        return ApiResponse.ok(new WeeklyChallengeListResponse(List.of(
-            new WeeklyChallengeSummaryResponse(1L, "물 2L 마시기", "SUNDAY", 3, "민석")
-        )));
+    public ApiResponse<WeeklyChallengeListResponse> getWeeklyChallenges(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long groupId
+    ) {
+        WeeklyChallengeService.WeeklyChallengeListResult result = weeklyChallengeService.getWeeklyChallenges(
+            memberId,
+            groupId
+        );
+        return ApiResponse.ok(WeeklyChallengeListResponse.from(result));
     }
 
     @GetMapping("/groups/{groupId}/challenges/nudges")
@@ -103,18 +113,46 @@ public class ChallengeController {
     }
 
     @GetMapping("/weekly-challenges/{challengeId}")
-    public ApiResponse<WeeklyChallengeDetailResponse> getWeeklyChallengeDetail(@PathVariable Long challengeId) {
-        return ApiResponse.ok(new WeeklyChallengeDetailResponse(challengeId, "물 2L 마시기", "하루 동안 물 2L를 마시고 사진으로 인증한다."));
+    public ApiResponse<WeeklyChallengeDetailResponse> getWeeklyChallengeDetail(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long challengeId
+    ) {
+        WeeklyChallengeService.WeeklyChallengeDetailResult result = weeklyChallengeService.getWeeklyChallengeDetail(
+            memberId,
+            challengeId
+        );
+        return ApiResponse.ok(WeeklyChallengeDetailResponse.from(result));
     }
 
     @GetMapping("/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs")
     public ApiResponse<WeeklyChallengeProofListResponse> getWeeklyChallengeProofs(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
         @PathVariable Long groupId,
         @PathVariable Long groupChallengeId
     ) {
-        return ApiResponse.ok(new WeeklyChallengeProofListResponse(List.of(
-            new WeeklyChallengeProofResponse(1L, "proofs/proof-1.jpg", 1L, "민석", "profiles/member-1.jpg")
-        )));
+        WeeklyChallengeService.WeeklyChallengeProofListResult result = weeklyChallengeService.getWeeklyChallengeProofs(
+            memberId,
+            groupId,
+            groupChallengeId
+        );
+        return ApiResponse.ok(WeeklyChallengeProofListResponse.from(result));
+    }
+
+    @PostMapping("/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<WeeklyChallengeProofCreateResponse> createWeeklyChallengeProof(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long groupId,
+        @PathVariable Long groupChallengeId,
+        @Valid @RequestBody WeeklyChallengeProofCreateRequest request
+    ) {
+        WeeklyChallengeService.WeeklyChallengeProofCreateResult result = weeklyChallengeService.createWeeklyChallengeProof(
+            memberId,
+            groupId,
+            groupChallengeId,
+            request.toCommand()
+        );
+        return ApiResponse.created(WeeklyChallengeProofCreateResponse.from(result));
     }
 
     @PostMapping("/groups/{groupId}/weekly-challenges/{groupChallengeId}/share")
@@ -150,6 +188,11 @@ public class ChallengeController {
     }
 
     public record WeeklyChallengeListResponse(List<WeeklyChallengeSummaryResponse> challenges) {
+        public static WeeklyChallengeListResponse from(WeeklyChallengeService.WeeklyChallengeListResult result) {
+            return new WeeklyChallengeListResponse(result.challenges().stream()
+                .map(WeeklyChallengeSummaryResponse::from)
+                .toList());
+        }
     }
 
     public record WeeklyChallengeSummaryResponse(
@@ -159,6 +202,15 @@ public class ChallengeController {
         int participantCount,
         String randomParticipantNickname
     ) {
+        public static WeeklyChallengeSummaryResponse from(WeeklyChallengeService.WeeklyChallengeSummaryResult result) {
+            return new WeeklyChallengeSummaryResponse(
+                result.groupChallengeId(),
+                result.title(),
+                result.deadlineDayOfWeek(),
+                result.participantCount(),
+                result.randomParticipantNickname()
+            );
+        }
     }
 
     public record NudgeTargetListResponse(List<NudgeTargetResponse> members) {
@@ -259,9 +311,17 @@ public class ChallengeController {
     }
 
     public record WeeklyChallengeDetailResponse(Long challengeId, String title, String description) {
+        public static WeeklyChallengeDetailResponse from(WeeklyChallengeService.WeeklyChallengeDetailResult result) {
+            return new WeeklyChallengeDetailResponse(result.challengeId(), result.title(), result.description());
+        }
     }
 
     public record WeeklyChallengeProofListResponse(List<WeeklyChallengeProofResponse> proofs) {
+        public static WeeklyChallengeProofListResponse from(WeeklyChallengeService.WeeklyChallengeProofListResult result) {
+            return new WeeklyChallengeProofListResponse(result.proofs().stream()
+                .map(WeeklyChallengeProofResponse::from)
+                .toList());
+        }
     }
 
     public record WeeklyChallengeProofResponse(
@@ -271,6 +331,32 @@ public class ChallengeController {
         String nickname,
         String profileImageUrl
     ) {
+        public static WeeklyChallengeProofResponse from(WeeklyChallengeService.WeeklyChallengeProofResult result) {
+            return new WeeklyChallengeProofResponse(
+                result.proofId(),
+                result.imageUrl(),
+                result.memberId(),
+                result.nickname(),
+                result.profileImageUrl()
+            );
+        }
+    }
+
+    public record WeeklyChallengeProofCreateRequest(
+        @NotBlank(message = "이미지 key는 필수입니다.")
+        String imageKey
+    ) {
+        public WeeklyChallengeService.WeeklyChallengeProofCreateCommand toCommand() {
+            return new WeeklyChallengeService.WeeklyChallengeProofCreateCommand(imageKey);
+        }
+    }
+
+    public record WeeklyChallengeProofCreateResponse(Long proofId, Long groupChallengeId, String imageUrl) {
+        public static WeeklyChallengeProofCreateResponse from(
+            WeeklyChallengeService.WeeklyChallengeProofCreateResult result
+        ) {
+            return new WeeklyChallengeProofCreateResponse(result.proofId(), result.groupChallengeId(), result.imageUrl());
+        }
     }
 
     public record WeeklyChallengeShareResponse(String imageUrl, int rows, int columns) {

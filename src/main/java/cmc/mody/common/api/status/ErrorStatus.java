@@ -35,6 +35,7 @@ public enum ErrorStatus implements BaseCode {
     CHALLENGE_VALIDATION_FAILED(400, "CHALLENGE301", "챌린지 입력값이 올바르지 않습니다."),
     CHALLENGE_NOT_FOUND(404, "CHALLENGE302", "챌린지를 찾을 수 없습니다."),
     CHALLENGE_IN_PROGRESS_NOT_FOUND(404, "CHALLENGE303", "진행 중인 걸음수 챌린지를 찾을 수 없습니다."),
+    CHALLENGE_PROOF_ALREADY_EXISTS(409, "CHALLENGE304", "이미 챌린지 인증을 완료했습니다."),
     NOTIFICATION_UNSUPPORTED_TYPE(400, "NOTIFICATION301", "지원하지 않는 알림 타입입니다."),
     NOTIFICATION_NOT_FOUND(404, "NOTIFICATION302", "알림을 찾을 수 없습니다."),
     NOTIFICATION_PAYLOAD_INVALID(400, "NOTIFICATION303", "알림 요청값이 올바르지 않습니다."),
