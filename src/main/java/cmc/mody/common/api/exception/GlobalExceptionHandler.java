@@ -53,6 +53,9 @@ public class GlobalExceptionHandler {
             || request.getRequestURI().contains("/weekly-challenges")) {
             return ErrorStatus.CHALLENGE_VALIDATION_FAILED;
         }
+        if (request.getRequestURI().startsWith("/api/v1/notifications")) {
+            return ErrorStatus.NOTIFICATION_VALIDATION_FAILED;
+        }
         return ErrorStatus.VALIDATION_FAILED;
     }
 

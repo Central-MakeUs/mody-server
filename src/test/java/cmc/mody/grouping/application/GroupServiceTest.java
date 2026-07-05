@@ -21,6 +21,7 @@ import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
+import cmc.mody.notification.application.NotificationRequestService;
 import cmc.mody.record.domain.RecordViewHistory;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
@@ -50,6 +51,9 @@ class GroupServiceTest {
 
     @Mock
     private GroupMemberRepository groupMemberRepository;
+
+    @Mock
+    private NotificationRequestService notificationRequestService;
 
     @Mock
     private ActivityRecordRepository activityRecordRepository;
@@ -114,6 +118,8 @@ class GroupServiceTest {
         then(groupMemberRepository).should().save(groupMemberCaptor.capture());
         assertThat(groupMemberCaptor.getValue().getGroupId()).isEqualTo(10L);
         assertThat(member.isGroupOnboardingCompleted()).isTrue();
+        then(notificationRequestService).should()
+            .requestGroupMemberJoined(10L, "모디 그룹", 1L, "민석");
     }
 
     @Test
@@ -238,6 +244,7 @@ class GroupServiceTest {
             memberRepository,
             modyGroupRepository,
             groupMemberRepository,
+            notificationRequestService,
             activityRecordRepository,
             recordViewHistoryRepository
         );

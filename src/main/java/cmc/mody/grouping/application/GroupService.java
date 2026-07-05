@@ -10,6 +10,7 @@ import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
+import cmc.mody.notification.application.NotificationRequestService;
 import cmc.mody.record.domain.RecordViewHistory;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
@@ -33,6 +34,7 @@ public class GroupService {
     private final MemberRepository memberRepository;
     private final ModyGroupRepository modyGroupRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final NotificationRequestService notificationRequestService;
     private final ActivityRecordRepository activityRecordRepository;
     private final RecordViewHistoryRepository recordViewHistoryRepository;
     private final SecureRandom secureRandom = new SecureRandom();
@@ -79,6 +81,12 @@ public class GroupService {
         int memberCount = (int) groupMemberRepository.countByGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
             group.getId(),
             GroupMemberStatus.JOINED
+        );
+        notificationRequestService.requestGroupMemberJoined(
+            group.getId(),
+            group.getName(),
+            member.getId(),
+            member.getNickname()
         );
         return new GroupJoinResult(group.getId(), group.getCode(), group.getName(), memberCount);
     }

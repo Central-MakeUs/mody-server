@@ -177,4 +177,11 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
     List<ActivityRecord> findByMemberIdAndDeletedAtIsNull(Long memberId);
 
     List<ActivityRecord> findByMemberIdAndGroupIdAndDeletedAtIsNull(Long memberId, Long groupId);
+
+    boolean existsByMemberIdAndGroupIdAndUploadedAtGreaterThanEqualAndUploadedAtLessThanAndDeletedAtIsNull(
+        Long memberId,
+        Long groupId,
+        LocalDateTime startAt,
+        LocalDateTime endAt
+    );
 }

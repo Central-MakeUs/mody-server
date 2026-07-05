@@ -6,9 +6,12 @@ import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
+import static org.springframework.restdocs.payload.PayloadDocumentation.requestFields;
 import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cmc.mody.auth.application.token.TokenProvider;
@@ -16,10 +19,13 @@ import cmc.mody.auth.presentation.support.CurrentMemberArgumentResolver;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.config.WebConfig;
+import cmc.mody.notification.application.NotificationPushTokenService;
+import cmc.mody.notification.application.NotificationPushTokenService.RegisterPushTokenCommand;
 import cmc.mody.notification.application.NotificationService;
 import cmc.mody.notification.application.NotificationService.NotificationListResult;
 import cmc.mody.notification.application.NotificationService.NotificationResult;
 import cmc.mody.notification.domain.NotificationType;
+import cmc.mody.notification.domain.PushPlatform;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -57,6 +63,9 @@ class NotificationControllerDocsTest {
 
     @MockitoBean
     private NotificationService notificationService;
+
+    @MockitoBean
+    private NotificationPushTokenService notificationPushTokenService;
 
     @MockitoBean
     private TokenProvider tokenProvider;
@@ -171,6 +180,114 @@ class NotificationControllerDocsTest {
                 .header("Authorization", "Bearer access-token"))
             .andExpect(status().isNotFound())
             .andDo(documentError("notification-read-not-found", "알림 읽음 처리"));
+    }
+
+    @Test
+    void registerPushToken() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(post("/api/v1/notifications/push-token")
+                .header("Authorization", "Bearer access-token")
+                .contentType("application/json")
+                .content("""
+                    {
+                      "deviceId": "ios-device-1",
+                      "platform": "IOS",
+                      "fcmToken": "fcm-token"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andDo(document("notification-push-token-register",
+                requestFields(
+                    fieldWithPath("deviceId").type(JsonFieldType.STRING).description("디바이스 식별자"),
+                    fieldWithPath("platform").type(JsonFieldType.STRING).description("플랫폼: IOS, ANDROID"),
+                    fieldWithPath("fcmToken").type(JsonFieldType.STRING).description("FCM 등록 토큰")
+                ),
+                resource(ResourceSnippetParameters.builder()
+                    .tag("Notification")
+                    .summary("푸시 토큰 등록")
+                    .description(NOTIFICATION_DESCRIPTION)
+                    .responseFields(commonResponseFields())
+                    .build())
+            ));
+    }
+
+    @Test
+    void disablePushToken() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(delete("/api/v1/notifications/push-token")
+                .header("Authorization", "Bearer access-token")
+                .contentType("application/json")
+                .content("""
+                    {
+                      "deviceId": "ios-device-1"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andDo(document("notification-push-token-disable",
+                requestFields(
+                    fieldWithPath("deviceId").type(JsonFieldType.STRING).description("비활성화할 디바이스 식별자")
+                ),
+                resource(ResourceSnippetParameters.builder()
+                    .tag("Notification")
+                    .summary("푸시 토큰 해제")
+                    .description(NOTIFICATION_DESCRIPTION)
+                    .responseFields(commonResponseFields())
+                    .build())
+            ));
+    }
+
+    @Test
+    void registerPushTokenWithInvalidRequest() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(post("/api/v1/notifications/push-token")
+                .header("Authorization", "Bearer access-token")
+                .contentType("application/json")
+                .content("""
+                    {
+                      "deviceId": "",
+                      "platform": "IOS",
+                      "fcmToken": ""
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andDo(documentError("notification-push-token-register-invalid-request", "푸시 토큰 등록"));
+    }
+
+    @Test
+    void registerPushTokenMemberNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
+            .given(notificationPushTokenService)
+            .register(1L, new RegisterPushTokenCommand("ios-device-1", PushPlatform.IOS, "fcm-token"));
+
+        mockMvc.perform(post("/api/v1/notifications/push-token")
+                .header("Authorization", "Bearer access-token")
+                .contentType("application/json")
+                .content("""
+                    {
+                      "deviceId": "ios-device-1",
+                      "platform": "IOS",
+                      "fcmToken": "fcm-token"
+                    }
+                    """))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("notification-push-token-register-member-not-found", "푸시 토큰 등록"));
+    }
+
+    @Test
+    void disablePushTokenWithoutAuthorization() throws Exception {
+        mockMvc.perform(delete("/api/v1/notifications/push-token")
+                .contentType("application/json")
+                .content("""
+                    {
+                      "deviceId": "ios-device-1"
+                    }
+                    """))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("notification-push-token-disable-auth-missing", "푸시 토큰 해제"));
     }
 
     private RestDocumentationResultHandler documentError(String identifier, String summary) {

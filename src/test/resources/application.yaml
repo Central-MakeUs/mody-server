@@ -30,6 +30,32 @@ upload:
   base-url: https://storage.example.com
   presigned-url-expires-in-seconds: 300
 
+notification:
+  dispatch:
+    enabled: false
+    fixed-delay-ms: 10000
+    batch-size: 100
+    max-retry: 3
+  reminder:
+    enabled: false
+    cron: "0 * * * * *"
+  retention:
+    enabled: false
+    cron: "0 0 4 * * *"
+    retention-days: 90
+    batch-size: 500
+  streak-risk:
+    enabled: false
+    cron: "0 0 21 * * *"
+    batch-size: 500
+  push:
+    provider: no-op
+    title: Mody
+
+fcm:
+  enabled: false
+  credentials-path: ""
+
 oauth:
   apple:
     auth-base-uri: https://appleid.apple.com

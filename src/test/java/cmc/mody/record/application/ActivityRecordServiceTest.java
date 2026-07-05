@@ -17,6 +17,7 @@ import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
+import cmc.mody.notification.application.NotificationRequestService;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateCommand;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateResult;
 import cmc.mody.record.domain.ActivityRecord;
@@ -61,6 +62,9 @@ class ActivityRecordServiceTest {
 
     @Mock
     private RecordCommentRepository recordCommentRepository;
+
+    @Mock
+    private NotificationRequestService notificationRequestService;
 
     @Mock
     private RecordViewHistoryRepository recordViewHistoryRepository;
@@ -421,6 +425,7 @@ class ActivityRecordServiceTest {
         assertThat(savedComment.getRecordId()).isEqualTo(100L);
         assertThat(savedComment.getMemberId()).isEqualTo(1L);
         assertThat(savedComment.getContent()).isEqualTo("좋다");
+        then(notificationRequestService).should().requestCommentCreated(100L, 1L);
     }
 
     @Test
@@ -488,7 +493,8 @@ class ActivityRecordServiceTest {
             activityRecordRepository,
             recordCommentRepository,
             recordViewHistoryRepository,
-            new UploadProperties()
+            new UploadProperties(),
+            notificationRequestService
         );
     }
 

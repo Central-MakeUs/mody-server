@@ -39,6 +39,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
     implementation("com.google.cloud:google-cloud-storage")
+    implementation("com.google.firebase:firebase-admin:9.4.3")
     // API 문서 (Swagger UI). springdoc 2.x = Spring Boot 3.x 지원
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0")
     // JWT
