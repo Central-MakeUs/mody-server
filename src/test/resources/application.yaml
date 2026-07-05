@@ -55,3 +55,13 @@ notification:
 fcm:
   enabled: false
   credentials-path: ""
+
+oauth:
+  apple:
+    auth-base-uri: https://appleid.apple.com
+    client-id: com.jagsim.mody-dev
+    identity-token:
+      issuer: https://appleid.apple.com
+      audience: com.jagsim.mody-dev
+      team-id: BLRYMXGV5K
+      public-key-cache-ttl-seconds: 3600
