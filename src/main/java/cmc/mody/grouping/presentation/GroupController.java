@@ -138,9 +138,14 @@ public class GroupController {
         }
     }
 
-    public record GroupMemberResponse(Long memberId, String nickname, String profileImageUrl) {
+    public record GroupMemberResponse(Long memberId, String nickname, String profileImageUrl, int unreadRecordCount) {
         public static GroupMemberResponse from(GroupService.GroupMemberResult result) {
-            return new GroupMemberResponse(result.memberId(), result.nickname(), result.profileImageUrl());
+            return new GroupMemberResponse(
+                result.memberId(),
+                result.nickname(),
+                result.profileImageUrl(),
+                result.unreadRecordCount()
+            );
         }
     }
 }

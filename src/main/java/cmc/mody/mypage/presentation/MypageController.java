@@ -243,8 +243,7 @@ public class MypageController {
     }
 
     public record NotificationSettingResponse(
-        boolean mealReminderEnabled,
-        boolean exerciseReminderEnabled,
+        boolean recordReminderEnabled,
         boolean commentNotificationEnabled,
         boolean challengeNotificationEnabled,
         List<MealScheduleItem> mealSchedules,
@@ -252,8 +251,7 @@ public class MypageController {
     ) {
         public static NotificationSettingResponse from(MypageService.NotificationSettingResult result) {
             return new NotificationSettingResponse(
-                result.mealReminderEnabled(),
-                result.exerciseReminderEnabled(),
+                result.recordReminderEnabled(),
                 result.commentNotificationEnabled(),
                 result.challengeNotificationEnabled(),
                 result.mealSchedules().stream()
@@ -267,15 +265,13 @@ public class MypageController {
     }
 
     public record NotificationSettingRequest(
-        boolean mealReminderEnabled,
-        boolean exerciseReminderEnabled,
+        boolean recordReminderEnabled,
         boolean commentNotificationEnabled,
         boolean challengeNotificationEnabled
     ) {
         public NotificationSettingCommand toCommand() {
             return new NotificationSettingCommand(
-                mealReminderEnabled,
-                exerciseReminderEnabled,
+                recordReminderEnabled,
                 commentNotificationEnabled,
                 challengeNotificationEnabled
             );

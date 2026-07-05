@@ -47,10 +47,15 @@ oauth:
     authorization-uri: ${APPLE_AUTHORIZATION_URI:https://appleid.apple.com/auth/authorize}
     auth-base-uri: ${APPLE_AUTH_BASE_URI:https://appleid.apple.com}
     api-base-uri: ${APPLE_API_BASE_URI:}
-    client-id: ${APPLE_CLIENT_ID:}
+    client-id: ${APPLE_CLIENT_ID:com.jagsim.mody-dev}
     client-secret: ${APPLE_CLIENT_SECRET:}
     redirect-uri: ${APPLE_REDIRECT_URI:}
     scope: ${APPLE_SCOPE:email,name}
+    identity-token:
+      issuer: ${APPLE_ID_TOKEN_ISSUER:https://appleid.apple.com}
+      audience: ${APPLE_BUNDLE_ID:com.jagsim.mody-dev}
+      team-id: ${APPLE_TEAM_ID:BLRYMXGV5K}
+      public-key-cache-ttl-seconds: ${APPLE_PUBLIC_KEY_CACHE_TTL_SECONDS:3600}
 
 springdoc:
   swagger-ui:
@@ -78,6 +83,12 @@ spring:
       hibernate:
         format_sql: true
 
+oauth:
+  apple:
+    client-id: ${APPLE_CLIENT_ID:com.jagsim.mody-dev}
+    identity-token:
+      audience: ${APPLE_BUNDLE_ID:com.jagsim.mody-dev}
+
 ---
 
 spring:
@@ -99,6 +110,12 @@ spring:
       hibernate:
         format_sql: false
 
+oauth:
+  apple:
+    client-id: ${APPLE_CLIENT_ID:com.jagsim.mody-dev}
+    identity-token:
+      audience: ${APPLE_BUNDLE_ID:com.jagsim.mody-dev}
+
 ---
 
 spring:
@@ -119,3 +136,9 @@ spring:
     properties:
       hibernate:
         format_sql: false
+
+oauth:
+  apple:
+    client-id: ${APPLE_CLIENT_ID:com.jagsim.mody}
+    identity-token:
+      audience: ${APPLE_BUNDLE_ID:com.jagsim.mody}

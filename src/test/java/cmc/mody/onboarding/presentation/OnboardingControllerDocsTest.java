@@ -425,14 +425,9 @@ class OnboardingControllerDocsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "mealReminderEnabled": true,
-                      "mealSchedules": [
-                        {"mealType": "BREAKFAST", "time": "08:00", "skipped": false},
-                        {"mealType": "LUNCH", "time": null, "skipped": true},
-                        {"mealType": "DINNER", "time": "18:00", "skipped": false}
-                      ],
-                      "exerciseReminderEnabled": true,
-                      "exerciseReminderTime": "20:00"
+                      "recordReminderEnabled": true,
+                      "commentNotificationEnabled": true,
+                      "challengeNotificationEnabled": true
                     }
                     """))
             .andExpect(status().isOk())
@@ -440,7 +435,7 @@ class OnboardingControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("Onboarding")
                     .summary("알림 설정")
-                    .description("식사 및 운동 기록 알림 시간을 저장한다.")
+                    .description("기록/댓글/챌린지 알림 수신 여부를 저장한다. 식사 시간과 운동 일정은 별도 API에서 관리한다.")
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.notificationSettingId")
                             .type(JsonFieldType.NUMBER)
@@ -452,7 +447,7 @@ class OnboardingControllerDocsTest {
     }
 
     @Test
-    void setupNotificationsValidationError() throws Exception {
+    void setupNotificationsUnreadableBody() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
 
         mockMvc.perform(put("/api/v1/onboarding/notifications")
@@ -460,14 +455,11 @@ class OnboardingControllerDocsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "mealReminderEnabled": true,
-                      "mealSchedules": [],
-                      "exerciseReminderEnabled": true,
-                      "exerciseReminderTime": null
+                      "recordReminderEnabled": "yes"
                     }
                     """))
             .andExpect(status().isBadRequest())
-            .andDo(document("onboarding-notifications-validation-error",
+            .andDo(document("onboarding-notifications-unreadable-body",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Onboarding")
                     .summary("알림 설정")

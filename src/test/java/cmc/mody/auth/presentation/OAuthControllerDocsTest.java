@@ -35,7 +35,7 @@ class OAuthControllerDocsTest {
         발생 가능한 예외:
         - `COMMON4000`: accessToken query parameter가 누락됨
         - `AUTH407`: 지원하지 않는 소셜 로그인 타입
-        - `AUTH408`: provider token이 비어있거나 유효하지 않음
+        - `AUTH408`: provider token이 비어있거나 유효하지 않음. Apple은 서명, issuer, Bundle ID audience, 만료 검증 실패 포함
         - `AUTH409`: OAuth 프로필 조회 실패
         - `AUTH410`: OAuth 프로필 정보가 올바르지 않음
         """;

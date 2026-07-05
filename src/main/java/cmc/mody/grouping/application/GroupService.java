@@ -10,6 +10,9 @@ import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
+import cmc.mody.record.domain.RecordViewHistory;
+import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
+import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,6 +33,8 @@ public class GroupService {
     private final MemberRepository memberRepository;
     private final ModyGroupRepository modyGroupRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final ActivityRecordRepository activityRecordRepository;
+    private final RecordViewHistoryRepository recordViewHistoryRepository;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional(readOnly = true)
@@ -98,7 +103,8 @@ public class GroupService {
             .map(groupMember -> new GroupMemberResult(
                 groupMember.getMemberId(),
                 groupMember.getDisplayNickname(),
-                groupMember.getDisplayProfileImageKey()
+                groupMember.getDisplayProfileImageKey(),
+                countUnreadRecords(memberId, groupId, groupMember.getMemberId())
             ))
             .toList();
         return new GroupMemberListResult(members);
@@ -177,6 +183,27 @@ public class GroupService {
         );
     }
 
+    private int countUnreadRecords(Long viewerMemberId, Long groupId, Long writerMemberId) {
+        if (viewerMemberId.equals(writerMemberId)) {
+            return 0;
+        }
+        LocalDateTime lastViewedAt = recordViewHistoryRepository
+            .findByViewerMemberIdAndGroupIdAndWriterMemberIdAndDeletedAtIsNull(
+                viewerMemberId,
+                groupId,
+                writerMemberId
+            )
+            .map(RecordViewHistory::getLastViewedAt)
+            .orElse(LocalDateTime.MIN);
+        long unreadCount = activityRecordRepository.countActiveGroupRecordsAfter(
+            groupId,
+            writerMemberId,
+            lastViewedAt,
+            GroupMemberStatus.JOINED
+        );
+        return Math.toIntExact(unreadCount);
+    }
+
     private String generateUniqueCode() {
         for (int attempt = 0; attempt < MAX_GROUP_CODE_GENERATION_ATTEMPTS; attempt++) {
             String code = randomCode();
@@ -219,6 +246,6 @@ public class GroupService {
     public record GroupMemberListResult(List<GroupMemberResult> members) {
     }
 
-    public record GroupMemberResult(Long memberId, String nickname, String profileImageUrl) {
+    public record GroupMemberResult(Long memberId, String nickname, String profileImageUrl, int unreadRecordCount) {
     }
 }

@@ -4,6 +4,8 @@ import static cmc.mody.docs.ApiDocumentUtils.commonResponseFields;
 import static com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.document;
 import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
@@ -21,9 +23,11 @@ import cmc.mody.common.config.WebConfig;
 import cmc.mody.record.application.ActivityRecordService;
 import cmc.mody.record.application.ActivityRecordService.CommentCreateCommand;
 import cmc.mody.record.application.ActivityRecordService.CommentCreateResult;
+import cmc.mody.record.application.ActivityRecordService.CommentCursorResult;
 import cmc.mody.record.application.ActivityRecordService.CommentResult;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateCommand;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateResult;
+import cmc.mody.record.application.ActivityRecordService.RecordDetailPageResult;
 import cmc.mody.record.application.ActivityRecordService.RecordDetailResult;
 import cmc.mody.record.domain.RecordType;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
@@ -128,7 +132,8 @@ class ActivityRecordControllerDocsTest {
                     "샐러드",
                     null,
                     null,
-                    "https://storage.example.com/records/1/2026/07/meal.jpg"
+                    "https://storage.example.com/records/1/2026/07/meal.jpg",
+                    4
                 )),
                 null,
                 false
@@ -176,6 +181,9 @@ class ActivityRecordControllerDocsTest {
                         fieldWithPath("result.records[].imageUrl")
                             .type(JsonFieldType.STRING)
                             .description("기록 이미지 URL"),
+                        fieldWithPath("result.records[].recordingStreakDays")
+                            .type(JsonFieldType.NUMBER)
+                            .description("작성자의 기준 날짜 연속 기록 일수"),
                         fieldWithPath("result.nextCursor").type(JsonFieldType.NULL).description("다음 커서"),
                         fieldWithPath("result.hasNext")
                             .type(JsonFieldType.BOOLEAN)
@@ -250,58 +258,151 @@ class ActivityRecordControllerDocsTest {
     @Test
     void getRecordDetail() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
-        given(activityRecordService.getRecordDetail(1L, 1L))
-            .willReturn(new RecordDetailResult(
-                1L,
-                RecordType.MEAL,
-                1L,
-                "민석",
-                "https://storage.example.com/profiles/member-1.jpg",
-                java.time.LocalTime.of(12, 30),
-                "샐러드",
-                null,
-                null,
-                "https://storage.example.com/records/1/2026/07/meal.jpg",
-                List.of(new CommentResult(10L, 2L, "친구", "좋다"))
+        given(activityRecordService.getRecordDetail(1L, 1L, null, 20))
+            .willReturn(new RecordDetailPageResult(
+                2,
+                0,
+                List.of(
+                    new RecordDetailResult(
+                        1L,
+                        RecordType.MEAL,
+                        1L,
+                        "민석",
+                        "https://storage.example.com/profiles/member-1.jpg",
+                        java.time.LocalTime.of(12, 30),
+                        "샐러드",
+                        null,
+                        null,
+                        "https://storage.example.com/records/1/2026/07/meal.jpg"
+                    ),
+                    new RecordDetailResult(
+                        2L,
+                        RecordType.EXERCISE,
+                        1L,
+                        "민석",
+                        "https://storage.example.com/profiles/member-1.jpg",
+                        java.time.LocalTime.of(20, 0),
+                        null,
+                        40,
+                        "러닝",
+                        "https://storage.example.com/records/1/2026/07/exercise.jpg"
+                    )
+                ),
+                2L,
+                false
             ));
 
         mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+                .param("size", "20")
                 .header("Authorization", "Bearer access-token"))
             .andExpect(status().isOk())
             .andDo(document("record-detail",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
                     .summary("기록 상세 조회")
-                    .description("식사/운동 기록 상세와 댓글을 조회한다.")
+                    .description("선택한 기록 작성자의 해당 날짜 기록 목록을 커서 페이징으로 조회한다. 앱은 records와 currentIndex로 캐러셀을 구성한다.")
+                    .queryParameters(
+                        parameterWithName("cursor").optional().description("이전 페이지의 마지막 기록 id (최초 조회 시 생략)"),
+                        parameterWithName("size").optional().description("페이지 크기 (기본값: 20)")
+                    )
                     .responseFields(commonResponseFields(
-                        fieldWithPath("result.recordId").type(JsonFieldType.NUMBER).description("기록 id"),
-                        fieldWithPath("result.recordType").type(JsonFieldType.STRING).description("기록 타입"),
-                        fieldWithPath("result.memberId").type(JsonFieldType.NUMBER).description("작성자 id"),
-                        fieldWithPath("result.nickname").type(JsonFieldType.STRING).description("작성자 닉네임"),
-                        fieldWithPath("result.profileImageUrl")
-                            .type(JsonFieldType.STRING)
-                            .description("작성자 프로필 이미지"),
-                        fieldWithPath("result.recordedTime").type(JsonFieldType.STRING).description("기록 시간"),
-                        fieldWithPath("result.menu").type(JsonFieldType.STRING).description("메뉴명"),
-                        fieldWithPath("result.exerciseDurationMinutes")
-                            .type(JsonFieldType.NULL)
-                            .description("운동 시간(분). 식사 기록이면 null"),
-                        fieldWithPath("result.exerciseName")
-                            .type(JsonFieldType.NULL)
-                            .description("운동명. 식사 기록이면 null"),
-                        fieldWithPath("result.imageUrl").type(JsonFieldType.STRING).description("기록 이미지 URL"),
-                        fieldWithPath("result.comments[].commentId")
-                            .type(JsonFieldType.NUMBER)
-                            .description("댓글 id"),
+                        fieldWithPath("result.totalCount").type(JsonFieldType.NUMBER).description("캐러셀 전체 기록 수"),
+                        fieldWithPath("result.currentIndex")
+                             .type(JsonFieldType.NUMBER)
+                             .description("현재 선택된 기록의 0-based 인덱스"),
+                        fieldWithPath("result.records[].recordId").type(JsonFieldType.NUMBER).description("기록 id"),
+                        fieldWithPath("result.records[].recordType")
+                             .type(JsonFieldType.STRING)
+                             .description("기록 타입: MEAL, EXERCISE"),
+                        fieldWithPath("result.records[].memberId").type(JsonFieldType.NUMBER).description("작성자 id"),
+                        fieldWithPath("result.records[].nickname").type(JsonFieldType.STRING).description("작성자 닉네임"),
+                        fieldWithPath("result.records[].profileImageUrl")
+                             .type(JsonFieldType.STRING)
+                             .description("작성자 프로필 이미지"),
+                        fieldWithPath("result.records[].recordedTime").type(JsonFieldType.STRING).description("기록 시간"),
+                        fieldWithPath("result.records[].menu")
+                             .type(JsonFieldType.VARIES)
+                             .optional()
+                             .description("메뉴명. 운동 기록이면 null"),
+                        fieldWithPath("result.records[].exerciseDurationMinutes")
+                             .type(JsonFieldType.VARIES)
+                             .optional()
+                             .description("운동 시간(분). 식사 기록이면 null"),
+                        fieldWithPath("result.records[].exerciseName")
+                             .type(JsonFieldType.VARIES)
+                             .optional()
+                             .description("운동명. 식사 기록이면 null"),
+                        fieldWithPath("result.records[].imageUrl")
+                             .type(JsonFieldType.STRING)
+                             .description("기록 이미지 URL"),
+                        fieldWithPath("result.nextCursor").type(JsonFieldType.NUMBER).optional().description("다음 페이지용 커서 id (더 이상 없으면 null)"),
+                        fieldWithPath("result.hasNext").type(JsonFieldType.BOOLEAN).description("다음 페이지 존재 여부")
+                    ))
+                    .build())
+            ));
+    }
+
+    @Test
+    void getRecordComments() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(activityRecordService.getRecordComments(1L, 1L, null, 20))
+            .willReturn(new CommentCursorResult(
+                List.of(
+                    new CommentResult(
+                        10L,
+                        2L,
+                        "친구",
+                        "https://storage.example.com/profiles/member-2.jpg",
+                        "좋다",
+                        false
+                    ),
+                    new CommentResult(
+                        11L,
+                        1L,
+                        "민석",
+                        "https://storage.example.com/profiles/member-1.jpg",
+                        "고마워",
+                        true
+                    )
+                ),
+                11L,
+                true
+            ));
+
+        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+                .header("Authorization", "Bearer access-token")
+                .param("size", "20"))
+            .andExpect(status().isOk())
+            .andDo(document("record-comment-list",
+                resource(ResourceSnippetParameters.builder()
+                    .tag("Feed")
+                    .summary("기록 댓글 목록 조회")
+                    .description("기록 댓글을 커서 기반으로 조회한다.")
+                    .queryParameters(
+                        parameterWithName("cursor").optional().description("다음 페이지 커서"),
+                        parameterWithName("size").description("조회 개수")
+                    )
+                    .responseFields(commonResponseFields(
+                        fieldWithPath("result.comments[].commentId").type(JsonFieldType.NUMBER).description("댓글 id"),
                         fieldWithPath("result.comments[].memberId")
                             .type(JsonFieldType.NUMBER)
                             .description("댓글 작성자 id"),
                         fieldWithPath("result.comments[].nickname")
                             .type(JsonFieldType.STRING)
                             .description("댓글 작성자 닉네임"),
+                        fieldWithPath("result.comments[].profileImageUrl")
+                            .type(JsonFieldType.STRING)
+                            .description("댓글 작성자 프로필 이미지"),
                         fieldWithPath("result.comments[].content")
                             .type(JsonFieldType.STRING)
-                            .description("댓글 내용")
+                            .description("댓글 내용"),
+                        fieldWithPath("result.comments[].isMine")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("현재 로그인한 회원이 작성한 댓글 여부"),
+                        fieldWithPath("result.nextCursor").type(JsonFieldType.NUMBER).description("다음 커서"),
+                        fieldWithPath("result.hasNext")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("다음 페이지 존재 여부")
                     ))
                     .build())
             ));
@@ -312,7 +413,7 @@ class ActivityRecordControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.RECORD_NOT_FOUND))
             .given(activityRecordService)
-            .getRecordDetail(1L, 1L);
+            .getRecordDetail(anyLong(), anyLong(), any(), anyInt());
 
         mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
                 .header("Authorization", "Bearer access-token"))
@@ -321,11 +422,37 @@ class ActivityRecordControllerDocsTest {
     }
 
     @Test
+    void getRecordDetailMemberNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
+            .given(activityRecordService)
+            .getRecordDetail(anyLong(), anyLong(), any(), anyInt());
+
+        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("record-detail-member-not-found", "기록 상세 조회"));
+    }
+
+    @Test
+    void getRecordDetailGroupNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_NOT_FOUND))
+            .given(activityRecordService)
+            .getRecordDetail(anyLong(), anyLong(), any(), anyInt());
+
+        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("record-detail-group-not-found", "기록 상세 조회"));
+    }
+
+    @Test
     void getRecordDetailGroupMemberNotFound() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND))
             .given(activityRecordService)
-            .getRecordDetail(1L, 1L);
+            .getRecordDetail(anyLong(), anyLong(), any(), anyInt());
 
         mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
                 .header("Authorization", "Bearer access-token"))
@@ -338,6 +465,179 @@ class ActivityRecordControllerDocsTest {
         mockMvc.perform(get("/api/v1/records/{recordId}", 1L))
             .andExpect(status().isUnauthorized())
             .andDo(documentError("record-detail-auth-missing", "기록 상세 조회"));
+    }
+
+    @Test
+    void getRecordDetailWithEmptyToken() throws Exception {
+        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+                .header("Authorization", "Bearer "))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-detail-auth-empty-token", "기록 상세 조회"));
+    }
+
+    @Test
+    void getRecordDetailWithInvalidAuthorizationHeader() throws Exception {
+        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+                .header("Authorization", "access-token"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-detail-auth-invalid-header", "기록 상세 조회"));
+    }
+
+    @Test
+    void getRecordDetailWithInvalidToken() throws Exception {
+        willThrow(new GeneralException(ErrorStatus.INVALID_JWT))
+            .given(tokenProvider)
+            .getMemberIdByAccessToken("invalid-token");
+
+        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+                .header("Authorization", "Bearer invalid-token"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-detail-auth-invalid-token", "기록 상세 조회"));
+    }
+
+    @Test
+    void getRecordDetailWithExpiredToken() throws Exception {
+        willThrow(new GeneralException(ErrorStatus.EXPIRED_JWT))
+            .given(tokenProvider)
+            .getMemberIdByAccessToken("expired-token");
+
+        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+                .header("Authorization", "Bearer expired-token"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-detail-auth-expired-token", "기록 상세 조회"));
+    }
+
+    @Test
+    void getRecordDetailWithUnsupportedToken() throws Exception {
+        willThrow(new GeneralException(ErrorStatus.UNSUPPORTED_JWT))
+            .given(tokenProvider)
+            .getMemberIdByAccessToken("unsupported-token");
+
+        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+                .header("Authorization", "Bearer unsupported-token"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-detail-auth-unsupported-token", "기록 상세 조회"));
+    }
+
+    @Test
+    void getRecordCommentsRecordNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.RECORD_NOT_FOUND))
+            .given(activityRecordService)
+            .getRecordComments(1L, 1L, null, 20);
+
+        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+                .header("Authorization", "Bearer access-token")
+                .param("size", "20"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("record-comment-list-record-not-found", "기록 댓글 목록 조회"));
+    }
+
+    @Test
+    void getRecordCommentsMemberNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
+            .given(activityRecordService)
+            .getRecordComments(1L, 1L, null, 20);
+
+        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+                .header("Authorization", "Bearer access-token")
+                .param("size", "20"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("record-comment-list-member-not-found", "기록 댓글 목록 조회"));
+    }
+
+    @Test
+    void getRecordCommentsGroupNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_NOT_FOUND))
+            .given(activityRecordService)
+            .getRecordComments(1L, 1L, null, 20);
+
+        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+                .header("Authorization", "Bearer access-token")
+                .param("size", "20"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("record-comment-list-group-not-found", "기록 댓글 목록 조회"));
+    }
+
+    @Test
+    void getRecordCommentsGroupMemberNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND))
+            .given(activityRecordService)
+            .getRecordComments(1L, 1L, null, 20);
+
+        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+                .header("Authorization", "Bearer access-token")
+                .param("size", "20"))
+            .andExpect(status().isNotFound())
+            .andDo(documentError("record-comment-list-group-member-not-found", "기록 댓글 목록 조회"));
+    }
+
+    @Test
+    void getRecordCommentsWithoutAuthorization() throws Exception {
+        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+                .param("size", "20"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-comment-list-auth-missing", "기록 댓글 목록 조회"));
+    }
+
+    @Test
+    void getRecordCommentsWithEmptyToken() throws Exception {
+        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+                .header("Authorization", "Bearer ")
+                .param("size", "20"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-comment-list-auth-empty-token", "기록 댓글 목록 조회"));
+    }
+
+    @Test
+    void getRecordCommentsWithInvalidAuthorizationHeader() throws Exception {
+        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+                .header("Authorization", "access-token")
+                .param("size", "20"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-comment-list-auth-invalid-header", "기록 댓글 목록 조회"));
+    }
+
+    @Test
+    void getRecordCommentsWithInvalidToken() throws Exception {
+        willThrow(new GeneralException(ErrorStatus.INVALID_JWT))
+            .given(tokenProvider)
+            .getMemberIdByAccessToken("invalid-token");
+
+        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+                .header("Authorization", "Bearer invalid-token")
+                .param("size", "20"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-comment-list-auth-invalid-token", "기록 댓글 목록 조회"));
+    }
+
+    @Test
+    void getRecordCommentsWithExpiredToken() throws Exception {
+        willThrow(new GeneralException(ErrorStatus.EXPIRED_JWT))
+            .given(tokenProvider)
+            .getMemberIdByAccessToken("expired-token");
+
+        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+                .header("Authorization", "Bearer expired-token")
+                .param("size", "20"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-comment-list-auth-expired-token", "기록 댓글 목록 조회"));
+    }
+
+    @Test
+    void getRecordCommentsWithUnsupportedToken() throws Exception {
+        willThrow(new GeneralException(ErrorStatus.UNSUPPORTED_JWT))
+            .given(tokenProvider)
+            .getMemberIdByAccessToken("unsupported-token");
+
+        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+                .header("Authorization", "Bearer unsupported-token")
+                .param("size", "20"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentError("record-comment-list-auth-unsupported-token", "기록 댓글 목록 조회"));
     }
 
     @Test
@@ -368,14 +668,18 @@ class ActivityRecordControllerDocsTest {
                             .type(JsonFieldType.STRING)
                             .optional()
                             .description("식사 시간. MEAL일 때 필수"),
-                        fieldWithPath("menu")
-                            .type(JsonFieldType.STRING)
-                            .optional()
-                            .description("메뉴명. MEAL일 때 필수"),
-                        fieldWithPath("exerciseDurationMinutes")
-                            .type(JsonFieldType.NUMBER)
-                            .optional()
-                            .description("운동 시간(분). EXERCISE일 때 필수"),
+	                        fieldWithPath("menu")
+	                            .type(JsonFieldType.STRING)
+	                            .optional()
+	                            .description("메뉴명. MEAL일 때 필수"),
+	                        fieldWithPath("exerciseDurationHours")
+	                            .type(JsonFieldType.NUMBER)
+	                            .optional()
+	                            .description("운동 시간(시). EXERCISE일 때 분과 합산해 1분 이상 필요"),
+	                        fieldWithPath("exerciseDurationMinutes")
+	                            .type(JsonFieldType.NUMBER)
+	                            .optional()
+	                            .description("운동 시간(분). 0~59"),
                         fieldWithPath("exerciseName")
                             .type(JsonFieldType.STRING)
                             .optional()
@@ -400,12 +704,13 @@ class ActivityRecordControllerDocsTest {
                 .content("""
                     {
                       "groupId": 1,
-                      "recordType": "EXERCISE",
-                      "imageKey": "records/1/2026/07/4111584723969.jpg",
-                      "mealTime": null,
-                      "menu": null,
-                      "exerciseDurationMinutes": 40,
-                      "exerciseName": "러닝"
+	                      "recordType": "EXERCISE",
+	                      "imageKey": "records/1/2026/07/4111584723969.jpg",
+	                      "mealTime": null,
+	                      "menu": null,
+	                      "exerciseDurationHours": 0,
+	                      "exerciseDurationMinutes": 40,
+	                      "exerciseName": "러닝"
                     }
                     """))
             .andExpect(status().isCreated())
@@ -453,10 +758,13 @@ class ActivityRecordControllerDocsTest {
                 .content("""
                     {
                       "groupId": 1,
-                      "recordType": "UNKNOWN",
-                      "imageKey": "records/1/2026/07/4111584723968.jpg",
-                      "mealTime": "12:30",
-                      "menu": "샐러드"
+	                      "recordType": "UNKNOWN",
+	                      "imageKey": "records/1/2026/07/4111584723968.jpg",
+	                      "mealTime": "12:30",
+	                      "menu": "샐러드",
+	                      "exerciseDurationHours": null,
+	                      "exerciseDurationMinutes": null,
+	                      "exerciseName": null
                     }
                     """))
             .andExpect(status().isBadRequest())
@@ -656,6 +964,7 @@ class ActivityRecordControllerDocsTest {
                   "imageKey": "records/1/2026/07/4111584723968.jpg",
                   "mealTime": "12:30",
                   "menu": "샐러드",
+                  "exerciseDurationHours": null,
                   "exerciseDurationMinutes": null,
                   "exerciseName": null
                 }

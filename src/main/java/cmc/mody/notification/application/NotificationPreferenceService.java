@@ -35,13 +35,24 @@ public class NotificationPreferenceService {
     public NotificationPreferenceResult updateReminderFlags(Long memberId, ReminderFlagCommand command) {
         NotificationSetting notificationSetting = getOrCreateNotificationSetting(memberId);
         notificationSetting.updateReminderFlags(
-            command.mealReminderEnabled(),
-            command.exerciseReminderEnabled(),
+            command.recordReminderEnabled(),
+            command.recordReminderEnabled(),
             command.commentNotificationEnabled(),
             command.challengeNotificationEnabled()
         );
         NotificationSetting saved = notificationSettingRepository.save(notificationSetting);
         return NotificationPreferenceResult.from(saved, findExerciseSchedules(memberId));
+    }
+
+    public NotificationSetting saveInitialReminderFlags(Long memberId, ReminderFlagCommand command) {
+        NotificationSetting notificationSetting = getOrCreateNotificationSetting(memberId);
+        notificationSetting.updateReminderFlags(
+            command.recordReminderEnabled(),
+            command.recordReminderEnabled(),
+            command.commentNotificationEnabled(),
+            command.challengeNotificationEnabled()
+        );
+        return notificationSettingRepository.save(notificationSetting);
     }
 
     public NotificationPreferenceResult updateMealTimes(Long memberId, List<MealScheduleCommand> mealSchedules) {
@@ -129,8 +140,7 @@ public class NotificationPreferenceService {
     }
 
     public record ReminderFlagCommand(
-        boolean mealReminderEnabled,
-        boolean exerciseReminderEnabled,
+        boolean recordReminderEnabled,
         boolean commentNotificationEnabled,
         boolean challengeNotificationEnabled
     ) {
@@ -150,8 +160,7 @@ public class NotificationPreferenceService {
     }
 
     public record NotificationPreferenceResult(
-        boolean mealReminderEnabled,
-        boolean exerciseReminderEnabled,
+        boolean recordReminderEnabled,
         boolean commentNotificationEnabled,
         boolean challengeNotificationEnabled,
         List<MealScheduleResult> mealSchedules,
@@ -159,7 +168,6 @@ public class NotificationPreferenceService {
     ) {
         public static NotificationPreferenceResult defaults(List<ExerciseScheduleResult> exerciseSchedules) {
             return new NotificationPreferenceResult(
-                true,
                 true,
                 true,
                 true,
@@ -177,8 +185,7 @@ public class NotificationPreferenceService {
             List<ExerciseScheduleResult> exerciseSchedules
         ) {
             return new NotificationPreferenceResult(
-                notificationSetting.isMealReminderEnabled(),
-                notificationSetting.isExerciseReminderEnabled(),
+                notificationSetting.isMealReminderEnabled() || notificationSetting.isExerciseReminderEnabled(),
                 notificationSetting.isCommentNotificationEnabled(),
                 notificationSetting.isChallengeNotificationEnabled(),
                 List.of(

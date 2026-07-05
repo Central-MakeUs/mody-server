@@ -51,8 +51,7 @@ class NotificationPreferenceServiceTest {
 
         NotificationPreferenceService.NotificationPreferenceResult result = service.getPreferences(1L);
 
-        assertThat(result.mealReminderEnabled()).isTrue();
-        assertThat(result.exerciseReminderEnabled()).isTrue();
+        assertThat(result.recordReminderEnabled()).isTrue();
         assertThat(result.commentNotificationEnabled()).isTrue();
         assertThat(result.challengeNotificationEnabled()).isTrue();
         assertThat(result.mealSchedules()).hasSize(3);
@@ -72,14 +71,13 @@ class NotificationPreferenceServiceTest {
 
         service.updateReminderFlags(1L, new NotificationPreferenceService.ReminderFlagCommand(
             false,
-            true,
             false,
             true
         ));
 
         then(notificationSettingRepository).should().save(notificationSettingCaptor.capture());
         assertThat(notificationSettingCaptor.getValue().isMealReminderEnabled()).isFalse();
-        assertThat(notificationSettingCaptor.getValue().isExerciseReminderEnabled()).isTrue();
+        assertThat(notificationSettingCaptor.getValue().isExerciseReminderEnabled()).isFalse();
         assertThat(notificationSettingCaptor.getValue().isCommentNotificationEnabled()).isFalse();
         assertThat(notificationSettingCaptor.getValue().isChallengeNotificationEnabled()).isTrue();
     }

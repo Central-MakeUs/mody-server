@@ -77,10 +77,28 @@ public class ActivityRecordController {
     @GetMapping("/records/{recordId}")
     public ApiResponse<RecordDetailResponse> getRecordDetail(
         @Parameter(hidden = true) @CurrentMember Long memberId,
-        @PathVariable Long recordId
+        @PathVariable Long recordId,
+        @RequestParam(required = false) Long cursor,
+        @RequestParam(defaultValue = "20") int size
     ) {
-        ActivityRecordService.RecordDetailResult result = activityRecordService.getRecordDetail(memberId, recordId);
+        ActivityRecordService.RecordDetailPageResult result = activityRecordService.getRecordDetail(memberId, recordId, cursor, size);
         return ApiResponse.ok(RecordDetailResponse.from(result));
+    }
+
+    @GetMapping("/records/{recordId}/comments")
+    public ApiResponse<CommentCursorResponse> getRecordComments(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long recordId,
+        @RequestParam(required = false) Long cursor,
+        @RequestParam(defaultValue = "20") int size
+    ) {
+        ActivityRecordService.CommentCursorResult result = activityRecordService.getRecordComments(
+            memberId,
+            recordId,
+            cursor,
+            size
+        );
+        return ApiResponse.ok(CommentCursorResponse.from(result));
     }
 
     @PostMapping("/records")
@@ -143,10 +161,60 @@ public class ActivityRecordController {
         String menu,
         Integer exerciseDurationMinutes,
         String exerciseName,
-        String imageUrl
+        String imageUrl,
+        int recordingStreakDays
     ) {
         public static RecordSummaryResponse from(ActivityRecordService.RecordSummaryResult result) {
             return new RecordSummaryResponse(
+                result.recordId(),
+                result.recordType(),
+                result.memberId(),
+                result.nickname(),
+                result.profileImageUrl(),
+                result.recordedTime(),
+                result.menu(),
+                result.exerciseDurationMinutes(),
+                result.exerciseName(),
+                result.imageUrl(),
+                result.recordingStreakDays()
+            );
+        }
+    }
+
+    public record RecordDetailResponse(
+        int totalCount,
+        int currentIndex,
+        List<RecordDetailItemResponse> records,
+        Long nextCursor,
+        boolean hasNext
+    ) {
+        public static RecordDetailResponse from(ActivityRecordService.RecordDetailPageResult result) {
+            return new RecordDetailResponse(
+                result.totalCount(),
+                result.currentIndex(),
+                result.records().stream()
+                    .map(RecordDetailItemResponse::from)
+                    .toList(),
+                result.nextCursor(),
+                result.hasNext()
+            );
+        }
+    }
+
+    public record RecordDetailItemResponse(
+        Long recordId,
+        RecordType recordType,
+        Long memberId,
+        String nickname,
+        String profileImageUrl,
+        LocalTime recordedTime,
+        String menu,
+        Integer exerciseDurationMinutes,
+        String exerciseName,
+        String imageUrl
+    ) {
+        public static RecordDetailItemResponse from(ActivityRecordService.RecordDetailResult result) {
+            return new RecordDetailItemResponse(
                 result.recordId(),
                 result.recordType(),
                 result.memberId(),
@@ -161,45 +229,30 @@ public class ActivityRecordController {
         }
     }
 
-    public record RecordDetailResponse(
-        Long recordId,
-        RecordType recordType,
-        Long memberId,
-        String nickname,
-        String profileImageUrl,
-        LocalTime recordedTime,
-        String menu,
-        Integer exerciseDurationMinutes,
-        String exerciseName,
-        String imageUrl,
-        List<CommentResponse> comments
-    ) {
-        public static RecordDetailResponse from(ActivityRecordService.RecordDetailResult result) {
-            return new RecordDetailResponse(
-                result.recordId(),
-                result.recordType(),
-                result.memberId(),
-                result.nickname(),
-                result.profileImageUrl(),
-                result.recordedTime(),
-                result.menu(),
-                result.exerciseDurationMinutes(),
-                result.exerciseName(),
-                result.imageUrl(),
-                result.comments().stream()
-                    .map(CommentResponse::from)
-                    .toList()
-            );
+    public record CommentCursorResponse(List<CommentResponse> comments, Long nextCursor, boolean hasNext) {
+        public static CommentCursorResponse from(ActivityRecordService.CommentCursorResult result) {
+            return new CommentCursorResponse(result.comments().stream()
+                .map(CommentResponse::from)
+                .toList(), result.nextCursor(), result.hasNext());
         }
     }
 
-    public record CommentResponse(Long commentId, Long memberId, String nickname, String content) {
+    public record CommentResponse(
+        Long commentId,
+        Long memberId,
+        String nickname,
+        String profileImageUrl,
+        String content,
+        boolean isMine
+    ) {
         public static CommentResponse from(ActivityRecordService.CommentResult result) {
             return new CommentResponse(
                 result.commentId(),
                 result.memberId(),
                 result.nickname(),
-                result.content()
+                result.profileImageUrl(),
+                result.content(),
+                result.isMine()
             );
         }
     }
@@ -219,8 +272,11 @@ public class ActivityRecordController {
         LocalTime mealTime,
         @Size(max = 100, message = "메뉴는 100자 이하로 입력해주세요.")
         String menu,
-        @Positive(message = "운동 시간은 1분 이상이어야 합니다.")
-        @Max(value = 1440, message = "운동 시간은 1440분 이하로 입력해주세요.")
+        @jakarta.validation.constraints.PositiveOrZero(message = "운동 시간은 0시간 이상이어야 합니다.")
+        @Max(value = 24, message = "운동 시간은 24시간 이하로 입력해주세요.")
+        Integer exerciseDurationHours,
+        @jakarta.validation.constraints.PositiveOrZero(message = "운동 분은 0분 이상이어야 합니다.")
+        @Max(value = 59, message = "운동 분은 59분 이하로 입력해주세요.")
         Integer exerciseDurationMinutes,
         @Size(max = 30, message = "운동명은 30자 이하로 입력해주세요.")
         String exerciseName
@@ -232,6 +288,7 @@ public class ActivityRecordController {
             }
             return mealTime != null
                 && hasText(menu)
+                && exerciseDurationHours == null
                 && exerciseDurationMinutes == null
                 && !hasText(exerciseName);
         }
@@ -241,7 +298,9 @@ public class ActivityRecordController {
             if (recordType != RecordType.EXERCISE) {
                 return true;
             }
-            return exerciseDurationMinutes != null
+            return totalExerciseDurationMinutes() != null
+                && totalExerciseDurationMinutes() > 0
+                && totalExerciseDurationMinutes() <= 1440
                 && hasText(exerciseName)
                 && mealTime == null
                 && !hasText(menu);
@@ -254,13 +313,22 @@ public class ActivityRecordController {
                 imageKey,
                 mealTime,
                 menu,
-                exerciseDurationMinutes,
+                totalExerciseDurationMinutes(),
                 exerciseName
             );
         }
 
         private boolean hasText(String value) {
             return value != null && !value.isBlank();
+        }
+
+        private Integer totalExerciseDurationMinutes() {
+            if (exerciseDurationHours == null && exerciseDurationMinutes == null) {
+                return null;
+            }
+            int hours = exerciseDurationHours == null ? 0 : exerciseDurationHours;
+            int minutes = exerciseDurationMinutes == null ? 0 : exerciseDurationMinutes;
+            return hours * 60 + minutes;
         }
     }
 

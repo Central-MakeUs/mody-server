@@ -14,8 +14,10 @@ import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.record.domain.ActivityRecord;
 import cmc.mody.record.domain.RecordComment;
 import cmc.mody.record.domain.RecordType;
+import cmc.mody.record.domain.RecordViewHistory;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
+import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -43,6 +45,7 @@ public class ActivityRecordService {
     private final GroupMemberRepository groupMemberRepository;
     private final ActivityRecordRepository activityRecordRepository;
     private final RecordCommentRepository recordCommentRepository;
+    private final RecordViewHistoryRepository recordViewHistoryRepository;
     private final UploadProperties uploadProperties;
 
     @Transactional(readOnly = true)
@@ -93,20 +96,31 @@ public class ActivityRecordService {
         boolean hasNext = records.size() > pageSize;
         List<ActivityRecord> pageRecords = hasNext ? records.subList(0, pageSize) : records;
         Map<Long, GroupMember> groupMembers = getJoinedGroupMembers(groupId);
+        Map<Long, Integer> streakDaysByMember = pageRecords.stream()
+            .map(ActivityRecord::getMemberId)
+            .distinct()
+            .collect(Collectors.toMap(
+                Function.identity(),
+                writerId -> calculateRecordingStreakDays(groupId, writerId, date)
+            ));
         List<RecordSummaryResult> summaries = pageRecords.stream()
-            .map(record -> toRecordSummary(record, groupMembers.get(record.getMemberId())))
+            .map(record -> toRecordSummary(
+                record,
+                groupMembers.get(record.getMemberId()),
+                streakDaysByMember.getOrDefault(record.getMemberId(), 0)
+            ))
             .toList();
         Long nextCursor = hasNext ? pageRecords.get(pageRecords.size() - 1).getId() : null;
         return new RecordCursorResult(summaries, nextCursor, hasNext);
     }
 
-    @Transactional(readOnly = true)
-    public RecordDetailResult getRecordDetail(Long memberId, Long recordId) {
+    @Transactional
+    public RecordDetailPageResult getRecordDetail(Long memberId, Long recordId, Long cursor, int size) {
         Member member = getMember(memberId);
         ActivityRecord record = getAccessibleRecord(memberId, recordId);
 
         if (record.getGroupId() == null) {
-            return toPersonalRecordDetail(member, record);
+            return toPersonalRecordDetailPage(member, record, cursor, size);
         }
 
         Map<Long, GroupMember> groupMembers = getJoinedGroupMembers(record.getGroupId());
@@ -114,20 +128,44 @@ public class ActivityRecordService {
         if (recordWriter == null) {
             throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
         }
+        updateRecordViewHistory(memberId, record);
 
-        List<CommentResult> comments = recordCommentRepository
-            .findByRecordIdAndDeletedAtIsNullOrderByCreatedAtAscIdAsc(record.getId())
-            .stream()
-            .filter(comment -> groupMembers.containsKey(comment.getMemberId()))
-            .map(comment -> toCommentResult(comment, groupMembers.get(comment.getMemberId())))
-            .toList();
-
-        return toRecordDetail(
+        return toRecordDetailPage(
             record,
+            cursor,
+            size,
             recordWriter.getDisplayNickname(),
-            recordWriter.getDisplayProfileImageKey(),
-            comments
+            recordWriter.getDisplayProfileImageKey()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public CommentCursorResult getRecordComments(Long memberId, Long recordId, Long cursor, int size) {
+        Member member = getMember(memberId);
+        ActivityRecord record = getAccessibleRecord(memberId, recordId);
+        int pageSize = normalizeSize(size);
+        Map<Long, GroupMember> groupMembers = record.getGroupId() == null
+            ? Map.of()
+            : getJoinedGroupMembers(record.getGroupId());
+        if (record.getGroupId() != null && !groupMembers.containsKey(record.getMemberId())) {
+            throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
+        }
+
+        List<RecordComment> comments = recordCommentRepository.findActiveCommentsByCursor(
+            record.getId(),
+            record.getGroupId(),
+            memberId,
+            cursor,
+            GroupMemberStatus.JOINED,
+            PageRequest.of(0, pageSize + 1)
+        );
+        boolean hasNext = comments.size() > pageSize;
+        List<RecordComment> pageComments = hasNext ? comments.subList(0, pageSize) : comments;
+        List<CommentResult> results = pageComments.stream()
+            .map(comment -> toCommentResult(comment, member, groupMembers))
+            .toList();
+        Long nextCursor = hasNext ? pageComments.get(pageComments.size() - 1).getId() : null;
+        return new CommentCursorResult(results, nextCursor, hasNext);
     }
 
     @Transactional
@@ -199,28 +237,63 @@ public class ActivityRecordService {
         return record;
     }
 
-    private RecordDetailResult toPersonalRecordDetail(Member member, ActivityRecord record) {
-        List<CommentResult> comments = recordCommentRepository
-            .findByRecordIdAndDeletedAtIsNullOrderByCreatedAtAscIdAsc(record.getId())
-            .stream()
-            .filter(comment -> comment.getMemberId().equals(member.getId()))
-            .map(comment -> new CommentResult(
-                comment.getId(),
-                comment.getMemberId(),
-                member.getNickname(),
-                comment.getContent()
-            ))
-            .toList();
-
-        return toRecordDetail(record, member.getNickname(), member.getProfileImageKey(), comments);
+    private RecordDetailPageResult toPersonalRecordDetailPage(Member member, ActivityRecord record, Long cursor, int size) {
+        return toRecordDetailPage(record, cursor, size, member.getNickname(), member.getProfileImageKey());
     }
 
-    private RecordDetailResult toRecordDetail(
+    private RecordDetailPageResult toRecordDetailPage(
         ActivityRecord record,
+        Long cursor,
+        int size,
         String nickname,
-        String profileImageKey,
-        List<CommentResult> comments
+        String profileImageKey
     ) {
+        LocalDate recordDate = record.getUploadedAt().toLocalDate();
+        int pageSize = normalizeSize(size);
+        Long queryCursor = (cursor == null) ? record.getId() - 1 : cursor;
+
+        List<ActivityRecord> foundRecords = activityRecordRepository.findActiveRecordsForDetailCarousel(
+            record.getGroupId(),
+            record.getMemberId(),
+            recordDate.atStartOfDay(),
+            recordDate.plusDays(1).atStartOfDay(),
+            queryCursor,
+            GroupMemberStatus.JOINED,
+            PageRequest.of(0, pageSize + 1)
+        );
+
+        boolean hasNext = foundRecords.size() > pageSize;
+        List<ActivityRecord> pageRecords = hasNext ? foundRecords.subList(0, pageSize) : foundRecords;
+
+        List<RecordDetailResult> records = pageRecords.stream()
+            .map(found -> toRecordDetail(found, nickname, profileImageKey))
+            .toList();
+
+        long totalCount = activityRecordRepository.countActiveRecordsForDetailCarousel(
+            record.getGroupId(),
+            record.getMemberId(),
+            recordDate.atStartOfDay(),
+            recordDate.plusDays(1).atStartOfDay(),
+            GroupMemberStatus.JOINED
+        );
+
+        int currentIndex = -1;
+        for (int index = 0; index < records.size(); index++) {
+            if (records.get(index).recordId().equals(record.getId())) {
+                currentIndex = index;
+                break;
+            }
+        }
+        if (currentIndex < 0) {
+            currentIndex = 0;
+        }
+
+        Long nextCursor = hasNext ? records.get(records.size() - 1).recordId() : null;
+
+        return new RecordDetailPageResult((int) totalCount, currentIndex, records, nextCursor, hasNext);
+    }
+
+    private RecordDetailResult toRecordDetail(ActivityRecord record, String nickname, String profileImageKey) {
         return new RecordDetailResult(
             record.getId(),
             record.getRecordType(),
@@ -231,17 +304,37 @@ public class ActivityRecordService {
             record.getMenu(),
             record.getExerciseDurationMinutes(),
             record.getExerciseName(),
-            toImageUrl(record.getImageKey()),
-            comments
+            toImageUrl(record.getImageKey())
         );
     }
 
-    private CommentResult toCommentResult(RecordComment comment, GroupMember groupMember) {
+    private CommentResult toCommentResult(
+        RecordComment comment,
+        Member currentMember,
+        Map<Long, GroupMember> groupMembers
+    ) {
+        if (groupMembers.isEmpty()) {
+            return new CommentResult(
+                comment.getId(),
+                comment.getMemberId(),
+                currentMember.getNickname(),
+                toImageUrl(currentMember.getProfileImageKey()),
+                comment.getContent(),
+                true
+            );
+        }
+
+        GroupMember groupMember = groupMembers.get(comment.getMemberId());
+        if (groupMember == null) {
+            throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
+        }
         return new CommentResult(
             comment.getId(),
             comment.getMemberId(),
             groupMember.getDisplayNickname(),
-            comment.getContent()
+            toImageUrl(groupMember.getDisplayProfileImageKey()),
+            comment.getContent(),
+            comment.getMemberId().equals(currentMember.getId())
         );
     }
 
@@ -270,7 +363,57 @@ public class ActivityRecordService {
             .collect(Collectors.toMap(GroupMember::getMemberId, Function.identity(), (left, right) -> left));
     }
 
-    private RecordSummaryResult toRecordSummary(ActivityRecord record, GroupMember groupMember) {
+    private int calculateRecordingStreakDays(Long groupId, Long writerMemberId, LocalDate baseDate) {
+        List<LocalDate> recordedDates = activityRecordRepository.findActiveGroupRecordsByMemberBefore(
+                groupId,
+                writerMemberId,
+                baseDate.plusDays(1).atStartOfDay(),
+                GroupMemberStatus.JOINED
+            )
+            .stream()
+            .map(found -> found.getUploadedAt().toLocalDate())
+            .distinct()
+            .toList();
+
+        int streakDays = 0;
+        LocalDate expectedDate = baseDate;
+        for (LocalDate recordedDate : recordedDates) {
+            if (recordedDate.isAfter(expectedDate)) {
+                continue;
+            }
+            if (!recordedDate.equals(expectedDate)) {
+                break;
+            }
+            streakDays++;
+            expectedDate = expectedDate.minusDays(1);
+        }
+        return streakDays;
+    }
+
+    private void updateRecordViewHistory(Long viewerMemberId, ActivityRecord record) {
+        recordViewHistoryRepository
+            .findByViewerMemberIdAndGroupIdAndWriterMemberIdAndDeletedAtIsNull(
+                viewerMemberId,
+                record.getGroupId(),
+                record.getMemberId()
+            )
+            .ifPresentOrElse(
+                history -> history.updateLastViewedAt(LocalDateTime.now()),
+                () -> recordViewHistoryRepository.save(new RecordViewHistory(
+                    idGenerator.nextId(),
+                    viewerMemberId,
+                    record.getGroupId(),
+                    record.getMemberId(),
+                    LocalDateTime.now()
+                ))
+            );
+    }
+
+    private RecordSummaryResult toRecordSummary(
+        ActivityRecord record,
+        GroupMember groupMember,
+        int recordingStreakDays
+    ) {
         return new RecordSummaryResult(
             record.getId(),
             record.getRecordType(),
@@ -281,7 +424,8 @@ public class ActivityRecordService {
             record.getMenu(),
             record.getExerciseDurationMinutes(),
             record.getExerciseName(),
-            toImageUrl(record.getImageKey())
+            toImageUrl(record.getImageKey()),
+            recordingStreakDays
         );
     }
 
@@ -367,7 +511,17 @@ public class ActivityRecordService {
         String menu,
         Integer exerciseDurationMinutes,
         String exerciseName,
-        String imageUrl
+        String imageUrl,
+        int recordingStreakDays
+    ) {
+    }
+
+    public record RecordDetailPageResult(
+        int totalCount,
+        int currentIndex,
+        List<RecordDetailResult> records,
+        Long nextCursor,
+        boolean hasNext
     ) {
     }
 
@@ -381,11 +535,20 @@ public class ActivityRecordService {
         String menu,
         Integer exerciseDurationMinutes,
         String exerciseName,
-        String imageUrl,
-        List<CommentResult> comments
+        String imageUrl
     ) {
     }
 
-    public record CommentResult(Long commentId, Long memberId, String nickname, String content) {
+    public record CommentCursorResult(List<CommentResult> comments, Long nextCursor, boolean hasNext) {
+    }
+
+    public record CommentResult(
+        Long commentId,
+        Long memberId,
+        String nickname,
+        String profileImageUrl,
+        String content,
+        boolean isMine
+    ) {
     }
 }
