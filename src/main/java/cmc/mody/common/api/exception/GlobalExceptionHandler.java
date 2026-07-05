@@ -49,6 +49,10 @@ public class GlobalExceptionHandler {
         if (request.getRequestURI().startsWith("/api/v1/records")) {
             return ErrorStatus.RECORD_VALIDATION_FAILED;
         }
+        if (request.getRequestURI().contains("/challenges")
+            || request.getRequestURI().contains("/weekly-challenges")) {
+            return ErrorStatus.CHALLENGE_VALIDATION_FAILED;
+        }
         return ErrorStatus.VALIDATION_FAILED;
     }
 

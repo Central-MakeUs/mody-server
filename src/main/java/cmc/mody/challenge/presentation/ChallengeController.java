@@ -1,7 +1,13 @@
 package cmc.mody.challenge.presentation;
 
+import cmc.mody.auth.presentation.support.CurrentMember;
+import cmc.mody.challenge.application.StepChallengeService;
 import cmc.mody.common.api.ApiResponse;
+import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,16 +17,26 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/v1")
 public class ChallengeController {
+    private final StepChallengeService stepChallengeService;
+
     @GetMapping("/groups/{groupId}/challenges/summary")
     public ApiResponse<ChallengeSummaryResponse> getChallengeSummary(@PathVariable Long groupId) {
         return ApiResponse.ok(new ChallengeSummaryResponse(12, 7, 360, 2));
     }
 
     @GetMapping("/groups/{groupId}/challenges/step/current")
-    public ApiResponse<StepChallengeStatusResponse> getCurrentStepChallenge(@PathVariable Long groupId) {
-        return ApiResponse.ok(new StepChallengeStatusResponse(1L, "서울-인천", 150_000, 34_000));
+    public ApiResponse<StepChallengeStatusResponse> getCurrentStepChallenge(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long groupId
+    ) {
+        StepChallengeService.StepChallengeStatusResult result = stepChallengeService.getCurrentStepChallenge(
+            memberId,
+            groupId
+        );
+        return ApiResponse.ok(StepChallengeStatusResponse.from(result));
     }
 
     @GetMapping("/groups/{groupId}/challenges/weekly")
@@ -43,25 +59,47 @@ public class ChallengeController {
     }
 
     @GetMapping("/groups/{groupId}/challenges/step/regions")
-    public ApiResponse<WalkedRegionListResponse> getWalkedRegions(@PathVariable Long groupId) {
-        return ApiResponse.ok(new WalkedRegionListResponse(List.of(
-            new WalkedRegionResponse("인천", "regions/incheon.png")
-        )));
+    public ApiResponse<WalkedRegionListResponse> getWalkedRegions(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long groupId
+    ) {
+        StepChallengeService.WalkedRegionListResult result = stepChallengeService.getWalkedRegions(memberId, groupId);
+        return ApiResponse.ok(WalkedRegionListResponse.from(result));
+    }
+
+    @GetMapping("/groups/{groupId}/challenges/step/options")
+    public ApiResponse<StepChallengeOptionListResponse> getStepChallengeOptions(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long groupId
+    ) {
+        StepChallengeService.StepChallengeOptionListResult result = stepChallengeService.getStepChallengeOptions(
+            memberId,
+            groupId
+        );
+        return ApiResponse.ok(StepChallengeOptionListResponse.from(result));
     }
 
     @GetMapping("/groups/{groupId}/challenges/step/rankings")
-    public ApiResponse<StepRankingListResponse> getStepRankings(@PathVariable Long groupId) {
-        return ApiResponse.ok(new StepRankingListResponse(List.of(
-            new StepRankingResponse(1, 1L, "민석", "profiles/member-1.jpg", 18_000)
-        )));
+    public ApiResponse<StepRankingListResponse> getStepRankings(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long groupId
+    ) {
+        StepChallengeService.StepRankingListResult result = stepChallengeService.getStepRankings(memberId, groupId);
+        return ApiResponse.ok(StepRankingListResponse.from(result));
     }
 
     @PatchMapping("/groups/{groupId}/challenges/step/current")
     public ApiResponse<StepChallengeChangeResponse> changeStepChallenge(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
         @PathVariable Long groupId,
-        @RequestBody StepChallengeChangeRequest request
+        @Valid @RequestBody StepChallengeChangeRequest request
     ) {
-        return ApiResponse.ok(new StepChallengeChangeResponse(2L, request.challengeId(), "서울-천안", 200_000, 0));
+        StepChallengeService.StepChallengeChangeResult result = stepChallengeService.changeStepChallenge(
+            memberId,
+            groupId,
+            request.toCommand()
+        );
+        return ApiResponse.ok(StepChallengeChangeResponse.from(result));
     }
 
     @GetMapping("/weekly-challenges/{challengeId}")
@@ -95,7 +133,20 @@ public class ChallengeController {
     ) {
     }
 
-    public record StepChallengeStatusResponse(Long groupChallengeId, String title, int targetStepCount, int currentStepCount) {
+    public record StepChallengeStatusResponse(
+        Long groupChallengeId,
+        String title,
+        int targetStepCount,
+        int currentStepCount
+    ) {
+        public static StepChallengeStatusResponse from(StepChallengeService.StepChallengeStatusResult result) {
+            return new StepChallengeStatusResponse(
+                result.groupChallengeId(),
+                result.title(),
+                result.targetStepCount(),
+                result.currentStepCount()
+            );
+        }
     }
 
     public record WeeklyChallengeListResponse(List<WeeklyChallengeSummaryResponse> challenges) {
@@ -117,18 +168,76 @@ public class ChallengeController {
     }
 
     public record WalkedRegionListResponse(List<WalkedRegionResponse> regions) {
+        public static WalkedRegionListResponse from(StepChallengeService.WalkedRegionListResult result) {
+            return new WalkedRegionListResponse(result.regions().stream()
+                .map(WalkedRegionResponse::from)
+                .toList());
+        }
     }
 
     public record WalkedRegionResponse(String regionName, String regionImageUrl) {
+        public static WalkedRegionResponse from(StepChallengeService.WalkedRegionResult result) {
+            return new WalkedRegionResponse(result.regionName(), result.regionImageUrl());
+        }
+    }
+
+    public record StepChallengeOptionListResponse(List<StepChallengeOptionResponse> options) {
+        public static StepChallengeOptionListResponse from(StepChallengeService.StepChallengeOptionListResult result) {
+            return new StepChallengeOptionListResponse(result.options().stream()
+                .map(StepChallengeOptionResponse::from)
+                .toList());
+        }
+    }
+
+    public record StepChallengeOptionResponse(
+        Long challengeId,
+        String title,
+        String departure,
+        String destination,
+        double distanceKm,
+        int targetStepCount,
+        boolean selected
+    ) {
+        public static StepChallengeOptionResponse from(StepChallengeService.StepChallengeOptionResult result) {
+            return new StepChallengeOptionResponse(
+                result.challengeId(),
+                result.title(),
+                result.departure(),
+                result.destination(),
+                result.distanceKm(),
+                result.targetStepCount(),
+                result.selected()
+            );
+        }
     }
 
     public record StepRankingListResponse(List<StepRankingResponse> rankings) {
+        public static StepRankingListResponse from(StepChallengeService.StepRankingListResult result) {
+            return new StepRankingListResponse(result.rankings().stream()
+                .map(StepRankingResponse::from)
+                .toList());
+        }
     }
 
     public record StepRankingResponse(int rank, Long memberId, String nickname, String profileImageUrl, int stepCount) {
+        public static StepRankingResponse from(StepChallengeService.StepRankingResult result) {
+            return new StepRankingResponse(
+                result.rank(),
+                result.memberId(),
+                result.nickname(),
+                result.profileImageUrl(),
+                result.stepCount()
+            );
+        }
     }
 
-    public record StepChallengeChangeRequest(Long challengeId) {
+    public record StepChallengeChangeRequest(
+        @NotNull(message = "챌린지 id는 필수입니다.")
+        Long challengeId
+    ) {
+        public StepChallengeService.StepChallengeChangeCommand toCommand() {
+            return new StepChallengeService.StepChallengeChangeCommand(challengeId);
+        }
     }
 
     public record StepChallengeChangeResponse(
@@ -138,6 +247,15 @@ public class ChallengeController {
         int targetStepCount,
         int currentStepCount
     ) {
+        public static StepChallengeChangeResponse from(StepChallengeService.StepChallengeChangeResult result) {
+            return new StepChallengeChangeResponse(
+                result.groupChallengeId(),
+                result.challengeId(),
+                result.title(),
+                result.targetStepCount(),
+                result.currentStepCount()
+            );
+        }
     }
 
     public record WeeklyChallengeDetailResponse(Long challengeId, String title, String description) {

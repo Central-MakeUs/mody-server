@@ -16,6 +16,10 @@ id:
   epoch-second: ${ID_EPOCH_SECOND:1767225600}
   node-id: ${ID_NODE_ID:0}
 
+challenge:
+  step-master-data-initializer:
+    enabled: ${CHALLENGE_STEP_MASTER_DATA_INITIALIZER_ENABLED:true}
+
 upload:
   provider: ${UPLOAD_PROVIDER:local}
   gcp-bucket: ${GCP_STORAGE_BUCKET:}

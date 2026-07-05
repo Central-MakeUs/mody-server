@@ -54,6 +54,17 @@ public class GroupChallenge extends BaseEntity {
         this.endsOn = endsOn;
     }
 
+    public void reset(LocalDateTime endedAt) {
+        this.groupChallengeStatus = GroupChallengeStatus.RESET;
+        this.endedAt = endedAt;
+    }
+
+    public void complete(LocalDateTime completedAt) {
+        this.groupChallengeStatus = GroupChallengeStatus.COMPLETED;
+        this.completedAt = completedAt;
+        this.endedAt = completedAt;
+    }
+
     public DayOfWeek getDueDayOfWeek() {
         return endsOn.getDayOfWeek();
     }
