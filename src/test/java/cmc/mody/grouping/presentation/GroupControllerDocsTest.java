@@ -1,5 +1,7 @@
 package cmc.mody.grouping.presentation;
 
+import static cmc.mody.docs.ApiDocumentDescriptions.AUTHENTICATED_API;
+import static cmc.mody.docs.ApiDocumentDescriptions.GROUP_ACCESS_RULES;
 import static cmc.mody.docs.ApiDocumentUtils.commonResponseFields;
 import static com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.document;
 import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
@@ -55,6 +57,10 @@ class GroupControllerDocsTest {
     private static final String GROUP_DESCRIPTION = """
         모든 그룹 API는 소셜 로그인 후 발급받은 access token의 회원 id 기준으로 처리한다.
 
+        %s
+
+        %s
+
         발생 가능한 예외 코드:
         - AUTH401: Authorization 헤더가 없거나 비어있음
         - AUTH402: Bearer 뒤 JWT 값이 비어있음
@@ -69,7 +75,7 @@ class GroupControllerDocsTest {
         - GROUP305: 이미 참여 중인 그룹
         - GROUP306: 그룹 참여 정보 없음
         - GROUP307: 그룹 최대 인원 초과
-        """;
+        """.formatted(AUTHENTICATED_API, GROUP_ACCESS_RULES);
 
     @Autowired
     private MockMvc mockMvc;
@@ -102,7 +108,9 @@ class GroupControllerDocsTest {
                     .summary("랜덤 그룹 코드 생성")
                     .description(GROUP_DESCRIPTION)
                     .responseFields(commonResponseFields(
-                        fieldWithPath("result.code").type(JsonFieldType.STRING).description("랜덤 그룹 코드")
+                        fieldWithPath("result.code")
+                            .type(JsonFieldType.STRING)
+                            .description("랜덤 그룹 코드. 그룹 생성 전에 미리보기/초대 코드 노출에 사용할 수 있음")
                     ))
                     .build())
             ));
@@ -129,11 +137,15 @@ class GroupControllerDocsTest {
                     .summary("그룹 생성")
                     .description(GROUP_DESCRIPTION)
                     .requestFields(
-                        fieldWithPath("name").type(JsonFieldType.STRING).description("그룹명. 최대 30자")
+                        fieldWithPath("name")
+                            .type(JsonFieldType.STRING)
+                            .description("그룹명. 최대 30자이며 실제 앱 화면에 노출되는 이름")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.groupId").type(JsonFieldType.NUMBER).description("그룹 id"),
-                        fieldWithPath("result.code").type(JsonFieldType.STRING).description("그룹 코드"),
+                        fieldWithPath("result.code")
+                            .type(JsonFieldType.STRING)
+                            .description("그룹 초대 코드. 다른 회원의 그룹 참여에 사용"),
                         fieldWithPath("result.name").type(JsonFieldType.STRING).description("그룹명")
                     ))
                     .build())
@@ -171,7 +183,7 @@ class GroupControllerDocsTest {
                         fieldWithPath("result.name").type(JsonFieldType.STRING).description("그룹명"),
                         fieldWithPath("result.memberCount")
                             .type(JsonFieldType.NUMBER)
-                            .description("그룹 참여 인원")
+                            .description("그룹 참여 인원. 최대 12명")
                     ))
                     .build())
             ));
@@ -199,7 +211,7 @@ class GroupControllerDocsTest {
                         fieldWithPath("result.groups[].code").type(JsonFieldType.STRING).description("그룹 코드"),
                         fieldWithPath("result.groups[].memberCount")
                             .type(JsonFieldType.NUMBER)
-                            .description("그룹 참여 인원")
+                            .description("그룹 참여 인원. 최대 12명")
                     ))
                     .build())
             ));
@@ -233,7 +245,7 @@ class GroupControllerDocsTest {
                             .description("프로필 이미지 URL"),
                         fieldWithPath("result.members[].unreadRecordCount")
                             .type(JsonFieldType.NUMBER)
-                            .description("현재 로그인 회원 기준 미확인 기록 수")
+                            .description("현재 로그인 회원이 해당 구성원의 기록 상세에 마지막으로 진입한 이후 올라온 기록 수. 본인은 0")
                     ))
                     .build())
             ));

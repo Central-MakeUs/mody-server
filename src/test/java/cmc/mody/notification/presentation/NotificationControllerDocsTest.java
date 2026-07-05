@@ -1,5 +1,7 @@
 package cmc.mody.notification.presentation;
 
+import static cmc.mody.docs.ApiDocumentDescriptions.AUTHENTICATED_API;
+import static cmc.mody.docs.ApiDocumentDescriptions.CURSOR_PAGING;
 import static cmc.mody.docs.ApiDocumentUtils.commonResponseFields;
 import static com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.document;
 import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
@@ -48,6 +50,10 @@ class NotificationControllerDocsTest {
     private static final String NOTIFICATION_DESCRIPTION = """
         알림 API는 access token의 회원 id 기준으로 처리한다.
 
+        %s
+
+        %s
+
         발생 가능한 예외 코드:
         - AUTH401: Authorization 헤더가 없거나 비어있음
         - AUTH402: Bearer 뒤 JWT 값이 비어있음
@@ -56,7 +62,7 @@ class NotificationControllerDocsTest {
         - AUTH405: 지원하지 않는 JWT
         - MEMBER302: 토큰의 회원 id에 해당하는 회원 없음
         - NOTIFICATION302: 알림 없음 또는 다른 회원 알림 접근
-        """;
+        """.formatted(AUTHENTICATED_API, CURSOR_PAGING);
 
     @Autowired
     private MockMvc mockMvc;
@@ -102,7 +108,7 @@ class NotificationControllerDocsTest {
                     .summary("알림 리스트 조회")
                     .description(NOTIFICATION_DESCRIPTION)
                     .queryParameters(
-                        parameterWithName("cursor").optional().description("다음 페이지 커서"),
+                        parameterWithName("cursor").optional().description("다음 페이지 커서. 최초 조회 시 생략"),
                         parameterWithName("size").description("조회 개수")
                     )
                     .responseFields(commonResponseFields(
@@ -111,8 +117,10 @@ class NotificationControllerDocsTest {
                         fieldWithPath("result.notifications[].title").type(JsonFieldType.STRING).description("제목"),
                         fieldWithPath("result.notifications[].description").type(JsonFieldType.STRING).description("설명"),
                         fieldWithPath("result.notifications[].createdAt").type(JsonFieldType.STRING).description("생성 일시"),
-                        fieldWithPath("result.notifications[].read").type(JsonFieldType.BOOLEAN).description("읽음 여부"),
-                        fieldWithPath("result.nextCursor").type(JsonFieldType.NUMBER).description("다음 커서"),
+                        fieldWithPath("result.notifications[].read")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("읽음 여부. 읽음 처리 API 호출 후 true"),
+                        fieldWithPath("result.nextCursor").type(JsonFieldType.NUMBER).description("다음 페이지 조회용 커서"),
                         fieldWithPath("result.hasNext").type(JsonFieldType.BOOLEAN).description("다음 페이지 존재 여부")
                     ))
                     .build())
@@ -199,9 +207,9 @@ class NotificationControllerDocsTest {
             .andExpect(status().isOk())
             .andDo(document("notification-push-token-register",
                 requestFields(
-                    fieldWithPath("deviceId").type(JsonFieldType.STRING).description("디바이스 식별자"),
+                    fieldWithPath("deviceId").type(JsonFieldType.STRING).description("디바이스 식별자. 같은 디바이스의 토큰 갱신 기준"),
                     fieldWithPath("platform").type(JsonFieldType.STRING).description("플랫폼: IOS, ANDROID"),
-                    fieldWithPath("fcmToken").type(JsonFieldType.STRING).description("FCM 등록 토큰")
+                    fieldWithPath("fcmToken").type(JsonFieldType.STRING).description("FCM 등록 토큰. 토큰이 바뀌면 같은 deviceId로 다시 등록")
                 ),
                 resource(ResourceSnippetParameters.builder()
                     .tag("Notification")
@@ -227,7 +235,7 @@ class NotificationControllerDocsTest {
             .andExpect(status().isOk())
             .andDo(document("notification-push-token-disable",
                 requestFields(
-                    fieldWithPath("deviceId").type(JsonFieldType.STRING).description("비활성화할 디바이스 식별자")
+                    fieldWithPath("deviceId").type(JsonFieldType.STRING).description("푸시 수신을 해제할 디바이스 식별자")
                 ),
                 resource(ResourceSnippetParameters.builder()
                     .tag("Notification")

@@ -1,5 +1,7 @@
 package cmc.mody.common.presentation;
 
+import static cmc.mody.docs.ApiDocumentDescriptions.AUTHENTICATED_API;
+import static cmc.mody.docs.ApiDocumentDescriptions.IMAGE_UPLOAD_FLOW;
 import static cmc.mody.docs.ApiDocumentUtils.commonResponseFields;
 import static com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.document;
 import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
@@ -36,6 +38,10 @@ class UploadControllerDocsTest {
     private static final String UPLOAD_DESCRIPTION = """
         인증 회원이 이미지 업로드용 presigned URL과 서버 API에 전달할 imageKey를 발급받는다.
 
+        %s
+
+        %s
+
         발생 가능한 예외 코드:
         - AUTH401: Authorization 헤더가 없거나 비어있음
         - AUTH402: Bearer 뒤 JWT 값이 비어있음
@@ -47,7 +53,7 @@ class UploadControllerDocsTest {
         - UPLOAD302: 지원하지 않는 파일 확장자
         - UPLOAD303: 업로드 스토리지 설정 누락
         - UPLOAD304: 업로드 URL 발급 실패
-        """;
+        """.formatted(AUTHENTICATED_API, IMAGE_UPLOAD_FLOW);
 
     @Autowired
     private MockMvc mockMvc;
@@ -87,16 +93,19 @@ class UploadControllerDocsTest {
                     .queryParameters(
                         parameterWithName("domain")
                             .description("업로드 도메인: record, profile, weekly-challenge"),
-                        parameterWithName("fileName").description("원본 파일명")
+                        parameterWithName("fileName")
+                            .description("원본 파일명. 서버는 확장자 검증과 imageKey 생성을 위해 사용")
                     )
                     .responseFields(commonResponseFields(
-                        fieldWithPath("result.presignedUrl").type(JsonFieldType.STRING).description("업로드 URL"),
+                        fieldWithPath("result.presignedUrl")
+                            .type(JsonFieldType.STRING)
+                            .description("클라이언트가 이미지 바이너리를 직접 업로드할 URL"),
                         fieldWithPath("result.imageKey")
                             .type(JsonFieldType.STRING)
-                            .description("서버 API에 전달할 이미지 key"),
+                            .description("기록/프로필/챌린지 API에 전달할 이미지 key. DB에는 URL 대신 이 값을 저장"),
                         fieldWithPath("result.expiresInSeconds")
                             .type(JsonFieldType.NUMBER)
-                            .description("만료 시간 초")
+                            .description("presigned URL 만료 시간 초. 만료 후에는 URL을 다시 발급받아야 함")
                     ))
                     .build())
             ));

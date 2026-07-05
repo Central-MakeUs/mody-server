@@ -42,7 +42,7 @@ class OAuthControllerDocsTest {
     private static final String MAIN_ACCESSIBLE_DESCRIPTION =
         "메인 화면 진입 가능 여부. 개인 정보 입력 완료 및 참여 그룹 1개 이상이면 true";
     private static final String GROUP_ONBOARDING_COMPLETED_DESCRIPTION =
-        "그룹 생성 또는 참여를 한 번이라도 완료했는지 여부";
+        "그룹 생성 또는 참여를 한 번이라도 완료했는지 여부. 현재 참여 그룹이 없어도 과거 완료 이력이 있으면 true";
 
     @Autowired
     private MockMvc mockMvc;
@@ -64,7 +64,10 @@ class OAuthControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("OAuth")
                     .summary("OAuth redirect URL 조회")
-                    .description("서버 callback 흐름에서 사용할 provider authorization URL을 조회한다.")
+                    .description("""
+                        서버 callback 흐름에서 사용할 provider authorization URL을 조회한다.
+                        네이티브 앱 로그인은 클라이언트 소셜 로그인 API를 우선 사용한다.
+                        """)
                     .pathParameters(
                         parameterWithName("loginType").description("로그인 타입: kakao, apple, google")
                     )
@@ -89,7 +92,10 @@ class OAuthControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("OAuth")
                     .summary("OAuth callback 로그인")
-                    .description("authorization code로 로그인하고 서비스 JWT를 발급한다.")
+                    .description("""
+                        authorization code로 로그인하고 서비스 JWT를 발급한다.
+                        서버 callback 흐름용 API이며, 네이티브 앱은 provider token을 전달하는 클라이언트 소셜 로그인 API를 사용한다.
+                        """)
                     .pathParameters(
                         parameterWithName("loginType").description("로그인 타입: kakao, apple, google")
                     )
