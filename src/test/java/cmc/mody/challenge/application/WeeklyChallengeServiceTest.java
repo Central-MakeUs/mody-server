@@ -29,6 +29,7 @@ import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
+import cmc.mody.notification.application.NotificationRequestService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -64,6 +65,9 @@ class WeeklyChallengeServiceTest {
 
     @Mock
     private ChallengeProofRepository challengeProofRepository;
+
+    @Mock
+    private NotificationRequestService notificationRequestService;
 
     @Captor
     private ArgumentCaptor<ChallengeProof> proofCaptor;
@@ -153,6 +157,9 @@ class WeeklyChallengeServiceTest {
         given(idGenerator.nextId()).willReturn(200L);
         given(challengeProofRepository.save(any(ChallengeProof.class)))
             .willAnswer(invocation -> invocation.getArgument(0));
+        given(groupMemberRepository.countByGroupIdAndGroupMemberStatusAndDeletedAtIsNull(10L, GroupMemberStatus.JOINED))
+            .willReturn(2L);
+        given(challengeProofRepository.countByGroupChallengeIdAndDeletedAtIsNull(100L)).willReturn(1L);
 
         WeeklyChallengeProofCreateResult result = service.createWeeklyChallengeProof(
             1L,
@@ -169,6 +176,59 @@ class WeeklyChallengeServiceTest {
             100L,
             "https://storage.example.com/weekly-challenges/1/proof.jpg"
         ));
+    }
+
+    @Test
+    @DisplayName("마지막 그룹원이 인증하면 주간 챌린지를 완료 처리하고 완료 알림을 요청한다.")
+    void completeWeeklyChallengeWhenAllJoinedMembersProved() {
+        WeeklyChallengeService service = service();
+        GroupChallenge groupChallenge = groupChallenge(100L, 10L, 1L);
+        givenValidGroupMembership();
+        given(groupChallengeRepository.findByIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
+            .willReturn(Optional.of(groupChallenge));
+        given(challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(1L, ChallengeType.PHOTO))
+            .willReturn(Optional.of(challenge(1L, "물 2L 마시기")));
+        given(challengeProofRepository.existsByGroupChallengeIdAndMemberIdAndDeletedAtIsNull(100L, 1L))
+            .willReturn(false);
+        given(idGenerator.nextId()).willReturn(200L);
+        given(challengeProofRepository.save(any(ChallengeProof.class)))
+            .willAnswer(invocation -> invocation.getArgument(0));
+        given(groupMemberRepository.countByGroupIdAndGroupMemberStatusAndDeletedAtIsNull(10L, GroupMemberStatus.JOINED))
+            .willReturn(2L);
+        given(challengeProofRepository.countByGroupChallengeIdAndDeletedAtIsNull(100L)).willReturn(2L);
+
+        service.createWeeklyChallengeProof(
+            1L,
+            10L,
+            100L,
+            new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg")
+        );
+
+        assertThat(groupChallenge.getGroupChallengeStatus()).isEqualTo(GroupChallengeStatus.COMPLETED);
+        assertThat(groupChallenge.getCompletedAt()).isNotNull();
+        then(notificationRequestService).should().requestWeeklyChallengeCompleted(10L, 100L);
+    }
+
+    @Test
+    @DisplayName("이미 완료된 주간 챌린지는 추가 인증할 수 없다.")
+    void throwChallengeAlreadyCompleted() {
+        WeeklyChallengeService service = service();
+        GroupChallenge groupChallenge = groupChallenge(100L, 10L, 1L);
+        groupChallenge.complete(LocalDateTime.now());
+        givenValidGroupMembership();
+        given(groupChallengeRepository.findByIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
+            .willReturn(Optional.of(groupChallenge));
+        given(challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(1L, ChallengeType.PHOTO))
+            .willReturn(Optional.of(challenge(1L, "물 2L 마시기")));
+
+        assertThatThrownBy(() -> service.createWeeklyChallengeProof(
+            1L,
+            10L,
+            100L,
+            new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg")
+        ))
+            .isInstanceOfSatisfying(GeneralException.class, exception ->
+                assertThat(exception.getStatus()).isEqualTo(ErrorStatus.CHALLENGE_ALREADY_COMPLETED));
     }
 
     @Test
@@ -205,6 +265,7 @@ class WeeklyChallengeServiceTest {
             challengeRepository,
             groupChallengeRepository,
             challengeProofRepository,
+            notificationRequestService,
             uploadProperties
         );
     }
