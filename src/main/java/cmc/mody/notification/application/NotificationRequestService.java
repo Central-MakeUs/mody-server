@@ -106,4 +106,13 @@ public class NotificationRequestService {
             groupId
         ));
     }
+
+    public void requestWeeklyChallengeCompleted(Long groupId, Long groupChallengeId) {
+        request(NotificationRequestedEvent.immediate(
+            NotificationType.WEEKLY_CHALLENGE_COMPLETED,
+            Map.of("groupId", groupId),
+            "CHALLENGE",
+            groupChallengeId
+        ));
+    }
 }

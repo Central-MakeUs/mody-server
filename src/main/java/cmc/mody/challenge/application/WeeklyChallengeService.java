@@ -19,6 +19,7 @@ import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
+import cmc.mody.notification.application.NotificationRequestService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -40,6 +41,7 @@ public class WeeklyChallengeService {
     private final ChallengeRepository challengeRepository;
     private final GroupChallengeRepository groupChallengeRepository;
     private final ChallengeProofRepository challengeProofRepository;
+    private final NotificationRequestService notificationRequestService;
     private final UploadProperties uploadProperties;
 
     @Transactional(readOnly = true)
@@ -102,6 +104,9 @@ public class WeeklyChallengeService {
     ) {
         validateGroupMembership(memberId, groupId);
         GroupChallenge groupChallenge = getWeeklyGroupChallenge(groupId, groupChallengeId);
+        if (groupChallenge.getGroupChallengeStatus() == GroupChallengeStatus.COMPLETED) {
+            throw new GeneralException(ErrorStatus.CHALLENGE_ALREADY_COMPLETED);
+        }
         boolean alreadyProved = challengeProofRepository.existsByGroupChallengeIdAndMemberIdAndDeletedAtIsNull(
             groupChallenge.getId(),
             memberId
@@ -117,7 +122,26 @@ public class WeeklyChallengeService {
             command.imageKey(),
             LocalDateTime.now()
         ));
+        completeIfAllMembersProved(groupChallenge);
         return new WeeklyChallengeProofCreateResult(proof.getId(), groupChallenge.getId(), toImageUrl(proof.getImageKey()));
+    }
+
+    private void completeIfAllMembersProved(GroupChallenge groupChallenge) {
+        long joinedMemberCount = groupMemberRepository.countByGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            groupChallenge.getGroupId(),
+            GroupMemberStatus.JOINED
+        );
+        if (joinedMemberCount == 0) {
+            return;
+        }
+
+        long proofCount = challengeProofRepository.countByGroupChallengeIdAndDeletedAtIsNull(groupChallenge.getId());
+        if (proofCount < joinedMemberCount) {
+            return;
+        }
+
+        groupChallenge.complete(LocalDateTime.now());
+        notificationRequestService.requestWeeklyChallengeCompleted(groupChallenge.getGroupId(), groupChallenge.getId());
     }
 
     private List<GroupChallenge> getCurrentWeeklyGroupChallenges(Long groupId, List<Challenge> weeklyChallenges) {

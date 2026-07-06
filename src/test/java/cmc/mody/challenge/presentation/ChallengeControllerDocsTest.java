@@ -112,6 +112,7 @@ class ChallengeControllerDocsTest {
         - CHALLENGE301: 챌린지 요청값 검증 실패
         - CHALLENGE302: 챌린지 없음
         - CHALLENGE304: 이미 주간 챌린지 인증을 완료함
+        - CHALLENGE305: 이미 완료된 챌린지임
         """;
 
     @Autowired
@@ -747,6 +748,30 @@ class ChallengeControllerDocsTest {
                     """))
             .andExpect(status().isConflict())
             .andDo(documentWeeklyError("weekly-challenge-proof-create-already-exists", "주간 챌린지 인증 업로드"));
+    }
+
+    @Test
+    void createWeeklyChallengeProofAlreadyCompleted() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.CHALLENGE_ALREADY_COMPLETED))
+            .given(weeklyChallengeService)
+            .createWeeklyChallengeProof(
+                1L,
+                1L,
+                1L,
+                new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg")
+            );
+
+        mockMvc.perform(post("/api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs", 1L, 1L)
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "imageKey": "weekly-challenges/1/proof.jpg"
+                    }
+                    """))
+            .andExpect(status().isConflict())
+            .andDo(documentWeeklyError("weekly-challenge-proof-create-already-completed", "주간 챌린지 인증 업로드"));
     }
 
     @Test
