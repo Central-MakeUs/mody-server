@@ -24,6 +24,14 @@ import cmc.mody.challenge.application.StepChallengeService.StepRankingListResult
 import cmc.mody.challenge.application.StepChallengeService.StepRankingResult;
 import cmc.mody.challenge.application.StepChallengeService.WalkedRegionListResult;
 import cmc.mody.challenge.application.StepChallengeService.WalkedRegionResult;
+import cmc.mody.challenge.application.WeeklyChallengeService;
+import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeDetailResult;
+import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeListResult;
+import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProofCreateCommand;
+import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProofCreateResult;
+import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProofListResult;
+import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProofResult;
+import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeSummaryResult;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.config.WebConfig;
@@ -67,12 +75,33 @@ class ChallengeControllerDocsTest {
         - CHALLENGE302: 챌린지 없음
         - CHALLENGE303: 진행 중인 걸음수 챌린지 없음
         """;
+    private static final String WEEKLY_CHALLENGE_DESCRIPTION = """
+        주간 챌린지 API는 access token의 회원 id 기준으로 처리한다.
+        그룹 기반 API는 요청 회원의 그룹 참여 여부를 검증한다.
+        인증 이미지는 Upload API에서 weekly-challenge 도메인으로 발급받은 imageKey를 전달한다.
+
+        발생 가능한 예외 코드:
+        - AUTH401: Authorization 헤더가 없거나 비어있음
+        - AUTH402: Bearer 뒤 JWT 값이 비어있음
+        - AUTH403: JWT 형식이 올바르지 않거나 refresh token을 사용함
+        - AUTH404: 만료된 JWT
+        - AUTH405: 지원하지 않는 JWT
+        - MEMBER302: 토큰의 회원 id에 해당하는 회원 없음
+        - GROUP302: 그룹 없음
+        - GROUP306: 그룹 참여 정보 없음
+        - CHALLENGE301: 챌린지 요청값 검증 실패
+        - CHALLENGE302: 챌린지 없음
+        - CHALLENGE304: 이미 주간 챌린지 인증을 완료함
+        """;
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
     private StepChallengeService stepChallengeService;
+
+    @MockitoBean
+    private WeeklyChallengeService weeklyChallengeService;
 
     @MockitoBean
     private TokenProvider tokenProvider;
@@ -133,13 +162,20 @@ class ChallengeControllerDocsTest {
 
     @Test
     void getWeeklyChallenges() throws Exception {
-        mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/weekly", 1L))
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(weeklyChallengeService.getWeeklyChallenges(1L, 1L))
+            .willReturn(new WeeklyChallengeListResult(List.of(
+                new WeeklyChallengeSummaryResult(1L, "물 2L 마시기", "SUNDAY", 3, "민석")
+            )));
+
+        mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/weekly", 1L)
+                .header("Authorization", "Bearer access-token"))
             .andExpect(status().isOk())
             .andDo(document("weekly-challenge-list",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Weekly Challenge")
-                    .summary("[미구현] 이번주의 주간 챌린지 조회")
-                    .description("이번주 진행 중인 주간 챌린지 목록과 참여 현황을 조회한다.")
+                    .summary("이번주의 주간 챌린지 조회")
+                    .description(WEEKLY_CHALLENGE_DESCRIPTION)
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.challenges[].groupChallengeId").type(JsonFieldType.NUMBER)
                             .description("그룹 챌린지 id"),
@@ -442,13 +478,18 @@ class ChallengeControllerDocsTest {
 
     @Test
     void getWeeklyChallengeDetail() throws Exception {
-        mockMvc.perform(get("/api/v1/weekly-challenges/{challengeId}", 1L))
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(weeklyChallengeService.getWeeklyChallengeDetail(1L, 1L))
+            .willReturn(new WeeklyChallengeDetailResult(1L, "물 2L 마시기", "하루 동안 물 2L를 마시고 사진으로 인증한다."));
+
+        mockMvc.perform(get("/api/v1/weekly-challenges/{challengeId}", 1L)
+                .header("Authorization", "Bearer access-token"))
             .andExpect(status().isOk())
             .andDo(document("weekly-challenge-detail",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Weekly Challenge")
-                    .summary("[미구현] 주간 챌린지 상세 조회")
-                    .description("주간 챌린지명과 상세 설명을 조회한다.")
+                    .summary("주간 챌린지 상세 조회")
+                    .description(WEEKLY_CHALLENGE_DESCRIPTION)
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.challengeId").type(JsonFieldType.NUMBER).description("챌린지 id"),
                         fieldWithPath("result.title").type(JsonFieldType.STRING).description("챌린지명"),
@@ -460,13 +501,26 @@ class ChallengeControllerDocsTest {
 
     @Test
     void getWeeklyChallengeProofs() throws Exception {
-        mockMvc.perform(get("/api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs", 1L, 1L))
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(weeklyChallengeService.getWeeklyChallengeProofs(1L, 1L, 1L))
+            .willReturn(new WeeklyChallengeProofListResult(List.of(
+                new WeeklyChallengeProofResult(
+                    1L,
+                    "https://storage.example.com/weekly-challenges/1/proof.jpg",
+                    1L,
+                    "민석",
+                    "https://storage.example.com/profiles/member-1.jpg"
+                )
+            )));
+
+        mockMvc.perform(get("/api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs", 1L, 1L)
+                .header("Authorization", "Bearer access-token"))
             .andExpect(status().isOk())
             .andDo(document("weekly-challenge-proofs",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Weekly Challenge")
-                    .summary("[미구현] 그룹원 인증 이미지 조회")
-                    .description("주간 챌린지에 업로드된 그룹원 인증 이미지를 조회한다.")
+                    .summary("그룹원 인증 이미지 조회")
+                    .description(WEEKLY_CHALLENGE_DESCRIPTION)
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.proofs[].proofId").type(JsonFieldType.NUMBER).description("인증 id"),
                         fieldWithPath("result.proofs[].imageUrl").type(JsonFieldType.STRING).description("인증 이미지 URL"),
@@ -477,6 +531,115 @@ class ChallengeControllerDocsTest {
                     ))
                     .build())
             ));
+    }
+
+    @Test
+    void createWeeklyChallengeProof() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(weeklyChallengeService.createWeeklyChallengeProof(
+            1L,
+            1L,
+            1L,
+            new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg")
+        )).willReturn(new WeeklyChallengeProofCreateResult(
+            10L,
+            1L,
+            "https://storage.example.com/weekly-challenges/1/proof.jpg"
+        ));
+
+        mockMvc.perform(post("/api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs", 1L, 1L)
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "imageKey": "weekly-challenges/1/proof.jpg"
+                    }
+                    """))
+            .andExpect(status().isCreated())
+            .andDo(document("weekly-challenge-proof-create",
+                requestFields(
+                    fieldWithPath("imageKey")
+                        .type(JsonFieldType.STRING)
+                        .description("weekly-challenge 도메인으로 발급받은 업로드 이미지 key")
+                ),
+                resource(ResourceSnippetParameters.builder()
+                    .tag("Weekly Challenge")
+                    .summary("주간 챌린지 인증 업로드")
+                    .description(WEEKLY_CHALLENGE_DESCRIPTION)
+                    .responseFields(commonResponseFields(
+                        fieldWithPath("result.proofId").type(JsonFieldType.NUMBER).description("인증 id"),
+                        fieldWithPath("result.groupChallengeId").type(JsonFieldType.NUMBER)
+                            .description("그룹 챌린지 id"),
+                        fieldWithPath("result.imageUrl").type(JsonFieldType.STRING).description("인증 이미지 URL")
+                    ))
+                    .build())
+            ));
+    }
+
+    @Test
+    void createWeeklyChallengeProofAlreadyExists() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.CHALLENGE_PROOF_ALREADY_EXISTS))
+            .given(weeklyChallengeService)
+            .createWeeklyChallengeProof(
+                1L,
+                1L,
+                1L,
+                new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg")
+            );
+
+        mockMvc.perform(post("/api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs", 1L, 1L)
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "imageKey": "weekly-challenges/1/proof.jpg"
+                    }
+                    """))
+            .andExpect(status().isConflict())
+            .andDo(documentWeeklyError("weekly-challenge-proof-create-already-exists", "주간 챌린지 인증 업로드"));
+    }
+
+    @Test
+    void createWeeklyChallengeProofInvalidRequest() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(post("/api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs", 1L, 1L)
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "imageKey": ""
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andDo(documentWeeklyError("weekly-challenge-proof-create-invalid-request", "주간 챌린지 인증 업로드"));
+    }
+
+    @Test
+    void getWeeklyChallengeDetailNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.CHALLENGE_NOT_FOUND))
+            .given(weeklyChallengeService)
+            .getWeeklyChallengeDetail(1L, 1L);
+
+        mockMvc.perform(get("/api/v1/weekly-challenges/{challengeId}", 1L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentWeeklyError("weekly-challenge-detail-not-found", "주간 챌린지 상세 조회"));
+    }
+
+    @Test
+    void getWeeklyChallengeProofsGroupMemberNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND))
+            .given(weeklyChallengeService)
+            .getWeeklyChallengeProofs(1L, 1L, 1L);
+
+        mockMvc.perform(get("/api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs", 1L, 1L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentWeeklyError("weekly-challenge-proofs-group-member-not-found", "그룹원 인증 이미지 조회"));
     }
 
     @Test
@@ -503,6 +666,17 @@ class ChallengeControllerDocsTest {
                 .tag("Step Challenge")
                 .summary(summary)
                 .description(STEP_CHALLENGE_DESCRIPTION)
+                .responseFields(commonResponseFields())
+                .build())
+        );
+    }
+
+    private RestDocumentationResultHandler documentWeeklyError(String identifier, String summary) {
+        return document(identifier,
+            resource(ResourceSnippetParameters.builder()
+                .tag("Weekly Challenge")
+                .summary(summary)
+                .description(WEEKLY_CHALLENGE_DESCRIPTION)
                 .responseFields(commonResponseFields())
                 .build())
         );

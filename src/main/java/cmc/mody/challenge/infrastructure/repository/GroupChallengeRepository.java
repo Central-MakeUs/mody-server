@@ -2,6 +2,7 @@ package cmc.mody.challenge.infrastructure.repository;
 
 import cmc.mody.challenge.domain.GroupChallenge;
 import cmc.mody.challenge.domain.GroupChallengeStatus;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -19,4 +20,17 @@ public interface GroupChallengeRepository extends JpaRepository<GroupChallenge, 
         Collection<Long> challengeIds,
         Collection<GroupChallengeStatus> statuses
     );
+
+    List<GroupChallenge>
+        findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndStartsOnLessThanEqualAndEndsOnGreaterThanEqualAndDeletedAtIsNullOrderByEndsOnAscIdAsc(
+            Long groupId,
+            Collection<Long> challengeIds,
+            GroupChallengeStatus status,
+            LocalDate startsOn,
+            LocalDate endsOn
+        );
+
+    Optional<GroupChallenge> findByIdAndGroupIdAndDeletedAtIsNull(Long id, Long groupId);
+
+    Optional<GroupChallenge> findByIdAndDeletedAtIsNull(Long id);
 }
