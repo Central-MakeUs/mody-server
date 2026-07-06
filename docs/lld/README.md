@@ -28,3 +28,4 @@
 | [LLD-0020](LLD-0020-api-spec-alignment.md) | 온보딩 및 피드 API 스펙 정리 | Accepted | #64 |
 | [LLD-0021](LLD-0021-step-challenge-api.md) | 걸음수 챌린지 API | Accepted | #49 |
 | [LLD-0022](LLD-0022-weekly-challenge-api.md) | 주간 챌린지 API | Accepted | #50 |
+| [LLD-0023](LLD-0023-challenge-home-nudge-api.md) | 챌린지 홈 및 버디 찌르기 API | Accepted | #51 |

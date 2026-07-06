@@ -14,6 +14,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import cmc.mody.auth.application.token.TokenProvider;
 import cmc.mody.auth.presentation.support.CurrentMemberArgumentResolver;
+import cmc.mody.challenge.application.ChallengeHomeService;
+import cmc.mody.challenge.application.ChallengeHomeService.ChallengeSummaryResult;
+import cmc.mody.challenge.application.ChallengeHomeService.NudgeTargetListResult;
+import cmc.mody.challenge.application.ChallengeHomeService.NudgeTargetResult;
 import cmc.mody.challenge.application.StepChallengeService;
 import cmc.mody.challenge.application.StepChallengeService.StepChallengeChangeCommand;
 import cmc.mody.challenge.application.StepChallengeService.StepChallengeChangeResult;
@@ -59,6 +63,22 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureRestDocs
 @Import(WebConfig.class)
 class ChallengeControllerDocsTest {
+    private static final String CHALLENGE_HOME_DESCRIPTION = """
+        챌린지 홈 API는 access token의 회원 id 기준으로 그룹 참여 여부를 검증한다.
+        챌린지 홈 요약은 요청 회원의 그룹 가입일과 이번 달 그룹 활동을 기준으로 계산한다.
+        버디 찌르기는 같은 그룹의 본인이 아닌 회원에게 알림 요청을 생성한다.
+
+        발생 가능한 예외 코드:
+        - AUTH401: Authorization 헤더가 없거나 비어있음
+        - AUTH402: Bearer 뒤 JWT 값이 비어있음
+        - AUTH403: JWT 형식이 올바르지 않거나 refresh token을 사용함
+        - AUTH404: 만료된 JWT
+        - AUTH405: 지원하지 않는 JWT
+        - MEMBER302: 토큰의 회원 id에 해당하는 회원 없음
+        - GROUP302: 그룹 없음
+        - GROUP306: 그룹 참여 정보 없음
+        - CHALLENGE301: 본인 찌르기 등 챌린지 요청값 검증 실패
+        """;
     private static final String STEP_CHALLENGE_DESCRIPTION = """
         걸음수 챌린지 API는 access token의 회원 id 기준으로 그룹 참여 여부를 검증한다.
 
@@ -98,6 +118,9 @@ class ChallengeControllerDocsTest {
     private MockMvc mockMvc;
 
     @MockitoBean
+    private ChallengeHomeService challengeHomeService;
+
+    @MockitoBean
     private StepChallengeService stepChallengeService;
 
     @MockitoBean
@@ -116,13 +139,18 @@ class ChallengeControllerDocsTest {
 
     @Test
     void getChallengeSummary() throws Exception {
-        mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/summary", 1L))
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(challengeHomeService.getChallengeSummary(1L, 1L))
+            .willReturn(new ChallengeSummaryResult(12, 7, 360, 2));
+
+        mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/summary", 1L)
+                .header("Authorization", "Bearer access-token"))
             .andExpect(status().isOk())
             .andDo(document("challenge-summary",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Challenge")
-                    .summary("[미구현] 챌린지 홈 요약 조회")
-                    .description("그룹과 함께한 날짜, 연속 기록, 이번달 운동 시간, 완료 챌린지 개수를 조회한다.")
+                    .summary("챌린지 홈 요약 조회")
+                    .description(CHALLENGE_HOME_DESCRIPTION)
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.daysTogether").type(JsonFieldType.NUMBER).description("그룹과 함께한 일수"),
                         fieldWithPath("result.allMemberRecordedDays").type(JsonFieldType.NUMBER)
@@ -193,13 +221,20 @@ class ChallengeControllerDocsTest {
 
     @Test
     void getNudgeTargets() throws Exception {
-        mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/nudges", 1L))
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(challengeHomeService.getNudgeTargets(1L, 1L))
+            .willReturn(new NudgeTargetListResult(List.of(
+                new NudgeTargetResult(2L, "친구", "https://storage.example.com/profiles/member-2.jpg", false)
+            )));
+
+        mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/nudges", 1L)
+                .header("Authorization", "Bearer access-token"))
             .andExpect(status().isOk())
             .andDo(document("challenge-nudge-targets",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Challenge")
-                    .summary("[미구현] 버디 찌르기 대상 조회")
-                    .description("오늘 기록하지 않은 그룹 구성원과 기록 여부를 조회한다.")
+                    .summary("버디 찌르기 대상 조회")
+                    .description(CHALLENGE_HOME_DESCRIPTION)
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.members[].memberId").type(JsonFieldType.NUMBER).description("회원 id"),
                         fieldWithPath("result.members[].nickname").type(JsonFieldType.STRING).description("닉네임"),
@@ -214,13 +249,16 @@ class ChallengeControllerDocsTest {
 
     @Test
     void nudgeMember() throws Exception {
-        mockMvc.perform(post("/api/v1/groups/{groupId}/challenges/nudges/{memberId}", 1L, 2L))
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(post("/api/v1/groups/{groupId}/challenges/nudges/{memberId}", 1L, 2L)
+                .header("Authorization", "Bearer access-token"))
             .andExpect(status().isOk())
             .andDo(document("challenge-nudge",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Challenge")
-                    .summary("[미구현] 버디 찌르기")
-                    .description("기록하지 않은 그룹 구성원에게 알림을 보낸다.")
+                    .summary("버디 찌르기")
+                    .description(CHALLENGE_HOME_DESCRIPTION)
                     .responseFields(commonResponseFields())
                     .build())
             ));
@@ -476,6 +514,117 @@ class ChallengeControllerDocsTest {
             .andDo(documentStepError("step-challenge-change-invalid-request", "챌린지 변경"));
     }
 
+    @ParameterizedTest(name = "{0} Authorization 헤더 없음")
+    @MethodSource("authenticatedChallengeHomeEndpoints")
+    void authenticatedChallengeHomeApisWithoutAuthorization(ChallengeHomeEndpoint endpoint) throws Exception {
+        mockMvc.perform(endpoint.request().get())
+            .andExpect(status().isUnauthorized())
+            .andDo(documentChallengeHomeError(endpoint.documentPrefix() + "-auth-missing", endpoint.summary()));
+    }
+
+    @ParameterizedTest(name = "{0} 빈 Bearer 토큰")
+    @MethodSource("authenticatedChallengeHomeEndpoints")
+    void authenticatedChallengeHomeApisWithEmptyToken(ChallengeHomeEndpoint endpoint) throws Exception {
+        mockMvc.perform(endpoint.request().get()
+                .header("Authorization", "Bearer "))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentChallengeHomeError(endpoint.documentPrefix() + "-auth-empty-token", endpoint.summary()));
+    }
+
+    @ParameterizedTest(name = "{0} 잘못된 Authorization 헤더")
+    @MethodSource("authenticatedChallengeHomeEndpoints")
+    void authenticatedChallengeHomeApisWithInvalidAuthorizationHeader(ChallengeHomeEndpoint endpoint) throws Exception {
+        mockMvc.perform(endpoint.request().get()
+                .header("Authorization", "access-token"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentChallengeHomeError(endpoint.documentPrefix() + "-auth-invalid-header", endpoint.summary()));
+    }
+
+    @ParameterizedTest(name = "{0} 만료된 JWT")
+    @MethodSource("authenticatedChallengeHomeEndpoints")
+    void authenticatedChallengeHomeApisWithExpiredToken(ChallengeHomeEndpoint endpoint) throws Exception {
+        willThrow(new GeneralException(ErrorStatus.EXPIRED_JWT))
+            .given(tokenProvider)
+            .getMemberIdByAccessToken("expired-token");
+
+        mockMvc.perform(endpoint.request().get()
+                .header("Authorization", "Bearer expired-token"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentChallengeHomeError(endpoint.documentPrefix() + "-auth-expired-token", endpoint.summary()));
+    }
+
+    @ParameterizedTest(name = "{0} 유효하지 않은 JWT")
+    @MethodSource("authenticatedChallengeHomeEndpoints")
+    void authenticatedChallengeHomeApisWithInvalidToken(ChallengeHomeEndpoint endpoint) throws Exception {
+        willThrow(new GeneralException(ErrorStatus.INVALID_JWT))
+            .given(tokenProvider)
+            .getMemberIdByAccessToken("invalid-token");
+
+        mockMvc.perform(endpoint.request().get()
+                .header("Authorization", "Bearer invalid-token"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentChallengeHomeError(endpoint.documentPrefix() + "-auth-invalid-token", endpoint.summary()));
+    }
+
+    @ParameterizedTest(name = "{0} 지원하지 않는 JWT")
+    @MethodSource("authenticatedChallengeHomeEndpoints")
+    void authenticatedChallengeHomeApisWithUnsupportedToken(ChallengeHomeEndpoint endpoint) throws Exception {
+        willThrow(new GeneralException(ErrorStatus.UNSUPPORTED_JWT))
+            .given(tokenProvider)
+            .getMemberIdByAccessToken("unsupported-token");
+
+        mockMvc.perform(endpoint.request().get()
+                .header("Authorization", "Bearer unsupported-token"))
+            .andExpect(status().isUnauthorized())
+            .andDo(documentChallengeHomeError(endpoint.documentPrefix() + "-auth-unsupported-token", endpoint.summary()));
+    }
+
+    @ParameterizedTest(name = "{0} 회원 없음")
+    @MethodSource("authenticatedChallengeHomeEndpoints")
+    void authenticatedChallengeHomeApisMemberNotFound(ChallengeHomeEndpoint endpoint) throws Exception {
+        givenChallengeHomeEndpointThrows(endpoint, ErrorStatus.MEMBER_NOT_FOUND);
+
+        mockMvc.perform(endpoint.request().get()
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentChallengeHomeError(endpoint.documentPrefix() + "-member-not-found", endpoint.summary()));
+    }
+
+    @ParameterizedTest(name = "{0} 그룹 없음")
+    @MethodSource("authenticatedChallengeHomeEndpoints")
+    void authenticatedChallengeHomeApisGroupNotFound(ChallengeHomeEndpoint endpoint) throws Exception {
+        givenChallengeHomeEndpointThrows(endpoint, ErrorStatus.GROUP_NOT_FOUND);
+
+        mockMvc.perform(endpoint.request().get()
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentChallengeHomeError(endpoint.documentPrefix() + "-group-not-found", endpoint.summary()));
+    }
+
+    @ParameterizedTest(name = "{0} 그룹 참여 정보 없음")
+    @MethodSource("authenticatedChallengeHomeEndpoints")
+    void authenticatedChallengeHomeApisGroupMemberNotFound(ChallengeHomeEndpoint endpoint) throws Exception {
+        givenChallengeHomeEndpointThrows(endpoint, ErrorStatus.GROUP_MEMBER_NOT_FOUND);
+
+        mockMvc.perform(endpoint.request().get()
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentChallengeHomeError(endpoint.documentPrefix() + "-group-member-not-found", endpoint.summary()));
+    }
+
+    @Test
+    void nudgeMemberInvalidSelfRequest() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.CHALLENGE_VALIDATION_FAILED))
+            .given(challengeHomeService)
+            .nudgeMember(1L, 1L, 1L);
+
+        mockMvc.perform(post("/api/v1/groups/{groupId}/challenges/nudges/{memberId}", 1L, 1L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isBadRequest())
+            .andDo(documentChallengeHomeError("challenge-nudge-invalid-self", "버디 찌르기"));
+    }
+
     @Test
     void getWeeklyChallengeDetail() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
@@ -671,6 +820,17 @@ class ChallengeControllerDocsTest {
         );
     }
 
+    private RestDocumentationResultHandler documentChallengeHomeError(String identifier, String summary) {
+        return document(identifier,
+            resource(ResourceSnippetParameters.builder()
+                .tag("Challenge")
+                .summary(summary)
+                .description(CHALLENGE_HOME_DESCRIPTION)
+                .responseFields(commonResponseFields())
+                .build())
+        );
+    }
+
     private RestDocumentationResultHandler documentWeeklyError(String identifier, String summary) {
         return document(identifier,
             resource(ResourceSnippetParameters.builder()
@@ -703,6 +863,34 @@ class ChallengeControllerDocsTest {
         );
     }
 
+    private static Stream<ChallengeHomeEndpoint> authenticatedChallengeHomeEndpoints() {
+        return Stream.of(
+            new ChallengeHomeEndpoint("challenge-summary", "챌린지 홈 요약 조회",
+                () -> get("/api/v1/groups/{groupId}/challenges/summary", 1L)),
+            new ChallengeHomeEndpoint("challenge-nudge-targets", "버디 찌르기 대상 조회",
+                () -> get("/api/v1/groups/{groupId}/challenges/nudges", 1L)),
+            new ChallengeHomeEndpoint("challenge-nudge", "버디 찌르기",
+                () -> post("/api/v1/groups/{groupId}/challenges/nudges/{memberId}", 1L, 2L))
+        );
+    }
+
+    private void givenChallengeHomeEndpointThrows(ChallengeHomeEndpoint endpoint, ErrorStatus errorStatus) {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        GeneralException exception = new GeneralException(errorStatus);
+        switch (endpoint.documentPrefix()) {
+            case "challenge-summary" -> willThrow(exception)
+                .given(challengeHomeService)
+                .getChallengeSummary(1L, 1L);
+            case "challenge-nudge-targets" -> willThrow(exception)
+                .given(challengeHomeService)
+                .getNudgeTargets(1L, 1L);
+            case "challenge-nudge" -> willThrow(exception)
+                .given(challengeHomeService)
+                .nudgeMember(1L, 1L, 2L);
+            default -> throw new IllegalArgumentException("지원하지 않는 챌린지 홈 문서 prefix입니다.");
+        }
+    }
+
     private void givenStepEndpointThrows(StepEndpoint endpoint, ErrorStatus errorStatus) {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         GeneralException exception = new GeneralException(errorStatus);
@@ -727,6 +915,17 @@ class ChallengeControllerDocsTest {
     }
 
     private record StepEndpoint(
+        String documentPrefix,
+        String summary,
+        Supplier<MockHttpServletRequestBuilder> request
+    ) {
+        @Override
+        public String toString() {
+            return summary;
+        }
+    }
+
+    private record ChallengeHomeEndpoint(
         String documentPrefix,
         String summary,
         Supplier<MockHttpServletRequestBuilder> request
