@@ -1,6 +1,7 @@
 package cmc.mody.challenge.presentation;
 
 import cmc.mody.auth.presentation.support.CurrentMember;
+import cmc.mody.challenge.application.ChallengeHomeService;
 import cmc.mody.challenge.application.StepChallengeService;
 import cmc.mody.challenge.application.WeeklyChallengeService;
 import cmc.mody.common.api.ApiResponse;
@@ -24,12 +25,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")
 public class ChallengeController {
+    private final ChallengeHomeService challengeHomeService;
     private final StepChallengeService stepChallengeService;
     private final WeeklyChallengeService weeklyChallengeService;
 
     @GetMapping("/groups/{groupId}/challenges/summary")
-    public ApiResponse<ChallengeSummaryResponse> getChallengeSummary(@PathVariable Long groupId) {
-        return ApiResponse.ok(new ChallengeSummaryResponse(12, 7, 360, 2));
+    public ApiResponse<ChallengeSummaryResponse> getChallengeSummary(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long groupId
+    ) {
+        ChallengeHomeService.ChallengeSummaryResult result = challengeHomeService.getChallengeSummary(memberId, groupId);
+        return ApiResponse.ok(ChallengeSummaryResponse.from(result));
     }
 
     @GetMapping("/groups/{groupId}/challenges/step/current")
@@ -57,14 +63,21 @@ public class ChallengeController {
     }
 
     @GetMapping("/groups/{groupId}/challenges/nudges")
-    public ApiResponse<NudgeTargetListResponse> getNudgeTargets(@PathVariable Long groupId) {
-        return ApiResponse.ok(new NudgeTargetListResponse(List.of(
-            new NudgeTargetResponse(2L, "친구", "profiles/member-2.jpg", false)
-        )));
+    public ApiResponse<NudgeTargetListResponse> getNudgeTargets(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long groupId
+    ) {
+        ChallengeHomeService.NudgeTargetListResult result = challengeHomeService.getNudgeTargets(memberId, groupId);
+        return ApiResponse.ok(NudgeTargetListResponse.from(result));
     }
 
     @PostMapping("/groups/{groupId}/challenges/nudges/{memberId}")
-    public ApiResponse<Void> nudgeMember(@PathVariable Long groupId, @PathVariable Long memberId) {
+    public ApiResponse<Void> nudgeMember(
+        @Parameter(hidden = true) @CurrentMember Long currentMemberId,
+        @PathVariable Long groupId,
+        @PathVariable Long memberId
+    ) {
+        challengeHomeService.nudgeMember(currentMemberId, groupId, memberId);
         return ApiResponse.ok();
     }
 
@@ -169,6 +182,14 @@ public class ChallengeController {
         int monthlyExerciseMinutes,
         int monthlyCompletedChallengeCount
     ) {
+        public static ChallengeSummaryResponse from(ChallengeHomeService.ChallengeSummaryResult result) {
+            return new ChallengeSummaryResponse(
+                result.daysTogether(),
+                result.allMemberRecordedDays(),
+                result.monthlyExerciseMinutes(),
+                result.monthlyCompletedChallengeCount()
+            );
+        }
     }
 
     public record StepChallengeStatusResponse(
@@ -214,9 +235,22 @@ public class ChallengeController {
     }
 
     public record NudgeTargetListResponse(List<NudgeTargetResponse> members) {
+        public static NudgeTargetListResponse from(ChallengeHomeService.NudgeTargetListResult result) {
+            return new NudgeTargetListResponse(result.members().stream()
+                .map(NudgeTargetResponse::from)
+                .toList());
+        }
     }
 
     public record NudgeTargetResponse(Long memberId, String nickname, String profileImageUrl, boolean recordedToday) {
+        public static NudgeTargetResponse from(ChallengeHomeService.NudgeTargetResult result) {
+            return new NudgeTargetResponse(
+                result.memberId(),
+                result.nickname(),
+                result.profileImageUrl(),
+                result.recordedToday()
+            );
+        }
     }
 
     public record WalkedRegionListResponse(List<WalkedRegionResponse> regions) {

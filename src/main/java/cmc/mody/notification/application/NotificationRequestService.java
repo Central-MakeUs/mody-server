@@ -85,4 +85,25 @@ public class NotificationRequestService {
             groupId
         ));
     }
+
+    public void requestBuddyNudge(
+        Long groupId,
+        Long senderMemberId,
+        String senderNickname,
+        Long receiverMemberId,
+        String date
+    ) {
+        request(NotificationRequestedEvent.immediate(
+            NotificationType.BUDDY_NUDGE,
+            Map.of(
+                "groupId", groupId,
+                "senderMemberId", senderMemberId,
+                "nickname", senderNickname,
+                "receiverMemberId", receiverMemberId,
+                "date", date
+            ),
+            "GROUP",
+            groupId
+        ));
+    }
 }
