@@ -35,6 +35,7 @@ import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProo
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProofCreateResult;
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProofListResult;
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProofResult;
+import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeShareResult;
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeSummaryResult;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
@@ -113,6 +114,9 @@ class ChallengeControllerDocsTest {
         - CHALLENGE302: 챌린지 없음
         - CHALLENGE304: 이미 주간 챌린지 인증을 완료함
         - CHALLENGE305: 이미 완료된 챌린지임
+        - CHALLENGE306: 완료되지 않은 챌린지임
+        - CHALLENGE307: 챌린지 인증 이미지 없음
+        - UPLOAD305: 스토리지 이미지 처리 실패
         """;
 
     @Autowired
@@ -818,13 +822,22 @@ class ChallengeControllerDocsTest {
 
     @Test
     void shareWeeklyChallenge() throws Exception {
-        mockMvc.perform(post("/api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/share", 1L, 1L))
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(weeklyChallengeService.shareWeeklyChallenge(1L, 1L, 1L))
+            .willReturn(new WeeklyChallengeShareResult(
+                "https://storage.example.com/weekly-challenge-shares/1/1.jpg",
+                2,
+                2
+            ));
+
+        mockMvc.perform(post("/api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/share", 1L, 1L)
+                .header("Authorization", "Bearer access-token"))
             .andExpect(status().isOk())
             .andDo(document("weekly-challenge-share",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Weekly Challenge")
-                    .summary("[미구현] 챌린지 완료 공유하기")
-                    .description("인원수에 맞게 그리드화한 공유 이미지 정보를 조회한다.")
+                    .summary("챌린지 완료 공유하기")
+                    .description(WEEKLY_CHALLENGE_DESCRIPTION)
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.imageUrl").type(JsonFieldType.STRING).description("공유 이미지 URL"),
                         fieldWithPath("result.rows").type(JsonFieldType.NUMBER).description("그리드 행 수"),
@@ -832,6 +845,45 @@ class ChallengeControllerDocsTest {
                     ))
                     .build())
             ));
+    }
+
+    @Test
+    void shareWeeklyChallengeNotCompleted() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.CHALLENGE_NOT_COMPLETED))
+            .given(weeklyChallengeService)
+            .shareWeeklyChallenge(1L, 1L, 1L);
+
+        mockMvc.perform(post("/api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/share", 1L, 1L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isConflict())
+            .andDo(documentWeeklyError("weekly-challenge-share-not-completed", "챌린지 완료 공유하기"));
+    }
+
+    @Test
+    void shareWeeklyChallengeProofNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.CHALLENGE_PROOF_NOT_FOUND))
+            .given(weeklyChallengeService)
+            .shareWeeklyChallenge(1L, 1L, 1L);
+
+        mockMvc.perform(post("/api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/share", 1L, 1L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(documentWeeklyError("weekly-challenge-share-proof-not-found", "챌린지 완료 공유하기"));
+    }
+
+    @Test
+    void shareWeeklyChallengeStorageFailed() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.UPLOAD_STORAGE_OPERATION_FAILED))
+            .given(weeklyChallengeService)
+            .shareWeeklyChallenge(1L, 1L, 1L);
+
+        mockMvc.perform(post("/api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/share", 1L, 1L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isInternalServerError())
+            .andDo(documentWeeklyError("weekly-challenge-share-storage-failed", "챌린지 완료 공유하기"));
     }
 
     private RestDocumentationResultHandler documentStepError(String identifier, String summary) {

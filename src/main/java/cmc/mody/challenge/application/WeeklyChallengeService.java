@@ -11,6 +11,7 @@ import cmc.mody.challenge.infrastructure.repository.GroupChallengeRepository;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.common.upload.ImageObjectStorage;
 import cmc.mody.common.upload.UploadProperties;
 import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
@@ -43,6 +44,8 @@ public class WeeklyChallengeService {
     private final ChallengeProofRepository challengeProofRepository;
     private final NotificationRequestService notificationRequestService;
     private final UploadProperties uploadProperties;
+    private final ImageObjectStorage imageObjectStorage;
+    private final WeeklyChallengeShareImageGenerator shareImageGenerator;
 
     @Transactional(readOnly = true)
     public WeeklyChallengeListResult getWeeklyChallenges(Long memberId, Long groupId) {
@@ -124,6 +127,37 @@ public class WeeklyChallengeService {
         ));
         completeIfAllMembersProved(groupChallenge);
         return new WeeklyChallengeProofCreateResult(proof.getId(), groupChallenge.getId(), toImageUrl(proof.getImageKey()));
+    }
+
+    @Transactional(readOnly = true)
+    public WeeklyChallengeShareResult shareWeeklyChallenge(Long memberId, Long groupId, Long groupChallengeId) {
+        validateGroupMembership(memberId, groupId);
+        GroupChallenge groupChallenge = getWeeklyGroupChallenge(groupId, groupChallengeId);
+        if (groupChallenge.getGroupChallengeStatus() != GroupChallengeStatus.COMPLETED) {
+            throw new GeneralException(ErrorStatus.CHALLENGE_NOT_COMPLETED);
+        }
+
+        List<ChallengeProof> proofs = challengeProofRepository
+            .findByGroupChallengeIdAndDeletedAtIsNullOrderByUploadedAtAscIdAsc(groupChallenge.getId());
+        if (proofs.isEmpty()) {
+            throw new GeneralException(ErrorStatus.CHALLENGE_PROOF_NOT_FOUND);
+        }
+
+        WeeklyChallengeShareImageGenerator.GridSize gridSize = shareImageGenerator.calculateGridSize(proofs.size());
+        String shareImageKey = shareImageKey(groupId, groupChallengeId);
+        if (!imageObjectStorage.exists(shareImageKey)) {
+            List<byte[]> sourceImages = proofs.stream()
+                .map(ChallengeProof::getImageKey)
+                .map(imageObjectStorage::read)
+                .toList();
+            byte[] sharedImage = shareImageGenerator.generate(sourceImages, gridSize);
+            imageObjectStorage.write(shareImageKey, sharedImage, "image/jpeg");
+        }
+        return new WeeklyChallengeShareResult(
+            imageObjectStorage.toUrl(shareImageKey),
+            gridSize.rows(),
+            gridSize.columns()
+        );
     }
 
     private void completeIfAllMembersProved(GroupChallenge groupChallenge) {
@@ -273,6 +307,10 @@ public class WeeklyChallengeService {
         return baseUrl + "/" + imageKey;
     }
 
+    private String shareImageKey(Long groupId, Long groupChallengeId) {
+        return "weekly-challenge-shares/" + groupId + "/" + groupChallengeId + ".jpg";
+    }
+
     public record WeeklyChallengeListResult(List<WeeklyChallengeSummaryResult> challenges) {
     }
 
@@ -304,5 +342,8 @@ public class WeeklyChallengeService {
     }
 
     public record WeeklyChallengeProofCreateResult(Long proofId, Long groupChallengeId, String imageUrl) {
+    }
+
+    public record WeeklyChallengeShareResult(String imageUrl, int rows, int columns) {
     }
 }

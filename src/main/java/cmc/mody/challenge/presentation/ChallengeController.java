@@ -170,10 +170,16 @@ public class ChallengeController {
 
     @PostMapping("/groups/{groupId}/weekly-challenges/{groupChallengeId}/share")
     public ApiResponse<WeeklyChallengeShareResponse> shareWeeklyChallenge(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
         @PathVariable Long groupId,
         @PathVariable Long groupChallengeId
     ) {
-        return ApiResponse.ok(new WeeklyChallengeShareResponse("shares/group-1-weekly-1.png", 2, 2));
+        WeeklyChallengeService.WeeklyChallengeShareResult result = weeklyChallengeService.shareWeeklyChallenge(
+            memberId,
+            groupId,
+            groupChallengeId
+        );
+        return ApiResponse.ok(WeeklyChallengeShareResponse.from(result));
     }
 
     public record ChallengeSummaryResponse(
@@ -394,5 +400,8 @@ public class ChallengeController {
     }
 
     public record WeeklyChallengeShareResponse(String imageUrl, int rows, int columns) {
+        public static WeeklyChallengeShareResponse from(WeeklyChallengeService.WeeklyChallengeShareResult result) {
+            return new WeeklyChallengeShareResponse(result.imageUrl(), result.rows(), result.columns());
+        }
     }
 }

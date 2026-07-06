@@ -37,6 +37,8 @@ public enum ErrorStatus implements BaseCode {
     CHALLENGE_IN_PROGRESS_NOT_FOUND(404, "CHALLENGE303", "진행 중인 걸음수 챌린지를 찾을 수 없습니다."),
     CHALLENGE_PROOF_ALREADY_EXISTS(409, "CHALLENGE304", "이미 챌린지 인증을 완료했습니다."),
     CHALLENGE_ALREADY_COMPLETED(409, "CHALLENGE305", "이미 완료된 챌린지입니다."),
+    CHALLENGE_NOT_COMPLETED(409, "CHALLENGE306", "완료되지 않은 챌린지입니다."),
+    CHALLENGE_PROOF_NOT_FOUND(404, "CHALLENGE307", "챌린지 인증 이미지를 찾을 수 없습니다."),
     NOTIFICATION_UNSUPPORTED_TYPE(400, "NOTIFICATION301", "지원하지 않는 알림 타입입니다."),
     NOTIFICATION_NOT_FOUND(404, "NOTIFICATION302", "알림을 찾을 수 없습니다."),
     NOTIFICATION_PAYLOAD_INVALID(400, "NOTIFICATION303", "알림 요청값이 올바르지 않습니다."),
@@ -46,6 +48,7 @@ public enum ErrorStatus implements BaseCode {
     UPLOAD_UNSUPPORTED_EXTENSION(400, "UPLOAD302", "지원하지 않는 파일 확장자입니다."),
     UPLOAD_STORAGE_CONFIG_INVALID(500, "UPLOAD303", "업로드 스토리지 설정이 올바르지 않습니다."),
     UPLOAD_PRESIGNED_URL_ISSUE_FAILED(500, "UPLOAD304", "업로드 URL 발급에 실패했습니다."),
+    UPLOAD_STORAGE_OPERATION_FAILED(500, "UPLOAD305", "스토리지 이미지 처리에 실패했습니다."),
     NOT_FOUND(404, "COMMON404", "리소스를 찾을 수 없습니다.");
 
     private final int httpStatus;

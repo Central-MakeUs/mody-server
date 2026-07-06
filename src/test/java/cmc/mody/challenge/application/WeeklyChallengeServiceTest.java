@@ -21,6 +21,7 @@ import cmc.mody.challenge.infrastructure.repository.GroupChallengeRepository;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.common.upload.ImageObjectStorage;
 import cmc.mody.common.upload.UploadProperties;
 import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
@@ -68,6 +69,12 @@ class WeeklyChallengeServiceTest {
 
     @Mock
     private NotificationRequestService notificationRequestService;
+
+    @Mock
+    private ImageObjectStorage imageObjectStorage;
+
+    @Mock
+    private WeeklyChallengeShareImageGenerator shareImageGenerator;
 
     @Captor
     private ArgumentCaptor<ChallengeProof> proofCaptor;
@@ -232,6 +239,101 @@ class WeeklyChallengeServiceTest {
     }
 
     @Test
+    @DisplayName("완료된 주간 챌린지는 인증 이미지를 합성해 공유 이미지 정보를 반환한다.")
+    void shareWeeklyChallenge() {
+        WeeklyChallengeService service = service();
+        GroupChallenge groupChallenge = groupChallenge(100L, 10L, 1L);
+        groupChallenge.complete(LocalDateTime.now());
+        givenValidGroupMembership();
+        given(groupChallengeRepository.findByIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
+            .willReturn(Optional.of(groupChallenge));
+        given(challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(1L, ChallengeType.PHOTO))
+            .willReturn(Optional.of(challenge(1L, "물 2L 마시기")));
+        given(challengeProofRepository.findByGroupChallengeIdAndDeletedAtIsNullOrderByUploadedAtAscIdAsc(100L))
+            .willReturn(List.of(
+                proof(1000L, 100L, 1L, "weekly-challenges/1/proof.jpg"),
+                proof(1001L, 100L, 2L, "weekly-challenges/2/proof.jpg")
+            ));
+        given(shareImageGenerator.calculateGridSize(2))
+            .willReturn(new WeeklyChallengeShareImageGenerator.GridSize(1, 2));
+        given(imageObjectStorage.exists("weekly-challenge-shares/10/100.jpg")).willReturn(false);
+        given(imageObjectStorage.read("weekly-challenges/1/proof.jpg")).willReturn(new byte[]{1});
+        given(imageObjectStorage.read("weekly-challenges/2/proof.jpg")).willReturn(new byte[]{2});
+        given(shareImageGenerator.generate(any(), any())).willReturn(new byte[]{3});
+        given(imageObjectStorage.toUrl("weekly-challenge-shares/10/100.jpg"))
+            .willReturn("https://storage.example.com/weekly-challenge-shares/10/100.jpg");
+
+        WeeklyChallengeService.WeeklyChallengeShareResult result = service.shareWeeklyChallenge(1L, 10L, 100L);
+
+        then(imageObjectStorage).should().write("weekly-challenge-shares/10/100.jpg", new byte[]{3}, "image/jpeg");
+        assertThat(result).isEqualTo(new WeeklyChallengeService.WeeklyChallengeShareResult(
+            "https://storage.example.com/weekly-challenge-shares/10/100.jpg",
+            1,
+            2
+        ));
+    }
+
+    @Test
+    @DisplayName("이미 공유 이미지가 있으면 재생성하지 않고 기존 URL을 반환한다.")
+    void shareWeeklyChallengeReuseExistingImage() {
+        WeeklyChallengeService service = service();
+        GroupChallenge groupChallenge = groupChallenge(100L, 10L, 1L);
+        groupChallenge.complete(LocalDateTime.now());
+        givenValidGroupMembership();
+        given(groupChallengeRepository.findByIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
+            .willReturn(Optional.of(groupChallenge));
+        given(challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(1L, ChallengeType.PHOTO))
+            .willReturn(Optional.of(challenge(1L, "물 2L 마시기")));
+        given(challengeProofRepository.findByGroupChallengeIdAndDeletedAtIsNullOrderByUploadedAtAscIdAsc(100L))
+            .willReturn(List.of(proof(1000L, 100L, 1L, "weekly-challenges/1/proof.jpg")));
+        given(shareImageGenerator.calculateGridSize(1))
+            .willReturn(new WeeklyChallengeShareImageGenerator.GridSize(1, 1));
+        given(imageObjectStorage.exists("weekly-challenge-shares/10/100.jpg")).willReturn(true);
+        given(imageObjectStorage.toUrl("weekly-challenge-shares/10/100.jpg"))
+            .willReturn("https://storage.example.com/weekly-challenge-shares/10/100.jpg");
+
+        WeeklyChallengeService.WeeklyChallengeShareResult result = service.shareWeeklyChallenge(1L, 10L, 100L);
+
+        assertThat(result.rows()).isEqualTo(1);
+        assertThat(result.columns()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("완료되지 않은 주간 챌린지는 공유 이미지를 생성할 수 없다.")
+    void throwChallengeNotCompleted() {
+        WeeklyChallengeService service = service();
+        GroupChallenge groupChallenge = groupChallenge(100L, 10L, 1L);
+        givenValidGroupMembership();
+        given(groupChallengeRepository.findByIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
+            .willReturn(Optional.of(groupChallenge));
+        given(challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(1L, ChallengeType.PHOTO))
+            .willReturn(Optional.of(challenge(1L, "물 2L 마시기")));
+
+        assertThatThrownBy(() -> service.shareWeeklyChallenge(1L, 10L, 100L))
+            .isInstanceOfSatisfying(GeneralException.class, exception ->
+                assertThat(exception.getStatus()).isEqualTo(ErrorStatus.CHALLENGE_NOT_COMPLETED));
+    }
+
+    @Test
+    @DisplayName("인증 이미지가 없으면 공유 이미지를 생성할 수 없다.")
+    void throwProofNotFoundWhenShareWeeklyChallenge() {
+        WeeklyChallengeService service = service();
+        GroupChallenge groupChallenge = groupChallenge(100L, 10L, 1L);
+        groupChallenge.complete(LocalDateTime.now());
+        givenValidGroupMembership();
+        given(groupChallengeRepository.findByIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
+            .willReturn(Optional.of(groupChallenge));
+        given(challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(1L, ChallengeType.PHOTO))
+            .willReturn(Optional.of(challenge(1L, "물 2L 마시기")));
+        given(challengeProofRepository.findByGroupChallengeIdAndDeletedAtIsNullOrderByUploadedAtAscIdAsc(100L))
+            .willReturn(List.of());
+
+        assertThatThrownBy(() -> service.shareWeeklyChallenge(1L, 10L, 100L))
+            .isInstanceOfSatisfying(GeneralException.class, exception ->
+                assertThat(exception.getStatus()).isEqualTo(ErrorStatus.CHALLENGE_PROOF_NOT_FOUND));
+    }
+
+    @Test
     @DisplayName("이미 인증한 주간 챌린지는 중복 인증할 수 없다.")
     void throwProofAlreadyExists() {
         WeeklyChallengeService service = service();
@@ -266,7 +368,9 @@ class WeeklyChallengeServiceTest {
             groupChallengeRepository,
             challengeProofRepository,
             notificationRequestService,
-            uploadProperties
+            uploadProperties,
+            imageObjectStorage,
+            shareImageGenerator
         );
     }
 
