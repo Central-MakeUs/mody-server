@@ -26,6 +26,9 @@ upload:
   base-url: ${UPLOAD_BASE_URL:https://storage.example.com}
   presigned-url-expires-in-seconds: ${UPLOAD_PRESIGNED_URL_EXPIRES_IN_SECONDS:300}
 
+invite:
+  app-store-url: ${MODY_INVITE_APP_STORE_URL:https://www.apple.com/kr/app-store/}
+
 notification:
   dispatch:
     enabled: ${NOTIFICATION_DISPATCH_ENABLED:false}
