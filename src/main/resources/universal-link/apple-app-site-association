@@ -1,0 +1,19 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "BLRYMXGV5K.com.jagsim.mody-dev"
+        ],
+        "components": [
+          {
+            "/": "/invite"
+          },
+          {
+            "/": "/invite/*"
+          }
+        ]
+      }
+    ]
+  }
+}
