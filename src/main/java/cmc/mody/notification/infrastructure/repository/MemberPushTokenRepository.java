@@ -6,6 +6,8 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MemberPushTokenRepository extends JpaRepository<MemberPushToken, Long> {
+    List<MemberPushToken> findByMemberIdAndDeletedAtIsNull(Long memberId);
+
     List<MemberPushToken> findByMemberIdAndEnabledTrueAndDeletedAtIsNull(Long memberId);
 
     Optional<MemberPushToken> findByMemberIdAndDeviceIdAndDeletedAtIsNull(Long memberId, String deviceId);

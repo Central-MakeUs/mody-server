@@ -9,6 +9,13 @@ import static org.mockito.BDDMockito.then;
 
 import cmc.mody.auth.domain.RefreshToken;
 import cmc.mody.auth.infrastructure.repository.RefreshTokenRepository;
+import cmc.mody.challenge.domain.ChallengeProof;
+import cmc.mody.challenge.domain.GroupChallenge;
+import cmc.mody.challenge.domain.StepRecord;
+import cmc.mody.challenge.domain.StepSource;
+import cmc.mody.challenge.infrastructure.repository.ChallengeProofRepository;
+import cmc.mody.challenge.infrastructure.repository.GroupChallengeRepository;
+import cmc.mody.challenge.infrastructure.repository.StepRecordRepository;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.domain.Status;
 import cmc.mody.common.api.status.ErrorStatus;
@@ -31,17 +38,22 @@ import cmc.mody.mypage.application.MypageService.WeightCreateCommand;
 import cmc.mody.mypage.application.MypageService.WeightCreateResult;
 import cmc.mody.notification.application.NotificationPreferenceService;
 import cmc.mody.notification.domain.ExerciseSchedule;
+import cmc.mody.notification.domain.MemberPushToken;
 import cmc.mody.notification.domain.MealType;
 import cmc.mody.notification.domain.Notification;
 import cmc.mody.notification.domain.NotificationSetting;
 import cmc.mody.notification.domain.NotificationType;
+import cmc.mody.notification.domain.PushPlatform;
 import cmc.mody.notification.infrastructure.repository.ExerciseScheduleRepository;
+import cmc.mody.notification.infrastructure.repository.MemberPushTokenRepository;
 import cmc.mody.notification.infrastructure.repository.NotificationRepository;
 import cmc.mody.notification.infrastructure.repository.NotificationSettingRepository;
 import cmc.mody.record.domain.ActivityRecord;
 import cmc.mody.record.domain.RecordComment;
+import cmc.mody.record.domain.RecordViewHistory;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
+import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -93,10 +105,25 @@ class MypageServiceTest {
     private NotificationRepository notificationRepository;
 
     @Mock
+    private MemberPushTokenRepository memberPushTokenRepository;
+
+    @Mock
     private ActivityRecordRepository activityRecordRepository;
 
     @Mock
     private RecordCommentRepository recordCommentRepository;
+
+    @Mock
+    private RecordViewHistoryRepository recordViewHistoryRepository;
+
+    @Mock
+    private GroupChallengeRepository groupChallengeRepository;
+
+    @Mock
+    private ChallengeProofRepository challengeProofRepository;
+
+    @Mock
+    private StepRecordRepository stepRecordRepository;
 
     @Captor
     private ArgumentCaptor<WeightRecord> weightRecordCaptor;
@@ -283,10 +310,21 @@ class MypageServiceTest {
         NotificationSetting notificationSetting = new NotificationSetting(13L, 1L);
         ExerciseSchedule exerciseSchedule = new ExerciseSchedule(14L, 1L, DayOfWeek.MONDAY, LocalTime.of(7, 30));
         Notification notification = new Notification(15L, 1L, NotificationType.COMMENT, "title", "content");
-        GroupMember groupMember = new GroupMember(16L, 1L, 100L, LocalDateTime.now());
-        ActivityRecord record = mealRecord(17L, 1L, 100L);
-        RecordComment myComment = new RecordComment(18L, 200L, 1L, "내 댓글");
-        RecordComment recordComment = new RecordComment(19L, 17L, 2L, "기록 댓글");
+        MemberPushToken pushToken = new MemberPushToken(
+            16L,
+            1L,
+            "device-1",
+            PushPlatform.IOS,
+            "fcm-token",
+            LocalDateTime.now()
+        );
+        GroupMember groupMember = new GroupMember(17L, 1L, 100L, LocalDateTime.now());
+        ActivityRecord record = mealRecord(18L, 1L, 100L);
+        RecordComment myComment = new RecordComment(19L, 200L, 1L, "내 댓글");
+        RecordComment recordComment = new RecordComment(20L, 18L, 2L, "기록 댓글");
+        RecordViewHistory recordViewHistory = new RecordViewHistory(21L, 1L, 100L, 2L, LocalDateTime.now());
+        ChallengeProof challengeProof = new ChallengeProof(22L, 300L, 1L, "challenge/proof.jpg", LocalDateTime.now());
+        StepRecord stepRecord = new StepRecord(23L, 301L, 1L, LocalDate.now(), 1000, StepSource.HEALTH_KIT);
 
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
         given(refreshTokenRepository.findAllByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(refreshToken));
@@ -295,11 +333,15 @@ class MypageServiceTest {
         given(notificationSettingRepository.findAllByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(notificationSetting));
         given(exerciseScheduleRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(exerciseSchedule));
         given(notificationRepository.findByReceiverMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(notification));
+        given(memberPushTokenRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(pushToken));
         given(groupMemberRepository.findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
             .willReturn(List.of(groupMember));
         given(activityRecordRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(record));
-        given(recordCommentRepository.findByRecordIdInAndDeletedAtIsNull(List.of(17L))).willReturn(List.of(recordComment));
+        given(recordCommentRepository.findByRecordIdInAndDeletedAtIsNull(List.of(18L))).willReturn(List.of(recordComment));
         given(recordCommentRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(myComment));
+        given(recordViewHistoryRepository.findActiveByMemberId(1L)).willReturn(List.of(recordViewHistory));
+        given(challengeProofRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(challengeProof));
+        given(stepRecordRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(stepRecord));
 
         service.deleteMe(1L);
 
@@ -310,10 +352,14 @@ class MypageServiceTest {
         assertThat(notificationSetting.getStatus()).isEqualTo(Status.INACTIVE);
         assertThat(exerciseSchedule.getStatus()).isEqualTo(Status.INACTIVE);
         assertThat(notification.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(pushToken.getStatus()).isEqualTo(Status.INACTIVE);
         assertThat(groupMember.getGroupMemberStatus()).isEqualTo(GroupMemberStatus.LEFT);
         assertThat(record.getStatus()).isEqualTo(Status.INACTIVE);
         assertThat(myComment.getStatus()).isEqualTo(Status.INACTIVE);
         assertThat(recordComment.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(recordViewHistory.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(challengeProof.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(stepRecord.getStatus()).isEqualTo(Status.INACTIVE);
     }
 
     @Test
@@ -353,6 +399,16 @@ class MypageServiceTest {
         ActivityRecord record = mealRecord(30L, 1L, 100L);
         RecordComment myComment = new RecordComment(31L, 200L, 1L, "내 댓글");
         RecordComment recordComment = new RecordComment(32L, 30L, 2L, "기록 댓글");
+        RecordViewHistory recordViewHistory = new RecordViewHistory(33L, 2L, 100L, 1L, LocalDateTime.now());
+        GroupChallenge groupChallenge = new GroupChallenge(
+            34L,
+            100L,
+            300L,
+            LocalDate.now(),
+            LocalDate.now().plusDays(6)
+        );
+        ChallengeProof challengeProof = new ChallengeProof(35L, 34L, 1L, "challenge/proof.jpg", LocalDateTime.now());
+        StepRecord stepRecord = new StepRecord(36L, 34L, 1L, LocalDate.now(), 1000, StepSource.HEALTH_KIT);
 
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
         given(groupMemberRepository.findByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
@@ -363,6 +419,12 @@ class MypageServiceTest {
         given(activityRecordRepository.findByMemberIdAndGroupIdAndDeletedAtIsNull(1L, 100L)).willReturn(List.of(record));
         given(recordCommentRepository.findByRecordIdInAndDeletedAtIsNull(List.of(30L))).willReturn(List.of(recordComment));
         given(recordCommentRepository.findActiveCommentsByMemberIdAndGroupId(1L, 100L)).willReturn(List.of(myComment));
+        given(recordViewHistoryRepository.findActiveByMemberIdAndGroupId(1L, 100L)).willReturn(List.of(recordViewHistory));
+        given(groupChallengeRepository.findByGroupIdAndDeletedAtIsNull(100L)).willReturn(List.of(groupChallenge));
+        given(challengeProofRepository.findByMemberIdAndGroupChallengeIdInAndDeletedAtIsNull(1L, List.of(34L)))
+            .willReturn(List.of(challengeProof));
+        given(stepRecordRepository.findByMemberIdAndGroupChallengeIdInAndDeletedAtIsNull(1L, List.of(34L)))
+            .willReturn(List.of(stepRecord));
 
         service.leaveGroup(1L, 100L);
 
@@ -370,6 +432,9 @@ class MypageServiceTest {
         assertThat(record.getStatus()).isEqualTo(Status.INACTIVE);
         assertThat(myComment.getStatus()).isEqualTo(Status.INACTIVE);
         assertThat(recordComment.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(recordViewHistory.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(challengeProof.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(stepRecord.getStatus()).isEqualTo(Status.INACTIVE);
     }
 
     private MypageService service() {
@@ -385,8 +450,13 @@ class MypageServiceTest {
             notificationSettingRepository,
             exerciseScheduleRepository,
             notificationRepository,
+            memberPushTokenRepository,
             activityRecordRepository,
-            recordCommentRepository
+            recordCommentRepository,
+            recordViewHistoryRepository,
+            groupChallengeRepository,
+            challengeProofRepository,
+            stepRecordRepository
         );
     }
 

@@ -33,8 +33,8 @@
 - provider HTTP client는 Spring Cloud OpenFeign 기반으로 구현한다.
 - 전략 선택 팩토리: 등록된 전략을 `LoginType` 기준으로 조회한다.
 - OAuth 프로필 표준 DTO: `loginType`, `providerUserId`, `email`, `nickname`, `profileImageUrl`.
-- 회원 보장 흐름: 소셜 계정이 있으면 기존 회원을 반환한다.
-- 소셜 계정이 없으면 회원과 소셜 계정을 생성한다.
+- 회원 보장 흐름: 활성 소셜 계정이 있으면 기존 활성 회원을 반환한다.
+- 활성 소셜 계정이 없으면 회원과 소셜 계정을 생성한다.
 - 토큰 발급: 기존 `TokenProvider`로 access/refresh token을 발급한다.
 - refresh token 저장: 회원별 기존 refresh token을 비활성화 또는 교체 후 DB에 저장한다.
 - Apple 클라이언트 로그인은 identity token의 issuer, audience, 만료, RSA 서명을 검증한다.
@@ -114,17 +114,18 @@ interface OAuthMemberService {
   - `token`: refresh JWT.
   - `status`, `deleted_at`: rotation 또는 로그아웃 시 비활성화에 사용한다.
 
-`social_account` 조회 기준은 `login_type + provider_user_id`다.
+`social_account` 조회 기준은 `login_type + provider_user_id + deleted_at is null`이다.
 이메일은 변경될 수 있으므로 회원 매칭의 주 식별자로 쓰지 않는다.
+회원탈퇴 시 `social_account`와 `member`는 논리 삭제되므로, 같은 provider 계정으로 재로그인하면 신규 회원으로 생성한다.
 
 ## 5. 처리 흐름
 
 1. 서버 callback 흐름은 클라이언트가 redirect URL을 조회하고 provider 로그인을 진행한다.
 2. `OAuthService`가 `OAuthStrategyFactory`에서 provider 전략을 선택한다.
 3. 전략이 authorization code로 provider token을 교환하고 외부 프로필을 조회해 `OAuthProfile`을 만든다.
-4. `OAuthMemberService`가 `loginType + providerUserId`로 기존 소셜 계정을 조회한다.
-5. 기존 계정이 있으면 연결된 `memberId`, 개인 정보 입력 완료 여부, 메인 진입 가능 여부, 그룹 온보딩 완료 이력을 반환한다.
-6. 기존 계정이 없으면 `member`와 `social_account`를 생성하고 `personalInfoCompleted=false`, `mainAccessible=false`, `groupOnboardingCompleted=false`를 반환한다.
+4. `OAuthMemberService`가 `loginType + providerUserId`로 활성 소셜 계정을 조회한다.
+5. 활성 계정이 있으면 연결된 활성 회원의 `memberId`, 개인 정보 입력 완료 여부, 메인 진입 가능 여부, 그룹 온보딩 완료 이력을 반환한다.
+6. 활성 계정이 없으면 `member`와 `social_account`를 생성하고 `personalInfoCompleted=false`, `mainAccessible=false`, `groupOnboardingCompleted=false`를 반환한다.
 7. `TokenProvider`가 access/refresh token을 발급한다.
 8. 기존 refresh token을 비활성화 또는 삭제한 뒤 새 refresh token을 DB에 저장한다.
 9. `TokenDto(id, accessToken, refreshToken, personalInfoCompleted, mainAccessible, groupOnboardingCompleted)`를 반환한다.
@@ -142,6 +143,7 @@ Apple은 provider token을 외부 user info API로 조회하지 않고, identity
 - Apple identity token 서명/issuer/audience/만료 검증 실패 → `INVALID_OAUTH_TOKEN`.
 - Apple 공개키 조회 실패 → `OAUTH_PROFILE_REQUEST_FAILED`.
 - provider 고유 id 누락 → `INVALID_OAUTH_PROFILE`.
+- 활성 소셜 계정이 비활성 회원을 참조하는 비정상 데이터 → `MEMBER_NOT_FOUND`.
 - refresh token 저장 실패 → 공통 서버 오류.
 
 에러 코드는 구현 시 `ErrorStatus`에 추가하고 `GlobalExceptionHandler`의 공통 응답 구조를 따른다.
@@ -151,6 +153,7 @@ Apple은 provider token을 외부 user info API로 조회하지 않고, identity
 - [x] provider별 전략이 `LoginType`으로 선택된다.
 - [x] 신규 소셜 계정 로그인 시 회원과 소셜 계정이 생성된다.
 - [x] 기존 소셜 계정 로그인 시 기존 회원을 반환한다.
+- [x] 탈퇴한 소셜 계정은 기존 회원 매칭에서 제외한다.
 - [x] 로그인 성공 시 access token과 refresh token이 함께 발급된다.
 - [x] refresh token은 DB에 저장되고 회원별 기존 token은 교체된다.
 - [x] 응답에 `personalInfoCompleted`가 포함된다.

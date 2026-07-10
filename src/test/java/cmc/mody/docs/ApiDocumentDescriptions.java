@@ -36,6 +36,19 @@ public final class ApiDocumentDescriptions {
         mainAccessible은 개인 정보 입력 완료와 참여 그룹 1개 이상을 모두 만족할 때 true가 된다.
         """;
 
+    public static final String ONBOARDING_PROFILE_REQUEST_RULES = """
+        개인 정보 입력 요청 규칙:
+        - nickname: 필수, 14자 이하. 그룹 내 중복 닉네임은 허용한다.
+        - birthDate: 필수, yyyy-MM-dd 형식, 과거 날짜만 허용한다.
+        - currentWeightKg, targetWeightKg: 필수, 20.0~300.0kg, 소수점 둘째 자리까지 허용한다.
+        - mealSchedules: 필수, 정확히 3개. BREAKFAST, LUNCH, DINNER를 각각 1개씩 보내야 한다.
+        - mealSchedules[].skipped=false이면 time은 필수이고 HH:mm 형식으로 보낸다.
+        - mealSchedules[].skipped=true이면 time은 null이어야 한다.
+        - exerciseSchedules: 필수, 최소 3개. 각 항목은 dayOfWeek와 time이 모두 필요하다.
+        - exerciseSchedules[].dayOfWeek: MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY 중 하나.
+        - exerciseSchedules[].time: HH:mm 형식.
+        """;
+
     public static final String SCHEDULE_OWNERSHIP_RULES = """
         식사 시간과 운동 일정은 온보딩 개인 정보 입력 또는 마이페이지 시간표 API에서만 관리한다.
         알림 설정 API는 수신 여부만 수정하며 식사 시간/운동 일정 값은 변경하지 않는다.

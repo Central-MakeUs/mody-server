@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.then;
 
 import cmc.mody.auth.application.oauth.dto.OAuthMemberResult;
 import cmc.mody.auth.application.oauth.dto.OAuthProfile;
+import cmc.mody.common.domain.Status;
 import cmc.mody.common.id.IdGenerator;
 import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
@@ -51,7 +52,7 @@ class OAuthMemberProcessorTest {
     void ensureExistingMember() {
         OAuthMemberProcessor processor = processor();
         OAuthProfile profile = new OAuthProfile(LoginType.KAKAO, "provider-1", null, "민석", null);
-        given(socialAccountRepository.findByLoginTypeAndProviderUserId(LoginType.KAKAO, "provider-1"))
+        given(socialAccountRepository.findByLoginTypeAndProviderUserIdAndDeletedAtIsNull(LoginType.KAKAO, "provider-1"))
             .willReturn(Optional.of(new SocialAccount(10L, 1L, LoginType.KAKAO, "provider-1")));
         Member member = completedMember();
         member.completeGroupOnboarding();
@@ -70,7 +71,7 @@ class OAuthMemberProcessorTest {
     void ensureExistingMemberWithoutJoinedGroup() {
         OAuthMemberProcessor processor = processor();
         OAuthProfile profile = new OAuthProfile(LoginType.KAKAO, "provider-1", null, "민석", null);
-        given(socialAccountRepository.findByLoginTypeAndProviderUserId(LoginType.KAKAO, "provider-1"))
+        given(socialAccountRepository.findByLoginTypeAndProviderUserIdAndDeletedAtIsNull(LoginType.KAKAO, "provider-1"))
             .willReturn(Optional.of(new SocialAccount(10L, 1L, LoginType.KAKAO, "provider-1")));
         Member member = completedMember();
         member.completeGroupOnboarding();
@@ -95,7 +96,7 @@ class OAuthMemberProcessorTest {
             "image"
         );
 
-        given(socialAccountRepository.findByLoginTypeAndProviderUserId(LoginType.GOOGLE, "provider-2"))
+        given(socialAccountRepository.findByLoginTypeAndProviderUserIdAndDeletedAtIsNull(LoginType.GOOGLE, "provider-2"))
             .willReturn(Optional.empty());
         given(idGenerator.nextId()).willReturn(1L, 2L);
         given(memberRepository.save(any(Member.class))).willAnswer(invocation -> invocation.getArgument(0));
@@ -111,6 +112,30 @@ class OAuthMemberProcessorTest {
         assertThat(memberCaptor.getValue().getNickname()).hasSize(Member.MAX_NICKNAME_LENGTH);
         assertThat(socialAccountCaptor.getValue().getId()).isEqualTo(2L);
         assertThat(socialAccountCaptor.getValue().getMemberId()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("탈퇴 후 동일 소셜 계정으로 로그인하면 신규 회원을 생성한다.")
+    void ensureNewMemberAfterWithdrawal() {
+        OAuthMemberProcessor processor = processor();
+        OAuthProfile profile = new OAuthProfile(LoginType.GOOGLE, "provider-2", "a@b.com", "동준", "image");
+
+        given(socialAccountRepository.findByLoginTypeAndProviderUserIdAndDeletedAtIsNull(LoginType.GOOGLE, "provider-2"))
+            .willReturn(Optional.empty());
+        given(idGenerator.nextId()).willReturn(20L, 21L);
+        given(memberRepository.save(any(Member.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(socialAccountRepository.save(any(SocialAccount.class)))
+            .willAnswer(invocation -> invocation.getArgument(0));
+
+        OAuthMemberResult result = processor.ensure(profile);
+
+        assertThat(result).isEqualTo(new OAuthMemberResult(20L, false, false, false));
+        then(memberRepository).should().save(memberCaptor.capture());
+        then(socialAccountRepository).should().save(socialAccountCaptor.capture());
+        assertThat(memberCaptor.getValue().getStatus()).isEqualTo(Status.ACTIVE);
+        assertThat(memberCaptor.getValue().isPersonalInfoCompleted()).isFalse();
+        assertThat(memberCaptor.getValue().isGroupOnboardingCompleted()).isFalse();
+        assertThat(socialAccountCaptor.getValue().getMemberId()).isEqualTo(20L);
     }
 
     private OAuthMemberProcessor processor() {

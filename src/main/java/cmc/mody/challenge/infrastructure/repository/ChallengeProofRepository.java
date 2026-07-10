@@ -8,6 +8,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface ChallengeProofRepository extends JpaRepository<ChallengeProof, Long> {
     boolean existsByGroupChallengeIdAndMemberIdAndDeletedAtIsNull(Long groupChallengeId, Long memberId);
 
+    List<ChallengeProof> findByMemberIdAndDeletedAtIsNull(Long memberId);
+
+    List<ChallengeProof> findByMemberIdAndGroupChallengeIdInAndDeletedAtIsNull(
+        Long memberId,
+        Collection<Long> groupChallengeIds
+    );
+
     long countByGroupChallengeIdAndDeletedAtIsNull(Long groupChallengeId);
 
     List<ChallengeProof> findByGroupChallengeIdInAndDeletedAtIsNullOrderByUploadedAtAscIdAsc(

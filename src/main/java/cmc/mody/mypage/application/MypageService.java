@@ -10,6 +10,12 @@ import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.auth.domain.RefreshToken;
 import cmc.mody.auth.infrastructure.repository.RefreshTokenRepository;
+import cmc.mody.challenge.domain.ChallengeProof;
+import cmc.mody.challenge.domain.GroupChallenge;
+import cmc.mody.challenge.domain.StepRecord;
+import cmc.mody.challenge.infrastructure.repository.ChallengeProofRepository;
+import cmc.mody.challenge.infrastructure.repository.GroupChallengeRepository;
+import cmc.mody.challenge.infrastructure.repository.StepRecordRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.domain.SocialAccount;
 import cmc.mody.member.domain.WeightRecord;
@@ -18,16 +24,20 @@ import cmc.mody.member.infrastructure.repository.SocialAccountRepository;
 import cmc.mody.member.infrastructure.repository.WeightRecordRepository;
 import cmc.mody.notification.application.NotificationPreferenceService;
 import cmc.mody.notification.domain.ExerciseSchedule;
+import cmc.mody.notification.domain.MemberPushToken;
 import cmc.mody.notification.domain.MealType;
 import cmc.mody.notification.domain.Notification;
 import cmc.mody.notification.domain.NotificationSetting;
 import cmc.mody.notification.infrastructure.repository.ExerciseScheduleRepository;
+import cmc.mody.notification.infrastructure.repository.MemberPushTokenRepository;
 import cmc.mody.notification.infrastructure.repository.NotificationRepository;
 import cmc.mody.notification.infrastructure.repository.NotificationSettingRepository;
 import cmc.mody.record.domain.ActivityRecord;
 import cmc.mody.record.domain.RecordComment;
+import cmc.mody.record.domain.RecordViewHistory;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
+import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -53,8 +63,13 @@ public class MypageService {
     private final NotificationSettingRepository notificationSettingRepository;
     private final ExerciseScheduleRepository exerciseScheduleRepository;
     private final NotificationRepository notificationRepository;
+    private final MemberPushTokenRepository memberPushTokenRepository;
     private final ActivityRecordRepository activityRecordRepository;
     private final RecordCommentRepository recordCommentRepository;
+    private final RecordViewHistoryRepository recordViewHistoryRepository;
+    private final GroupChallengeRepository groupChallengeRepository;
+    private final ChallengeProofRepository challengeProofRepository;
+    private final StepRecordRepository stepRecordRepository;
 
     @Transactional(readOnly = true)
     public MyInfoResult getMyInfo(Long memberId) {
@@ -125,6 +140,8 @@ public class MypageService {
         deleteNotificationData(memberId);
         deleteJoinedGroupMemberships(memberId);
         deleteMemberRecordsAndComments(memberId);
+        deleteRecordViewHistories(memberId);
+        deleteChallengeData(memberId);
         member.delete();
     }
 
@@ -211,6 +228,8 @@ public class MypageService {
             .findByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(memberId, groupId, GroupMemberStatus.JOINED)
             .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND));
         deleteGroupRecordsAndComments(memberId, groupId);
+        deleteGroupRecordViewHistories(memberId, groupId);
+        deleteGroupChallengeData(memberId, groupId);
         groupMember.leave(LocalDateTime.now());
     }
 
@@ -256,6 +275,8 @@ public class MypageService {
             .forEach(ExerciseSchedule::delete);
         notificationRepository.findByReceiverMemberIdAndDeletedAtIsNull(memberId)
             .forEach(Notification::delete);
+        memberPushTokenRepository.findByMemberIdAndDeletedAtIsNull(memberId)
+            .forEach(MemberPushToken::delete);
     }
 
     private void deleteJoinedGroupMemberships(Long memberId) {
@@ -272,6 +293,18 @@ public class MypageService {
         records.forEach(ActivityRecord::delete);
     }
 
+    private void deleteRecordViewHistories(Long memberId) {
+        recordViewHistoryRepository.findActiveByMemberId(memberId)
+            .forEach(RecordViewHistory::delete);
+    }
+
+    private void deleteChallengeData(Long memberId) {
+        challengeProofRepository.findByMemberIdAndDeletedAtIsNull(memberId)
+            .forEach(ChallengeProof::delete);
+        stepRecordRepository.findByMemberIdAndDeletedAtIsNull(memberId)
+            .forEach(StepRecord::delete);
+    }
+
     private void deleteGroupRecordsAndComments(Long memberId, Long groupId) {
         List<ActivityRecord> records = activityRecordRepository.findByMemberIdAndGroupIdAndDeletedAtIsNull(
             memberId,
@@ -281,6 +314,26 @@ public class MypageService {
         recordCommentRepository.findActiveCommentsByMemberIdAndGroupId(memberId, groupId)
             .forEach(RecordComment::delete);
         records.forEach(ActivityRecord::delete);
+    }
+
+    private void deleteGroupRecordViewHistories(Long memberId, Long groupId) {
+        recordViewHistoryRepository.findActiveByMemberIdAndGroupId(memberId, groupId)
+            .forEach(RecordViewHistory::delete);
+    }
+
+    private void deleteGroupChallengeData(Long memberId, Long groupId) {
+        List<Long> groupChallengeIds = groupChallengeRepository.findByGroupIdAndDeletedAtIsNull(groupId)
+            .stream()
+            .map(GroupChallenge::getId)
+            .toList();
+        if (groupChallengeIds.isEmpty()) {
+            return;
+        }
+
+        challengeProofRepository.findByMemberIdAndGroupChallengeIdInAndDeletedAtIsNull(memberId, groupChallengeIds)
+            .forEach(ChallengeProof::delete);
+        stepRecordRepository.findByMemberIdAndGroupChallengeIdInAndDeletedAtIsNull(memberId, groupChallengeIds)
+            .forEach(StepRecord::delete);
     }
 
     private void deleteCommentsOnRecords(List<ActivityRecord> records) {

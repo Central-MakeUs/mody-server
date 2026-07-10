@@ -3,14 +3,15 @@ package cmc.mody.onboarding.presentation;
 import static cmc.mody.docs.ApiDocumentDescriptions.AUTHENTICATED_API;
 import static cmc.mody.docs.ApiDocumentDescriptions.GROUP_ACCESS_RULES;
 import static cmc.mody.docs.ApiDocumentDescriptions.ONBOARDING_FLOW_RULES;
+import static cmc.mody.docs.ApiDocumentDescriptions.ONBOARDING_PROFILE_REQUEST_RULES;
 import static cmc.mody.docs.ApiDocumentDescriptions.SCHEDULE_OWNERSHIP_RULES;
 import static cmc.mody.docs.ApiDocumentUtils.commonResponseFields;
 import static com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.document;
 import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -63,6 +64,8 @@ class OnboardingControllerDocsTest {
 
         %s
 
+        %s
+
         발생 가능한 예외 코드:
         - AUTH401: Authorization 헤더가 없거나 비어있음
         - AUTH402: Bearer 뒤 JWT 값이 비어있음
@@ -72,7 +75,12 @@ class OnboardingControllerDocsTest {
         - MEMBER301: 회원 가입 입력값 검증 실패
         - MEMBER302: 토큰의 회원 id에 해당하는 회원 없음
         - MEMBER303: 이미 개인 정보 입력이 완료된 회원
-        """.formatted(AUTHENTICATED_API, ONBOARDING_FLOW_RULES, SCHEDULE_OWNERSHIP_RULES);
+        """.formatted(
+            AUTHENTICATED_API,
+            ONBOARDING_FLOW_RULES,
+            SCHEDULE_OWNERSHIP_RULES,
+            ONBOARDING_PROFILE_REQUEST_RULES
+        );
     private static final String ONBOARDING_GROUP_DESCRIPTION = """
         온보딩 중 그룹 생성/참여에 사용하는 API다.
 
@@ -137,17 +145,36 @@ class OnboardingControllerDocsTest {
                     .summary("개인 정보 입력")
                     .description(PROFILE_DESCRIPTION)
                     .requestFields(
-                        fieldWithPath("nickname").type(JsonFieldType.STRING).description("닉네임. 그룹 내 중복 허용"),
-                        fieldWithPath("birthDate").type(JsonFieldType.STRING).description("생년월일(yyyy-MM-dd)"),
-                        fieldWithPath("currentWeightKg").type(JsonFieldType.NUMBER).description("현재 체중 kg"),
-                        fieldWithPath("targetWeightKg").type(JsonFieldType.NUMBER).description("목표 체중 kg"),
-                        fieldWithPath("mealSchedules").type(JsonFieldType.ARRAY).description("식사 설정 목록. 아침/점심/저녁 3개 입력"),
-                        fieldWithPath("mealSchedules[].mealType").type(JsonFieldType.STRING).description("식사 타입: BREAKFAST, LUNCH, DINNER"),
-                        fieldWithPath("mealSchedules[].time").type(JsonFieldType.STRING).description("식사 알림 시간(HH:mm). skipped=true이면 null").optional(),
-                        fieldWithPath("mealSchedules[].skipped").type(JsonFieldType.BOOLEAN).description("먹지 않음 여부"),
-                        fieldWithPath("exerciseSchedules").type(JsonFieldType.ARRAY).description("운동 일정 목록. 주 3회 이상 입력"),
-                        fieldWithPath("exerciseSchedules[].dayOfWeek").type(JsonFieldType.STRING).description("운동 요일: MONDAY~SUNDAY"),
-                        fieldWithPath("exerciseSchedules[].time").type(JsonFieldType.STRING).description("운동 시간(HH:mm)")
+                        fieldWithPath("nickname").type(JsonFieldType.STRING).description("닉네임. 필수, 14자 이하, 그룹 내 중복 허용"),
+                        fieldWithPath("birthDate").type(JsonFieldType.STRING).description("생년월일. 필수, yyyy-MM-dd, 과거 날짜"),
+                        fieldWithPath("currentWeightKg")
+                            .type(JsonFieldType.NUMBER)
+                            .description("현재 체중 kg. 필수, 20.0~300.0, 소수점 둘째 자리까지 허용"),
+                        fieldWithPath("targetWeightKg")
+                            .type(JsonFieldType.NUMBER)
+                            .description("목표 체중 kg. 필수, 20.0~300.0, 소수점 둘째 자리까지 허용"),
+                        fieldWithPath("mealSchedules")
+                            .type(JsonFieldType.ARRAY)
+                            .description("식사 설정 목록. 필수, 정확히 3개, BREAKFAST/LUNCH/DINNER 각각 1개씩 입력"),
+                        fieldWithPath("mealSchedules[].mealType")
+                            .type(JsonFieldType.STRING)
+                            .description("식사 타입. BREAKFAST, LUNCH, DINNER"),
+                        fieldWithPath("mealSchedules[].time")
+                            .type(JsonFieldType.STRING)
+                            .description("식사 알림 시간(HH:mm). skipped=false이면 필수, skipped=true이면 null")
+                            .optional(),
+                        fieldWithPath("mealSchedules[].skipped")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("먹지 않음 여부. true이면 time은 null, false이면 time은 필수"),
+                        fieldWithPath("exerciseSchedules")
+                            .type(JsonFieldType.ARRAY)
+                            .description("운동 일정 목록. 필수, 주 3회 이상 입력"),
+                        fieldWithPath("exerciseSchedules[].dayOfWeek")
+                            .type(JsonFieldType.STRING)
+                            .description("운동 요일. MONDAY~SUNDAY"),
+                        fieldWithPath("exerciseSchedules[].time")
+                            .type(JsonFieldType.STRING)
+                            .description("운동 시간(HH:mm). 필수")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.memberId").type(JsonFieldType.NUMBER).description("회원 id"),
@@ -300,6 +327,46 @@ class OnboardingControllerDocsTest {
                     .tag("Onboarding")
                     .summary("개인 정보 입력")
                     .description(PROFILE_DESCRIPTION)
+                    .responseFields(commonResponseFields())
+                    .build())
+            ));
+    }
+
+    @Test
+    void setupProfileWithInsufficientExerciseSchedules() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(post("/api/v1/onboarding/profile")
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "nickname": "동준이빡빡이",
+                      "birthDate": "1997-11-17",
+                      "currentWeightKg": 75,
+                      "targetWeightKg": 70,
+                      "mealSchedules": [
+                        {"mealType": "BREAKFAST", "time": null, "skipped": true},
+                        {"mealType": "LUNCH", "time": "12:00", "skipped": false},
+                        {"mealType": "DINNER", "time": "19:00", "skipped": false}
+                      ],
+                      "exerciseSchedules": [
+                        {"dayOfWeek": "MONDAY", "time": "18:00"},
+                        {"dayOfWeek": "WEDNESDAY", "time": "18:00"}
+                      ]
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andDo(document("onboarding-profile-insufficient-exercise-schedules",
+                resource(ResourceSnippetParameters.builder()
+                    .tag("Onboarding")
+                    .summary("개인 정보 입력")
+                    .description("""
+                        운동 일정은 최소 3개가 필요하다.
+                        식사 설정에서 skipped=true인 항목의 time=null은 허용되며, 이 예시는 운동 일정 개수 부족으로 실패한다.
+
+                        %s
+                        """.formatted(PROFILE_DESCRIPTION))
                     .responseFields(commonResponseFields())
                     .build())
             ));

@@ -1,12 +1,20 @@
 package cmc.mody.challenge.infrastructure.repository;
 
 import cmc.mody.challenge.domain.StepRecord;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface StepRecordRepository extends JpaRepository<StepRecord, Long> {
+    List<StepRecord> findByMemberIdAndDeletedAtIsNull(Long memberId);
+
+    List<StepRecord> findByMemberIdAndGroupChallengeIdInAndDeletedAtIsNull(
+        Long memberId,
+        Collection<Long> groupChallengeIds
+    );
+
     @Query("""
         select coalesce(sum(record.stepCount), 0)
         from StepRecord record
