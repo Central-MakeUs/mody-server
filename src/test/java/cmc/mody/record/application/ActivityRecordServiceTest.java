@@ -515,7 +515,7 @@ class ActivityRecordServiceTest {
     }
 
     private ModyGroup group() {
-        return new ModyGroup(10L, "ABC123", "모디 그룹");
+        return new ModyGroup(10L, "ABCD2345", "모디 그룹");
     }
 
     private ActivityRecord mealRecord(Long id, LocalDateTime uploadedAt) {

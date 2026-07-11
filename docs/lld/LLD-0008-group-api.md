@@ -55,7 +55,7 @@ DELETE /api/v1/groups/{groupId}/members/me
 
 ```json
 {
-  "code": "ABC123"
+  "code": "ABCD2345"
 }
 ```
 
@@ -63,7 +63,7 @@ DELETE /api/v1/groups/{groupId}/members/me
 
 - `mody_group`
   - `id`: 내부 그룹 id.
-  - `code`: 6자리 대문자/숫자 그룹 코드.
+  - `code`: 8자리 영문 대문자/숫자 그룹 코드.
   - `name`: 그룹명, 최대 30자.
 - `group_member`
   - `member_id`: 회원 id 논리 참조.
@@ -86,7 +86,8 @@ DELETE /api/v1/groups/{groupId}/members/me
 
 1. `@CurrentMember`가 access token에서 회원 id를 추출한다.
 2. 생성/참여 API는 회원 존재 여부와 참여 그룹 수 4개 제한을 확인한다.
-3. 그룹 코드는 6자리 대문자/숫자로 생성하고, 활성 그룹 코드와 중복되면 재시도한다.
+3. 그룹 코드는 8자리 영문 대문자/숫자로 생성하고, 활성 그룹 코드와 중복되면 재시도한다.
+   - 혼동을 줄이기 위해 `I`, `O`, `0`, `1`은 자동 생성 문자셋에서 제외한다.
 4. 그룹 생성 시 `mody_group`을 저장하고 생성자를 `group_member`로 함께 저장한다.
 5. 그룹 참여 시 코드로 그룹을 찾는다.
 6. 이미 참여 중인지, 회원당 그룹 수와 그룹 정원이 초과되지 않았는지 확인한다.

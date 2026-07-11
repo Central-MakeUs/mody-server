@@ -263,7 +263,7 @@ class DevToolControllerDocsTest {
             true,
             true,
             1,
-            List.of(new DevToolService.DevGroupResult(10L, "모디 그룹", "ABC123"))
+            List.of(new DevToolService.DevGroupResult(10L, "모디 그룹", "ABCD2345"))
         ));
 
         mockMvc.perform(get("/api/v1/dev/members/{memberId}/state", 100L))
@@ -297,7 +297,7 @@ class DevToolControllerDocsTest {
     @Test
     void getGroups() throws Exception {
         given(devToolService.getGroups()).willReturn(new DevToolService.DevGroupListResult(List.of(
-            new DevToolService.DevGroupSummaryResult(10L, "모디 그룹", "ABC123", 3)
+            new DevToolService.DevGroupSummaryResult(10L, "모디 그룹", "ABCD2345", 3)
         )));
 
         mockMvc.perform(get("/api/v1/dev/groups"))
@@ -322,7 +322,7 @@ class DevToolControllerDocsTest {
         given(devToolService.getGroup(10L)).willReturn(new DevToolService.DevGroupDetailResult(
             10L,
             "모디 그룹",
-            "ABC123",
+            "ABCD2345",
             1,
             List.of(new DevToolService.DevGroupMemberResult(
                 100L,

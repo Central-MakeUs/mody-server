@@ -621,14 +621,14 @@ class OnboardingControllerDocsTest {
     void joinGroup() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(groupService.joinGroup(eq(1L), any(GroupJoinCommand.class)))
-            .willReturn(new GroupJoinResult(1L, "ABCDEF", "모디 그룹", 4));
+            .willReturn(new GroupJoinResult(1L, "ABCD2345", "모디 그룹", 4));
 
         mockMvc.perform(post("/api/v1/onboarding/groups/join")
                 .header("Authorization", "Bearer access-token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "code": "ABCDEF"
+                      "code": "ABCD2345"
                     }
                     """))
             .andExpect(status().isOk())
@@ -638,7 +638,7 @@ class OnboardingControllerDocsTest {
                     .summary("그룹 코드 입력")
                     .description(ONBOARDING_GROUP_DESCRIPTION)
                     .requestFields(
-                        fieldWithPath("code").type(JsonFieldType.STRING).description("그룹 코드. 영문/숫자 6자리")
+                        fieldWithPath("code").type(JsonFieldType.STRING).description("그룹 코드. 영문 대문자/숫자 8자리")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.groupId").type(JsonFieldType.NUMBER).description("그룹 id"),
@@ -662,7 +662,7 @@ class OnboardingControllerDocsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "code": "ABCDEF"
+                      "code": "ABCD2345"
                     }
                     """))
             .andExpect(status().isNotFound())
@@ -680,7 +680,7 @@ class OnboardingControllerDocsTest {
     void createGroup() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(groupService.createGroup(eq(1L), any(GroupCreateCommand.class)))
-            .willReturn(new GroupCreateResult(1L, "ABCDEF", "모디 그룹"));
+            .willReturn(new GroupCreateResult(1L, "ABCD2345", "모디 그룹"));
 
         mockMvc.perform(post("/api/v1/onboarding/groups")
                 .header("Authorization", "Bearer access-token")

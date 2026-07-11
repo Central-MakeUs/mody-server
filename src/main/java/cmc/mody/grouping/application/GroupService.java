@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class GroupService {
     private static final int MAX_GROUP_COUNT = 4;
     private static final int MAX_GROUP_MEMBER_COUNT = 12;
-    private static final int GROUP_CODE_LENGTH = 6;
+    private static final int GROUP_CODE_LENGTH = 8;
     private static final int MAX_GROUP_CODE_GENERATION_ATTEMPTS = 20;
     private static final char[] GROUP_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".toCharArray();
 
