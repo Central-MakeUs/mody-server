@@ -31,9 +31,10 @@ public class GlobalExceptionHandler {
         HttpServletRequest request
     ) {
         log.warn("Validation failed: {}", e.getBindingResult().getFieldErrors());
+        ErrorStatus status = ValidationErrorStatusResolver.resolve(e, resolveValidationStatus(request));
         return ResponseEntity
             .badRequest()
-            .body(ApiResponse.failure(resolveValidationStatus(request)));
+            .body(ApiResponse.failure(status));
     }
 
     private ErrorStatus resolveValidationStatus(HttpServletRequest request) {

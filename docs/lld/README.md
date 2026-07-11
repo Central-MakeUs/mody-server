@@ -33,3 +33,4 @@
 | [LLD-0025](LLD-0025-weekly-challenge-share-image.md) | 주간 챌린지 완료 공유 이미지 API | Accepted | #77 |
 | [LLD-0026](LLD-0026-dev-convenience-api.md) | 개발 편의 API | Accepted | #79 |
 | [LLD-0027](LLD-0027-kakao-share-invite-link.md) | 카카오 공유 초대 링크 | Accepted | #81 |
+| [LLD-0028](LLD-0028-detailed-error-status.md) | 세부 에러 코드 매핑 | Accepted | #85 |

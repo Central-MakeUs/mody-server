@@ -15,6 +15,7 @@ import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cmc.mody.auth.application.token.TokenProvider;
@@ -73,6 +74,12 @@ class OnboardingControllerDocsTest {
         - AUTH404: 만료된 JWT
         - AUTH405: 지원하지 않는 JWT
         - MEMBER301: 회원 가입 입력값 검증 실패
+        - MEMBER304: 닉네임 오류
+        - MEMBER305: 생년월일 오류
+        - MEMBER306: 체중 오류
+        - MEMBER307: 식사 설정 개수 또는 식사 타입 조합 오류
+        - MEMBER308: 식사 시간과 먹지 않음 조합 오류
+        - MEMBER309: 운동 일정 개수, 요일, 시간 오류
         - MEMBER302: 토큰의 회원 id에 해당하는 회원 없음
         - MEMBER303: 이미 개인 정보 입력이 완료된 회원
         """.formatted(
@@ -322,6 +329,7 @@ class OnboardingControllerDocsTest {
                     }
                     """))
             .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorStatus.MEMBER_NICKNAME_INVALID.getCode()))
             .andDo(document("onboarding-profile-validation-error",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Onboarding")
@@ -357,6 +365,7 @@ class OnboardingControllerDocsTest {
                     }
                     """))
             .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorStatus.MEMBER_EXERCISE_SCHEDULE_INVALID.getCode()))
             .andDo(document("onboarding-profile-insufficient-exercise-schedules",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Onboarding")
