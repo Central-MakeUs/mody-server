@@ -3,10 +3,28 @@ package cmc.mody.common.api.exception;
 import cmc.mody.common.api.status.ErrorStatus;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 final class ValidationErrorStatusResolver {
+    private static final List<ErrorStatus> STATUS_PRIORITY = List.of(
+        ErrorStatus.MEMBER_NICKNAME_INVALID,
+        ErrorStatus.MEMBER_BIRTH_DATE_INVALID,
+        ErrorStatus.MEMBER_WEIGHT_INVALID,
+        ErrorStatus.MEMBER_MEAL_SCHEDULE_INVALID,
+        ErrorStatus.MEMBER_MEAL_TIME_INVALID,
+        ErrorStatus.MEMBER_EXERCISE_SCHEDULE_INVALID,
+        ErrorStatus.RECORD_GROUP_ID_INVALID,
+        ErrorStatus.RECORD_TYPE_INVALID,
+        ErrorStatus.RECORD_IMAGE_INVALID,
+        ErrorStatus.RECORD_MEAL_PAYLOAD_INVALID,
+        ErrorStatus.RECORD_EXERCISE_PAYLOAD_INVALID,
+        ErrorStatus.RECORD_EXERCISE_DURATION_INVALID,
+        ErrorStatus.RECORD_COMMENT_INVALID
+    );
+
     private static final Map<String, ErrorStatus> STATUS_BY_MESSAGE = Map.ofEntries(
         Map.entry("닉네임은 필수입니다.", ErrorStatus.MEMBER_NICKNAME_INVALID),
         Map.entry("닉네임은 14자 이하로 입력해주세요.", ErrorStatus.MEMBER_NICKNAME_INVALID),
@@ -50,15 +68,16 @@ final class ValidationErrorStatusResolver {
     }
 
     static ErrorStatus resolve(MethodArgumentNotValidException exception, ErrorStatus fallback) {
-        List<String> messages = exception.getBindingResult()
+        Set<ErrorStatus> statuses = exception.getBindingResult()
             .getAllErrors()
             .stream()
             .map(ObjectError::getDefaultMessage)
-            .toList();
-
-        return messages.stream()
             .map(STATUS_BY_MESSAGE::get)
             .filter(status -> status != null)
+            .collect(Collectors.toSet());
+
+        return STATUS_PRIORITY.stream()
+            .filter(statuses::contains)
             .findFirst()
             .orElse(fallback);
     }

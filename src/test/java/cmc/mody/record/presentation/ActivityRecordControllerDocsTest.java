@@ -769,8 +769,8 @@ class ActivityRecordControllerDocsTest {
                       "groupId": 1,
                       "recordType": "MEAL",
                       "imageKey": "profiles/1/2026/07/profile.jpg",
-                      "mealTime": null,
-                      "menu": "",
+                      "mealTime": "12:30",
+                      "menu": "샐러드",
                       "exerciseDurationMinutes": null,
                       "exerciseName": null
                     }
