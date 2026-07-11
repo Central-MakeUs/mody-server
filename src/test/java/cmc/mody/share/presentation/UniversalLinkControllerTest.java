@@ -33,12 +33,12 @@ class UniversalLinkControllerTest {
 
     @Test
     void invite() throws Exception {
-        mockMvc.perform(get("/invite").param("code", "ABC123"))
+        mockMvc.perform(get("/invite").param("code", "ABCD2345"))
             .andExpect(status().isOk())
             .andExpect(redirectedUrl(null))
             .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
             .andExpect(header().string(HttpHeaders.CONTENT_TYPE, containsString("text/html")))
-            .andExpect(content().string(containsString("ABC123")))
+            .andExpect(content().string(containsString("ABCD2345")))
             .andExpect(content().string(containsString("App Store로 이동")))
             .andExpect(content().string(containsString("https://www.apple.com/kr/app-store/")));
     }

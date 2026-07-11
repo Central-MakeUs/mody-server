@@ -83,7 +83,7 @@ class GroupServiceTest {
 
         assertThat(result.groupId()).isEqualTo(10L);
         assertThat(result.name()).isEqualTo("모디 그룹");
-        assertThat(result.code()).hasSize(6);
+        assertThat(result.code()).hasSize(8);
         then(modyGroupRepository).should().save(groupCaptor.capture());
         then(groupMemberRepository).should().save(groupMemberCaptor.capture());
         assertThat(groupCaptor.getValue().getCode()).isEqualTo(result.code());
@@ -98,9 +98,9 @@ class GroupServiceTest {
     void joinGroup() {
         GroupService service = service();
         Member member = member();
-        ModyGroup group = new ModyGroup(10L, "ABC123", "모디 그룹");
+        ModyGroup group = new ModyGroup(10L, "ABCD2345", "모디 그룹");
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
-        given(modyGroupRepository.findByCodeAndDeletedAtIsNull("ABC123")).willReturn(Optional.of(group));
+        given(modyGroupRepository.findByCodeAndDeletedAtIsNull("ABCD2345")).willReturn(Optional.of(group));
         given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
             1L,
             10L,
@@ -112,9 +112,9 @@ class GroupServiceTest {
             .willReturn(3L);
         given(idGenerator.nextId()).willReturn(20L);
 
-        GroupJoinResult result = service.joinGroup(1L, new GroupJoinCommand("ABC123"));
+        GroupJoinResult result = service.joinGroup(1L, new GroupJoinCommand("ABCD2345"));
 
-        assertThat(result).isEqualTo(new GroupJoinResult(10L, "ABC123", "모디 그룹", 3));
+        assertThat(result).isEqualTo(new GroupJoinResult(10L, "ABCD2345", "모디 그룹", 3));
         then(groupMemberRepository).should().save(groupMemberCaptor.capture());
         assertThat(groupMemberCaptor.getValue().getGroupId()).isEqualTo(10L);
         assertThat(member.isGroupOnboardingCompleted()).isTrue();
@@ -127,15 +127,15 @@ class GroupServiceTest {
     void joinAlreadyJoinedGroup() {
         GroupService service = service();
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
-        given(modyGroupRepository.findByCodeAndDeletedAtIsNull("ABC123"))
-            .willReturn(Optional.of(new ModyGroup(10L, "ABC123", "모디 그룹")));
+        given(modyGroupRepository.findByCodeAndDeletedAtIsNull("ABCD2345"))
+            .willReturn(Optional.of(new ModyGroup(10L, "ABCD2345", "모디 그룹")));
         given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
             1L,
             10L,
             GroupMemberStatus.JOINED
         )).willReturn(true);
 
-        assertThatThrownBy(() -> service.joinGroup(1L, new GroupJoinCommand("ABC123")))
+        assertThatThrownBy(() -> service.joinGroup(1L, new GroupJoinCommand("ABCD2345")))
             .isInstanceOfSatisfying(GeneralException.class, exception ->
                 assertThat(exception.getStatus()).isEqualTo(ErrorStatus.GROUP_ALREADY_JOINED));
     }
@@ -145,8 +145,8 @@ class GroupServiceTest {
     void joinGroupLimitExceeded() {
         GroupService service = service();
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
-        given(modyGroupRepository.findByCodeAndDeletedAtIsNull("ABC123"))
-            .willReturn(Optional.of(new ModyGroup(10L, "ABC123", "모디 그룹")));
+        given(modyGroupRepository.findByCodeAndDeletedAtIsNull("ABCD2345"))
+            .willReturn(Optional.of(new ModyGroup(10L, "ABCD2345", "모디 그룹")));
         given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
             1L,
             10L,
@@ -155,7 +155,7 @@ class GroupServiceTest {
         given(groupMemberRepository.countByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
             .willReturn(4L);
 
-        assertThatThrownBy(() -> service.joinGroup(1L, new GroupJoinCommand("ABC123")))
+        assertThatThrownBy(() -> service.joinGroup(1L, new GroupJoinCommand("ABCD2345")))
             .isInstanceOfSatisfying(GeneralException.class, exception ->
                 assertThat(exception.getStatus()).isEqualTo(ErrorStatus.GROUP_LIMIT_EXCEEDED));
     }
@@ -165,8 +165,8 @@ class GroupServiceTest {
     void joinGroupCapacityExceeded() {
         GroupService service = service();
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
-        given(modyGroupRepository.findByCodeAndDeletedAtIsNull("ABC123"))
-            .willReturn(Optional.of(new ModyGroup(10L, "ABC123", "모디 그룹")));
+        given(modyGroupRepository.findByCodeAndDeletedAtIsNull("ABCD2345"))
+            .willReturn(Optional.of(new ModyGroup(10L, "ABCD2345", "모디 그룹")));
         given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
             1L,
             10L,
@@ -177,7 +177,7 @@ class GroupServiceTest {
         given(groupMemberRepository.countByGroupIdAndGroupMemberStatusAndDeletedAtIsNull(10L, GroupMemberStatus.JOINED))
             .willReturn(12L);
 
-        assertThatThrownBy(() -> service.joinGroup(1L, new GroupJoinCommand("ABC123")))
+        assertThatThrownBy(() -> service.joinGroup(1L, new GroupJoinCommand("ABCD2345")))
             .isInstanceOfSatisfying(GeneralException.class, exception ->
                 assertThat(exception.getStatus()).isEqualTo(ErrorStatus.GROUP_CAPACITY_EXCEEDED));
     }
@@ -206,7 +206,7 @@ class GroupServiceTest {
     void getGroupMembersWithUnreadRecordCount() {
         GroupService service = service();
         LocalDateTime lastViewedAt = LocalDateTime.of(2026, 7, 1, 12, 0);
-        given(modyGroupRepository.findById(10L)).willReturn(Optional.of(new ModyGroup(10L, "ABC123", "모디 그룹")));
+        given(modyGroupRepository.findById(10L)).willReturn(Optional.of(new ModyGroup(10L, "ABCD2345", "모디 그룹")));
         given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
             1L,
             10L,

@@ -79,4 +79,4 @@ invite:
 
 - AASA 경로가 200 OK, `application/json`, redirect 없음으로 응답한다.
 - AASA에 dev 앱 id와 `/invite`, `/invite/*` 경로가 포함된다.
-- `/invite?code=ABC123`가 HTML을 반환하고 코드, 자동 이동 URL, 수동 이동 버튼을 포함한다.
+- `/invite?code=ABCD2345`가 HTML을 반환하고 코드, 자동 이동 URL, 수동 이동 버튼을 포함한다.

@@ -376,7 +376,7 @@ class WeeklyChallengeServiceTest {
 
     private void givenValidGroupMembership() {
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
-        given(modyGroupRepository.findById(10L)).willReturn(Optional.of(new ModyGroup(10L, "ABC123", "모디")));
+        given(modyGroupRepository.findById(10L)).willReturn(Optional.of(new ModyGroup(10L, "ABCD2345", "모디")));
         given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
             1L,
             10L,

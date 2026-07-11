@@ -169,7 +169,7 @@ class ChallengeHomeServiceTest {
 
     private void givenValidGroupMembership(Long memberId, GroupMember groupMember) {
         given(memberRepository.findById(memberId)).willReturn(Optional.of(member(memberId)));
-        given(modyGroupRepository.findById(10L)).willReturn(Optional.of(new ModyGroup(10L, "ABC123", "모디")));
+        given(modyGroupRepository.findById(10L)).willReturn(Optional.of(new ModyGroup(10L, "ABCD2345", "모디")));
         given(groupMemberRepository.findByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
             memberId,
             10L,

@@ -100,8 +100,8 @@ public class GroupController {
     public record GroupJoinRequest(
         @NotBlank(message = "그룹 코드는 필수입니다.")
         @Pattern(
-            regexp = "^[A-Za-z0-9]{6}$",
-            message = "그룹 코드는 영문 또는 숫자 6자리여야 합니다."
+            regexp = "^[A-Z0-9]{8}$",
+            message = "그룹 코드는 영문 대문자 또는 숫자 8자리여야 합니다."
         )
         String code
     ) {

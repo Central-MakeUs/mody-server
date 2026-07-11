@@ -405,7 +405,7 @@ class MypageServiceTest {
     void getGroupMembers() {
         MypageService service = service();
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
-        given(modyGroupRepository.findById(100L)).willReturn(Optional.of(new ModyGroup(100L, "ABC123", "모디")));
+        given(modyGroupRepository.findById(100L)).willReturn(Optional.of(new ModyGroup(100L, "ABCD2345", "모디")));
         given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
             1L,
             100L,
