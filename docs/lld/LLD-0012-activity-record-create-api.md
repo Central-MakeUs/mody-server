@@ -96,6 +96,13 @@ POST /api/v1/records
 
 - 인증 실패: `AUTH401`~`AUTH405`.
 - 요청 검증 실패: `RECORD301`.
+- 그룹 id 형식 오류: `RECORD303`.
+- 기록 타입 오류: `RECORD304`.
+- 기록 이미지 키 오류: `RECORD305`.
+- 식사 기록 payload 조합 오류: `RECORD306`.
+- 운동 기록 payload 조합 오류: `RECORD307`.
+- 운동 시간 범위 오류: `RECORD308`.
+- 댓글 내용 오류: `RECORD309`.
 - 회원 없음: `MEMBER302`.
 - 그룹 없음: `GROUP302`.
 - 그룹 참여 정보 없음: `GROUP306`.

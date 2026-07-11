@@ -17,6 +17,7 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWit
 import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cmc.mody.auth.application.token.TokenProvider;
@@ -75,6 +76,13 @@ class ActivityRecordControllerDocsTest {
         - GROUP302: 그룹 없음
         - GROUP306: 그룹 참여 정보 없음
         - RECORD301: 기록 입력값 검증 실패
+        - RECORD303: 그룹 id 형식 오류
+        - RECORD304: 기록 타입 오류
+        - RECORD305: 기록 이미지 키 오류
+        - RECORD306: 식사 기록 payload 조합 오류
+        - RECORD307: 운동 기록 payload 조합 오류
+        - RECORD308: 운동 시간 범위 오류
+        - RECORD309: 댓글 내용 오류
         - RECORD302: 기록 없음 또는 접근할 수 없는 기록
         """.formatted(AUTHENTICATED_API, IMAGE_UPLOAD_FLOW, CURSOR_PAGING, RECORD_CREATE_RULES);
 
@@ -761,14 +769,63 @@ class ActivityRecordControllerDocsTest {
                       "groupId": 1,
                       "recordType": "MEAL",
                       "imageKey": "profiles/1/2026/07/profile.jpg",
-                      "mealTime": null,
-                      "menu": "",
+                      "mealTime": "12:30",
+                      "menu": "샐러드",
                       "exerciseDurationMinutes": null,
                       "exerciseName": null
                     }
                     """))
             .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorStatus.RECORD_IMAGE_INVALID.getCode()))
             .andDo(documentError("record-create-validation-error", "기록 입력"));
+    }
+
+    @Test
+    void createRecordMealPayloadValidationError() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(post("/api/v1/records")
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "groupId": 1,
+                      "recordType": "MEAL",
+                      "imageKey": "records/1/2026/07/4111584723968.jpg",
+                      "mealTime": null,
+                      "menu": "",
+                      "exerciseDurationHours": null,
+                      "exerciseDurationMinutes": null,
+                      "exerciseName": null
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorStatus.RECORD_MEAL_PAYLOAD_INVALID.getCode()))
+            .andDo(documentError("record-create-meal-payload-invalid", "기록 입력"));
+    }
+
+    @Test
+    void createRecordExercisePayloadValidationError() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(post("/api/v1/records")
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "groupId": 1,
+                      "recordType": "EXERCISE",
+                      "imageKey": "records/1/2026/07/4111584723969.jpg",
+                      "mealTime": null,
+                      "menu": null,
+                      "exerciseDurationHours": 0,
+                      "exerciseDurationMinutes": 0,
+                      "exerciseName": ""
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorStatus.RECORD_EXERCISE_PAYLOAD_INVALID.getCode()))
+            .andDo(documentError("record-create-exercise-payload-invalid", "기록 입력"));
     }
 
     @Test
@@ -926,6 +983,7 @@ class ActivityRecordControllerDocsTest {
                     }
                     """))
             .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorStatus.RECORD_COMMENT_INVALID.getCode()))
             .andDo(documentError("record-comment-create-validation-error", "기록 댓글 작성"));
     }
 

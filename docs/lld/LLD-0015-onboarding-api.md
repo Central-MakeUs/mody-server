@@ -62,7 +62,7 @@ POST /api/v1/onboarding/groups
 - `exerciseSchedules[].time`: 필수, `HH:mm`.
 
 예를 들어 식사에서 `skipped=true`, `time=null`은 정상 요청이다.
-운동 일정이 2개뿐이면 주 3회 이상 정책을 만족하지 않아 `MEMBER301`로 실패한다.
+운동 일정이 2개뿐이면 주 3회 이상 정책을 만족하지 않아 `MEMBER309`로 실패한다.
 
 ## 4. 데이터 모델
 
@@ -96,9 +96,12 @@ POST /api/v1/onboarding/groups
 - 인증 실패: `AUTH401`~`AUTH405`.
 - 회원 없음: `MEMBER302`.
 - 회원 가입 입력값 검증 실패: `MEMBER301`.
-  - 식사 설정이 3개가 아니거나, 아침/점심/저녁 중복/누락이 있는 경우.
-  - `skipped=false`인데 `time`이 없거나, `skipped=true`인데 `time`이 있는 경우.
-  - 운동 일정이 3개 미만이거나 요일/시간이 누락된 경우.
+- 닉네임 오류: `MEMBER304`.
+- 생년월일 오류: `MEMBER305`.
+- 체중 오류: `MEMBER306`.
+- 식사 설정 개수 또는 식사 타입 조합 오류: `MEMBER307`.
+- 식사 시간과 먹지 않음 조합 오류: `MEMBER308`.
+- 운동 일정 개수, 요일, 시간 오류: `MEMBER309`.
 - 이미 개인 정보 입력 완료: `MEMBER303`.
 - 그룹 관련 오류: `GROUP302`~`GROUP307`.
 
