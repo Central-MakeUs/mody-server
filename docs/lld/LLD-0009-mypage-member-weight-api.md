@@ -14,6 +14,7 @@
 
 마이페이지 화면에서 현재 회원의 기본 정보와 체중 변화를 조회해야 한다.
 체중 추가 시 이전 체중 기록 대비 증감 값을 서버에서 계산해 저장한다.
+앱 재실행 시에는 내 정보 조회 API로 토큰 유효성과 최신 온보딩/메인 진입 상태를 함께 동기화한다.
 
 ## 2. 범위
 
@@ -65,7 +66,11 @@ POST /api/v1/mypage/weights
 
 - `member`
   - `nickname`, `birth_date`, `profile_image_key`, `created_at`을 조회한다.
+  - `birth_date`, `target_weight_kg` 존재 여부로 `personalInfoCompleted`를 계산한다.
+  - `group_onboarding_completed`를 `groupOnboardingCompleted`로 반환한다.
   - 프로필 수정은 `nickname`, `birth_date`만 변경한다.
+- `group_member`
+  - 현재 `JOINED` 상태 그룹 수로 `mainAccessible`을 계산한다.
 - `social_account`
   - `member_id`로 첫 활성 소셜 계정을 조회해 `login_type`을 응답한다.
 - `weight_record`
@@ -78,10 +83,11 @@ POST /api/v1/mypage/weights
 1. `@CurrentMember`가 access token에서 회원 id를 추출한다.
 2. 회원 조회는 활성 회원만 대상으로 한다.
 3. 내 정보 조회는 회원 생성일 기준으로 함께한 날짜를 계산한다.
-4. 프로필 조회는 회원과 첫 활성 소셜 계정의 로그인 타입을 반환한다.
-5. 프로필 수정은 닉네임과 생년월일을 검증한 뒤 회원 엔티티에 반영한다.
-6. 체중 기록 조회는 최신 기록일부터 내림차순으로 반환한다.
-7. 체중 추가는 직전 체중과의 차이를 계산해 `change_from_previous_kg`에 저장한다.
+4. 내 정보 조회는 개인 정보 입력 완료 여부, 그룹 온보딩 완료 이력, 메인 진입 가능 여부를 최신 서버 상태로 계산해 반환한다.
+5. 프로필 조회는 회원과 첫 활성 소셜 계정의 로그인 타입을 반환한다.
+6. 프로필 수정은 닉네임과 생년월일을 검증한 뒤 회원 엔티티에 반영한다.
+7. 체중 기록 조회는 최신 기록일부터 내림차순으로 반환한다.
+8. 체중 추가는 직전 체중과의 차이를 계산해 `change_from_previous_kg`에 저장한다.
 
 ## 6. 예외 / 에러 처리
 
@@ -93,6 +99,7 @@ POST /api/v1/mypage/weights
 ## 7. 인수조건 (Acceptance Criteria)
 
 - [x] 인증 회원이 내 정보를 조회할 수 있다.
+- [x] 내 정보 조회 응답에 `personalInfoCompleted`, `groupOnboardingCompleted`, `mainAccessible`이 포함된다.
 - [x] 인증 회원이 프로필을 조회할 수 있다.
 - [x] 인증 회원이 닉네임과 생년월일을 수정할 수 있다.
 - [x] 인증 회원이 체중 기록 변화를 조회할 수 있다.

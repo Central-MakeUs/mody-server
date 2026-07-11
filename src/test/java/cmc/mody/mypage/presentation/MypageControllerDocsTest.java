@@ -190,7 +190,7 @@ class MypageControllerDocsTest {
     void getMyInfo() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(mypageService.getMyInfo(1L))
-            .willReturn(new MyInfoResult(1L, "민석", "profiles/member-1.jpg", 12));
+            .willReturn(new MyInfoResult(1L, "민석", "profiles/member-1.jpg", 12, true, true, true));
 
         mockMvc.perform(get("/api/v1/mypage/me")
                 .header("Authorization", "Bearer access-token"))
@@ -208,7 +208,16 @@ class MypageControllerDocsTest {
                             .description("프로필 이미지 URL"),
                         fieldWithPath("result.daysTogether")
                             .type(JsonFieldType.NUMBER)
-                            .description("회원 가입일 기준 서비스와 함께한 일수")
+                            .description("회원 가입일 기준 서비스와 함께한 일수"),
+                        fieldWithPath("result.personalInfoCompleted")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("개인 정보 입력 완료 여부"),
+                        fieldWithPath("result.groupOnboardingCompleted")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("그룹 생성 또는 참여를 한 번이라도 완료했는지 여부"),
+                        fieldWithPath("result.mainAccessible")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("개인 정보 입력 완료와 현재 참여 그룹 1개 이상을 모두 만족하는지 여부")
                     ))
                     .build())
             ));
