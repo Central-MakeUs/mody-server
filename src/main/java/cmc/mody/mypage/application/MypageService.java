@@ -74,11 +74,16 @@ public class MypageService {
     @Transactional(readOnly = true)
     public MyInfoResult getMyInfo(Long memberId) {
         Member member = getMember(memberId);
+        boolean personalInfoCompleted = member.isPersonalInfoCompleted();
+        boolean mainAccessible = personalInfoCompleted && hasJoinedGroup(memberId);
         return new MyInfoResult(
             member.getId(),
             member.getNickname(),
             member.getProfileImageKey(),
-            calculateDaysTogether(member)
+            calculateDaysTogether(member),
+            personalInfoCompleted,
+            member.isGroupOnboardingCompleted(),
+            mainAccessible
         );
     }
 
@@ -355,11 +360,21 @@ public class MypageService {
         return Math.toIntExact(Math.max(days, 1));
     }
 
+    private boolean hasJoinedGroup(Long memberId) {
+        return groupMemberRepository.countByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(
+            memberId,
+            GroupMemberStatus.JOINED
+        ) > 0;
+    }
+
     public record MyInfoResult(
         Long memberId,
         String nickname,
         String profileImageUrl,
-        int daysTogether
+        int daysTogether,
+        boolean personalInfoCompleted,
+        boolean groupOnboardingCompleted,
+        boolean mainAccessible
     ) {
     }
 

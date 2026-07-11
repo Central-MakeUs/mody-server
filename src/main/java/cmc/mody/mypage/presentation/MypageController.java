@@ -206,13 +206,24 @@ public class MypageController {
         }
     }
 
-    public record MyInfoResponse(Long memberId, String nickname, String profileImageUrl, int daysTogether) {
+    public record MyInfoResponse(
+        Long memberId,
+        String nickname,
+        String profileImageUrl,
+        int daysTogether,
+        boolean personalInfoCompleted,
+        boolean groupOnboardingCompleted,
+        boolean mainAccessible
+    ) {
         public static MyInfoResponse from(MypageService.MyInfoResult result) {
             return new MyInfoResponse(
                 result.memberId(),
                 result.nickname(),
                 result.profileImageUrl(),
-                result.daysTogether()
+                result.daysTogether(),
+                result.personalInfoCompleted(),
+                result.groupOnboardingCompleted(),
+                result.mainAccessible()
             );
         }
     }

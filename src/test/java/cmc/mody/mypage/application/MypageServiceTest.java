@@ -129,6 +129,44 @@ class MypageServiceTest {
     private ArgumentCaptor<WeightRecord> weightRecordCaptor;
 
     @Test
+    @DisplayName("내 정보 조회 시 자동 로그인 진입 상태를 함께 반환한다.")
+    void getMyInfo() {
+        MypageService service = service();
+        Member member = member();
+        member.completeGroupOnboarding();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+        given(groupMemberRepository.countByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(
+            1L,
+            GroupMemberStatus.JOINED
+        )).willReturn(1L);
+
+        MypageService.MyInfoResult result = service.getMyInfo(1L);
+
+        assertThat(result.personalInfoCompleted()).isTrue();
+        assertThat(result.groupOnboardingCompleted()).isTrue();
+        assertThat(result.mainAccessible()).isTrue();
+    }
+
+    @Test
+    @DisplayName("그룹 온보딩 이력이 있어도 현재 참여 그룹이 없으면 메인에 진입할 수 없다.")
+    void getMyInfoWithoutJoinedGroup() {
+        MypageService service = service();
+        Member member = member();
+        member.completeGroupOnboarding();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+        given(groupMemberRepository.countByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(
+            1L,
+            GroupMemberStatus.JOINED
+        )).willReturn(0L);
+
+        MypageService.MyInfoResult result = service.getMyInfo(1L);
+
+        assertThat(result.personalInfoCompleted()).isTrue();
+        assertThat(result.groupOnboardingCompleted()).isTrue();
+        assertThat(result.mainAccessible()).isFalse();
+    }
+
+    @Test
     @DisplayName("프로필 조회 시 회원과 소셜 로그인 타입을 반환한다.")
     void getProfile() {
         MypageService service = service();
