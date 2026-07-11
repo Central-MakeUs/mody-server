@@ -19,6 +19,7 @@
 
 ### In scope
 
+- 통합 개인 정보 입력 API 요청 규칙 명세 보강.
 - 체중 입력 API 실제 저장.
 - 기록/댓글/챌린지 알림 수신 여부 실제 저장.
 - 건강 앱 연동 상태 저장.
@@ -45,6 +46,23 @@ POST /api/v1/onboarding/groups
 ```
 
 온보딩 그룹 API는 동일한 비즈니스 로직을 재사용하기 위해 `GroupService`에 위임한다.
+
+### 개인 정보 입력 요청 규칙
+
+`POST /api/v1/onboarding/profile`은 다음 규칙을 만족해야 한다.
+
+- `nickname`: 필수, 14자 이하, 그룹 내 중복 허용.
+- `birthDate`: 필수, `yyyy-MM-dd`, 과거 날짜.
+- `currentWeightKg`, `targetWeightKg`: 필수, 20.0~300.0kg, 소수점 둘째 자리까지 허용.
+- `mealSchedules`: 필수, 정확히 3개. `BREAKFAST`, `LUNCH`, `DINNER`를 각각 1개씩 입력.
+- `mealSchedules[].skipped=false`: `time` 필수, `HH:mm`.
+- `mealSchedules[].skipped=true`: `time`은 `null`.
+- `exerciseSchedules`: 필수, 최소 3개.
+- `exerciseSchedules[].dayOfWeek`: `MONDAY`~`SUNDAY`.
+- `exerciseSchedules[].time`: 필수, `HH:mm`.
+
+예를 들어 식사에서 `skipped=true`, `time=null`은 정상 요청이다.
+운동 일정이 2개뿐이면 주 3회 이상 정책을 만족하지 않아 `MEMBER301`로 실패한다.
 
 ## 4. 데이터 모델
 
@@ -78,6 +96,9 @@ POST /api/v1/onboarding/groups
 - 인증 실패: `AUTH401`~`AUTH405`.
 - 회원 없음: `MEMBER302`.
 - 회원 가입 입력값 검증 실패: `MEMBER301`.
+  - 식사 설정이 3개가 아니거나, 아침/점심/저녁 중복/누락이 있는 경우.
+  - `skipped=false`인데 `time`이 없거나, `skipped=true`인데 `time`이 있는 경우.
+  - 운동 일정이 3개 미만이거나 요일/시간이 누락된 경우.
 - 이미 개인 정보 입력 완료: `MEMBER303`.
 - 그룹 관련 오류: `GROUP302`~`GROUP307`.
 

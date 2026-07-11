@@ -28,7 +28,7 @@ public class OAuthMemberProcessor {
     @Transactional
     public OAuthMemberResult ensure(OAuthProfile profile) {
         validate(profile);
-        return socialAccountRepository.findByLoginTypeAndProviderUserId(
+        return socialAccountRepository.findByLoginTypeAndProviderUserIdAndDeletedAtIsNull(
                 profile.loginType(),
                 profile.providerUserId()
             )
@@ -67,6 +67,7 @@ public class OAuthMemberProcessor {
 
     private Member getMember(Long memberId) {
         return memberRepository.findById(memberId)
+            .filter(Member::isActive)
             .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
     }
 

@@ -10,6 +10,8 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GroupChallengeRepository extends JpaRepository<GroupChallenge, Long> {
+    List<GroupChallenge> findByGroupIdAndDeletedAtIsNull(Long groupId);
+
     Optional<GroupChallenge> findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
         Long groupId,
         Collection<Long> challengeIds,

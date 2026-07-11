@@ -31,6 +31,8 @@ class OAuthControllerDocsTest {
     private static final String CLIENT_LOGIN_DESCRIPTION = """
         클라이언트가 provider token으로 로그인하고 서비스 JWT를 발급받는다.
         Kakao/Google은 provider access token, Apple은 identity token을 `accessToken` 파라미터로 전달한다.
+        회원탈퇴 후 동일 소셜 계정으로 다시 로그인하면 신규 회원으로 생성되며,
+        personalInfoCompleted=false, groupOnboardingCompleted=false, mainAccessible=false를 반환한다.
 
         발생 가능한 예외:
         - `COMMON4000`: accessToken query parameter가 누락됨
