@@ -44,7 +44,6 @@ final class ValidationErrorStatusResolver {
         Map.entry("식사 설정은 아침, 점심, 저녁을 각각 1개씩 입력해주세요.", ErrorStatus.MEMBER_MEAL_SCHEDULE_INVALID),
         Map.entry("먹지 않음이면 시간은 비워두고, 먹는 식사는 시간을 입력해주세요.", ErrorStatus.MEMBER_MEAL_TIME_INVALID),
         Map.entry("운동 일정은 필수입니다.", ErrorStatus.MEMBER_EXERCISE_SCHEDULE_INVALID),
-        Map.entry("운동 일정은 주 3회 이상 입력해주세요.", ErrorStatus.MEMBER_EXERCISE_SCHEDULE_INVALID),
         Map.entry("운동 요일은 필수입니다.", ErrorStatus.MEMBER_EXERCISE_SCHEDULE_INVALID),
         Map.entry("운동 시간은 필수입니다.", ErrorStatus.MEMBER_EXERCISE_SCHEDULE_INVALID),
         Map.entry("그룹 id는 양수여야 합니다.", ErrorStatus.RECORD_GROUP_ID_INVALID),

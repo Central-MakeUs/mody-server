@@ -26,7 +26,7 @@ public enum ErrorStatus implements BaseCode {
     MEMBER_WEIGHT_INVALID(400, "MEMBER306", "체중은 20kg 이상 300kg 이하로 입력해야 합니다."),
     MEMBER_MEAL_SCHEDULE_INVALID(400, "MEMBER307", "식사 설정은 아침, 점심, 저녁을 각각 1개씩 입력해야 합니다."),
     MEMBER_MEAL_TIME_INVALID(400, "MEMBER308", "먹지 않음이면 시간을 비우고, 먹는 식사는 시간을 입력해야 합니다."),
-    MEMBER_EXERCISE_SCHEDULE_INVALID(400, "MEMBER309", "운동 일정은 최소 3개 이상 입력해야 합니다."),
+    MEMBER_EXERCISE_SCHEDULE_INVALID(400, "MEMBER309", "운동 일정은 요일과 시간을 함께 입력해야 합니다."),
     GROUP_VALIDATION_FAILED(400, "GROUP301", "그룹 입력값이 올바르지 않습니다."),
     GROUP_NOT_FOUND(404, "GROUP302", "그룹을 찾을 수 없습니다."),
     GROUP_CODE_GENERATION_FAILED(409, "GROUP303", "그룹 코드를 생성할 수 없습니다."),

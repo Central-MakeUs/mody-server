@@ -44,7 +44,7 @@ public final class ApiDocumentDescriptions {
         - mealSchedules: 필수, 정확히 3개. BREAKFAST, LUNCH, DINNER를 각각 1개씩 보내야 한다.
         - mealSchedules[].skipped=false이면 time은 필수이고 HH:mm 형식으로 보낸다.
         - mealSchedules[].skipped=true이면 time은 null이어야 한다.
-        - exerciseSchedules: 필수, 최소 3개. 각 항목은 dayOfWeek와 time이 모두 필요하다.
+        - exerciseSchedules: 필수, 최소 개수 제한 없음. 일정이 없으면 빈 배열을 보낼 수 있고, 각 항목은 dayOfWeek와 time이 모두 필요하다.
         - exerciseSchedules[].dayOfWeek: MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY 중 하나.
         - exerciseSchedules[].time: HH:mm 형식.
         """;
