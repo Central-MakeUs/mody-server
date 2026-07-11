@@ -57,12 +57,12 @@ POST /api/v1/onboarding/groups
 - `mealSchedules`: 필수, 정확히 3개. `BREAKFAST`, `LUNCH`, `DINNER`를 각각 1개씩 입력.
 - `mealSchedules[].skipped=false`: `time` 필수, `HH:mm`.
 - `mealSchedules[].skipped=true`: `time`은 `null`.
-- `exerciseSchedules`: 필수, 최소 3개.
+- `exerciseSchedules`: 필수, 최소 개수 제한 없음. 일정이 없으면 빈 배열.
 - `exerciseSchedules[].dayOfWeek`: `MONDAY`~`SUNDAY`.
 - `exerciseSchedules[].time`: 필수, `HH:mm`.
 
 예를 들어 식사에서 `skipped=true`, `time=null`은 정상 요청이다.
-운동 일정이 2개뿐이면 주 3회 이상 정책을 만족하지 않아 `MEMBER309`로 실패한다.
+운동 일정은 0개, 1개, 2개도 허용하며, 입력한 각 항목의 요일과 시간만 검증한다.
 
 ## 4. 데이터 모델
 
@@ -101,7 +101,7 @@ POST /api/v1/onboarding/groups
 - 체중 오류: `MEMBER306`.
 - 식사 설정 개수 또는 식사 타입 조합 오류: `MEMBER307`.
 - 식사 시간과 먹지 않음 조합 오류: `MEMBER308`.
-- 운동 일정 개수, 요일, 시간 오류: `MEMBER309`.
+- 운동 일정 요일 또는 시간 오류: `MEMBER309`.
 - 이미 개인 정보 입력 완료: `MEMBER303`.
 - 그룹 관련 오류: `GROUP302`~`GROUP307`.
 

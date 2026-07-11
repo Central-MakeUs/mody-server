@@ -498,7 +498,7 @@ class MypageControllerDocsTest {
                     .summary("운동 일정 수정")
                     .description(MYPAGE_DESCRIPTION)
                     .requestFields(
-                        fieldWithPath("schedules").type(JsonFieldType.ARRAY).description("운동 일정 목록. 최소 3개"),
+                        fieldWithPath("schedules").type(JsonFieldType.ARRAY).description("운동 일정 목록. 최소 개수 제한 없음"),
                         fieldWithPath("schedules[].dayOfWeek")
                             .type(JsonFieldType.STRING)
                             .description("운동 요일. MONDAY~SUNDAY"),
@@ -568,7 +568,7 @@ class MypageControllerDocsTest {
                 .content("""
                     {
                       "schedules": [
-                        {"dayOfWeek": "MONDAY", "time": "07:30"}
+                        {"dayOfWeek": "MONDAY", "time": null}
                       ]
                     }
                     """))

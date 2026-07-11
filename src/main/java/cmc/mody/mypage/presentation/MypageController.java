@@ -280,7 +280,6 @@ public class MypageController {
 
     public record ExerciseScheduleRequest(
         @NotNull(message = "운동 일정은 필수입니다.")
-        @Size(min = 3, message = "운동 일정은 주 3회 이상 입력해주세요.")
         List<@Valid ExerciseScheduleItem> schedules
     ) {
         public ExerciseScheduleUpdateCommand toCommand() {

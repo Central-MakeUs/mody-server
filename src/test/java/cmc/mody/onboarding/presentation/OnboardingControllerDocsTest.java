@@ -79,7 +79,7 @@ class OnboardingControllerDocsTest {
         - MEMBER306: 체중 오류
         - MEMBER307: 식사 설정 개수 또는 식사 타입 조합 오류
         - MEMBER308: 식사 시간과 먹지 않음 조합 오류
-        - MEMBER309: 운동 일정 개수, 요일, 시간 오류
+        - MEMBER309: 운동 일정 요일 또는 시간 오류
         - MEMBER302: 토큰의 회원 id에 해당하는 회원 없음
         - MEMBER303: 이미 개인 정보 입력이 완료된 회원
         """.formatted(
@@ -175,7 +175,7 @@ class OnboardingControllerDocsTest {
                             .description("먹지 않음 여부. true이면 time은 null, false이면 time은 필수"),
                         fieldWithPath("exerciseSchedules")
                             .type(JsonFieldType.ARRAY)
-                            .description("운동 일정 목록. 필수, 주 3회 이상 입력"),
+                            .description("운동 일정 목록. 필수, 최소 개수 제한 없음"),
                         fieldWithPath("exerciseSchedules[].dayOfWeek")
                             .type(JsonFieldType.STRING)
                             .description("운동 요일. MONDAY~SUNDAY"),
@@ -341,8 +341,10 @@ class OnboardingControllerDocsTest {
     }
 
     @Test
-    void setupProfileWithInsufficientExerciseSchedules() throws Exception {
+    void setupProfileWithTwoExerciseSchedules() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(onboardingService.setupProfile(eq(1L), any(ProfileSetupCommand.class)))
+            .willReturn(new ProfileSetupResult(1L, 10L, true));
 
         mockMvc.perform(post("/api/v1/onboarding/profile")
                 .header("Authorization", "Bearer access-token")
@@ -364,19 +366,24 @@ class OnboardingControllerDocsTest {
                       ]
                     }
                     """))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.code").value(ErrorStatus.MEMBER_EXERCISE_SCHEDULE_INVALID.getCode()))
-            .andDo(document("onboarding-profile-insufficient-exercise-schedules",
+            .andExpect(status().isOk())
+            .andDo(document("onboarding-profile-two-exercise-schedules",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Onboarding")
                     .summary("개인 정보 입력")
                     .description("""
-                        운동 일정은 최소 3개가 필요하다.
-                        식사 설정에서 skipped=true인 항목의 time=null은 허용되며, 이 예시는 운동 일정 개수 부족으로 실패한다.
+                        운동 일정은 최소 개수 제한이 없다.
+                        식사 설정에서 skipped=true인 항목의 time=null은 허용된다.
 
                         %s
                         """.formatted(PROFILE_DESCRIPTION))
-                    .responseFields(commonResponseFields())
+                    .responseFields(commonResponseFields(
+                        fieldWithPath("result.memberId").type(JsonFieldType.NUMBER).description("회원 id"),
+                        fieldWithPath("result.weightRecordId").type(JsonFieldType.NUMBER).description("생성된 체중 기록 id"),
+                        fieldWithPath("result.personalInfoCompleted")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("개인 정보 입력 완료 여부. true이면 온보딩 개인 정보 입력 단계 재진입 불가")
+                    ))
                     .build())
             ));
     }
