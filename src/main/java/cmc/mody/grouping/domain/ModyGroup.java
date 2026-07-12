@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
         }
 )
 public class ModyGroup extends BaseEntity {
-    @Column(nullable = false, length = 6)
+    @Column(nullable = false, length = 8)
     private String code;
 
     @Column(nullable = false, length = 30)

@@ -102,7 +102,7 @@ erDiagram
 
     MODY_GROUP {
         bigint id PK
-        varchar code "not null, len 6"
+        varchar code "not null, len 8"
         varchar name "not null, len 30"
     }
 
