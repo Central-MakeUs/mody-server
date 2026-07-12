@@ -30,6 +30,13 @@ upload:
   base-url: https://storage.example.com
   presigned-url-expires-in-seconds: 300
 
+error-alert:
+  slack:
+    enabled: false
+    webhook-url: ""
+    max-message-length: 3500
+    stack-trace-depth: 8
+
 notification:
   dispatch:
     enabled: false

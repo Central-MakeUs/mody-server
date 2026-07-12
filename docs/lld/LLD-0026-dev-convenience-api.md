@@ -110,6 +110,15 @@ GET /api/v1/dev/groups/{groupId}
 2. 목록에서는 `groupId`, `name`, `code`, `memberCount`를 내려준다.
 3. 상세에서는 그룹 구성원의 `memberId`, 그룹 내 표시 닉네임, 프로필 이미지 key, 참여 일시를 함께 내려준다.
 
+### 500 에러 알림 테스트
+
+```http
+POST /api/v1/dev/errors/internal-server-error
+```
+
+1. Slack 500 에러 알림 연동 확인을 위해 항상 `IllegalStateException`을 발생시킨다.
+2. Swagger 문서에는 노출하지 않는다.
+
 ## 4. 테스트 시나리오
 
 - mock 회원을 생성한다.
@@ -119,6 +128,7 @@ GET /api/v1/dev/groups/{groupId}
 - 지정한 회원에게 테스트 알림을 생성한다.
 - 지정한 회원의 앱 진입 상태와 그룹 목록을 반환한다.
 - 그룹 목록과 그룹 상세를 조회한다.
+- 500 에러 알림 테스트 API는 500 응답을 반환하고 Slack 알림 경로를 호출한다.
 - 회원 없음, 그룹 없음, 입력값 검증 실패 예외 응답이 Swagger에 생성된다.
 
 ## 5. 미결정 사항 (Open Questions)

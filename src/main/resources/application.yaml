@@ -29,6 +29,13 @@ upload:
 invite:
   app-store-url: ${MODY_INVITE_APP_STORE_URL:https://www.apple.com/kr/app-store/}
 
+error-alert:
+  slack:
+    enabled: ${SLACK_ERROR_ALERT_ENABLED:false}
+    webhook-url: ${SLACK_ERROR_ALERT_WEBHOOK_URL:}
+    max-message-length: ${SLACK_ERROR_ALERT_MAX_MESSAGE_LENGTH:3500}
+    stack-trace-depth: ${SLACK_ERROR_ALERT_STACK_TRACE_DEPTH:8}
+
 notification:
   dispatch:
     enabled: ${NOTIFICATION_DISPATCH_ENABLED:false}
