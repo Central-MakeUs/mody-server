@@ -24,3 +24,4 @@
 | [ADR-0018](ADR-0018-notification-batch-scheduler.md) | 알림 배치와 스케줄러 운영 전략 | Accepted | 2026-07-04 |
 | [ADR-0019](ADR-0019-detailed-error-status.md) | 클라이언트 친화적 세부 에러 코드 전략 | Accepted | 2026-07-11 |
 | [ADR-0020](ADR-0020-server-error-slack-alert.md) | 500 에러 Slack 알림 전략 | Accepted | 2026-07-12 |
+| [ADR-0021](ADR-0021-database-migration-versioning.md) | Flyway 기반 DB 마이그레이션 관리 | Accepted | 2026-07-12 |

@@ -40,6 +40,7 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
     implementation("com.google.cloud:google-cloud-storage")
     implementation("com.google.firebase:firebase-admin:9.4.3")
+    implementation("org.flywaydb:flyway-core")
     // API 문서 (Swagger UI). springdoc 2.x = Spring Boot 3.x 지원
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0")
     // JWT
@@ -48,6 +49,7 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
     runtimeOnly("com.mysql:mysql-connector-j")
+    runtimeOnly("org.flywaydb:flyway-mysql")
     annotationProcessor("org.projectlombok:lombok")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
