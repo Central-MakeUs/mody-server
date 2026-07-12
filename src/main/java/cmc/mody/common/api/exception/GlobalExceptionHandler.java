@@ -2,9 +2,11 @@ package cmc.mody.common.api.exception;
 
 import cmc.mody.common.api.ApiResponse;
 import cmc.mody.common.api.status.ErrorStatus;
+import cmc.mody.common.alert.ServerErrorAlertService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -16,10 +18,16 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     private final Logger log = LoggerFactory.getLogger(getClass());
+    private final ObjectProvider<ServerErrorAlertService> serverErrorAlertService;
+
+    public GlobalExceptionHandler(ObjectProvider<ServerErrorAlertService> serverErrorAlertService) {
+        this.serverErrorAlertService = serverErrorAlertService;
+    }
 
     @ExceptionHandler(GeneralException.class)
-    public ResponseEntity<ApiResponse<Void>> handleGeneralException(GeneralException e) {
+    public ResponseEntity<ApiResponse<Void>> handleGeneralException(GeneralException e, HttpServletRequest request) {
         log.warn("GeneralException: {}", e.getMessage());
+        notifyIfServerError(e, request, e.getStatus().getHttpStatus(), e.getStatus().getCode());
         return ResponseEntity
             .status(e.getStatus().getHttpStatus())
             .body(ApiResponse.failure(e.getStatus()));
@@ -102,10 +110,28 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
+    public ResponseEntity<ApiResponse<Void>> handleException(Exception e, HttpServletRequest request) {
         log.error("Unhandled exception", e);
+        notifyIfServerError(
+            e,
+            request,
+            ErrorStatus.INTERNAL_SERVER_ERROR.getHttpStatus(),
+            ErrorStatus.INTERNAL_SERVER_ERROR.getCode()
+        );
         return ResponseEntity
             .internalServerError()
             .body(ApiResponse.failure(ErrorStatus.INTERNAL_SERVER_ERROR));
+    }
+
+    private void notifyIfServerError(
+        Throwable exception,
+        HttpServletRequest request,
+        int statusCode,
+        String errorCode
+    ) {
+        if (statusCode < 500) {
+            return;
+        }
+        serverErrorAlertService.ifAvailable(service -> service.notify(exception, request, statusCode, errorCode));
     }
 }
