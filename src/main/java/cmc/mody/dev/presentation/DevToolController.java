@@ -80,6 +80,11 @@ public class DevToolController {
         return ApiResponse.ok(DevGroupDetailResponse.from(result));
     }
 
+    @PostMapping("/errors/internal-server-error")
+    public ApiResponse<Void> throwInternalServerError() {
+        throw new IllegalStateException("Dev triggered internal server error");
+    }
+
     public record CreateMockMemberRequest(
         @Size(max = 14, message = "닉네임은 14자 이하로 입력해주세요.")
         String nickname,

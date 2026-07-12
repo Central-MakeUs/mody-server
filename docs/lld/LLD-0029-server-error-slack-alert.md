@@ -24,6 +24,7 @@
 - 요청자 `memberId`, `nickname` 추출.
 - 요청 method, URI, query, IP, User-Agent, exception 요약 포함.
 - Slack 설정 미존재/비활성화 시 no-op.
+- `local`, `dev` 프로필 전용 500 에러 테스트 API.
 
 ### Out of scope
 
@@ -35,6 +36,16 @@
 ## 3. 인터페이스 / API
 
 외부 API는 추가하지 않는다.
+
+개발/검증 전용 API:
+
+```http
+POST /api/v1/dev/errors/internal-server-error
+```
+
+- `local`, `dev` 프로필에서만 활성화된다.
+- Slack 알림 연동 확인을 위해 항상 `IllegalStateException`을 발생시킨다.
+- Swagger 문서에는 노출하지 않는다.
 
 환경 변수:
 
@@ -79,6 +90,7 @@ DB 테이블은 추가하지 않는다.
 - [x] 요청 body와 Authorization 값은 Slack 메시지에 포함되지 않는다.
 - [x] Slack 설정이 없으면 전송하지 않고 서버는 정상 기동한다.
 - [x] Slack 전송 실패가 API 응답을 바꾸지 않는다.
+- [x] 개발/검증용 500 에러 API로 Slack 알림 동작을 확인할 수 있다.
 - [x] 관련 테스트와 `./gradlew build`가 통과한다.
 
 ## 8. 영향 범위 / 마이그레이션
