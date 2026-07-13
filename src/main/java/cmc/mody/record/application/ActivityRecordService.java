@@ -22,11 +22,10 @@ import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.YearMonth;
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -51,35 +50,28 @@ public class ActivityRecordService {
     private final NotificationRequestService notificationRequestService;
 
     @Transactional(readOnly = true)
-    public ActivityCalendarResult getActivityCalendar(Long memberId, Long groupId, YearMonth yearMonth) {
+    public ActivityCalendarResult getActivityCalendar(Long memberId, Long groupId, LocalDate baseDate) {
         getMember(memberId);
         validateGroupMembership(memberId, groupId);
-        LocalDate startDate = yearMonth.atDay(1);
-        LocalDate endDate = yearMonth.atEndOfMonth().plusDays(1);
+        LocalDate weekStartDate = baseDate.minusDays(baseDate.getDayOfWeek().getValue() % 7L);
+        LocalDate weekEndDate = weekStartDate.plusDays(6);
         List<ActivityRecord> records = activityRecordRepository.findActiveGroupRecordsBetween(
             groupId,
-            startDate.atStartOfDay(),
-            endDate.atStartOfDay(),
+            weekStartDate.atStartOfDay(),
+            weekEndDate.plusDays(1).atStartOfDay(),
             GroupMemberStatus.JOINED
         );
 
-        Map<LocalDate, EnumMap<RecordType, Boolean>> recordedByDate = records.stream()
-            .collect(Collectors.groupingBy(
-                record -> record.getUploadedAt().toLocalDate(),
-                Collectors.collectingAndThen(Collectors.toList(), this::toRecordTypeMap)
-            ));
+        Set<LocalDate> recordedDates = records.stream()
+            .map(record -> record.getUploadedAt().toLocalDate())
+            .collect(Collectors.toSet());
 
         List<ActivityDayResult> days = new ArrayList<>();
-        for (int day = 1; day <= yearMonth.lengthOfMonth(); day++) {
-            LocalDate date = yearMonth.atDay(day);
-            Map<RecordType, Boolean> recordedTypes = recordedByDate.getOrDefault(date, new EnumMap<>(RecordType.class));
-            days.add(new ActivityDayResult(
-                date,
-                recordedTypes.getOrDefault(RecordType.MEAL, false),
-                recordedTypes.getOrDefault(RecordType.EXERCISE, false)
-            ));
+        for (int offset = 0; offset < 7; offset++) {
+            LocalDate date = weekStartDate.plusDays(offset);
+            days.add(new ActivityDayResult(date, recordedDates.contains(date)));
         }
-        return new ActivityCalendarResult(days);
+        return new ActivityCalendarResult(weekStartDate, weekEndDate, days);
     }
 
     @Transactional(readOnly = true)
@@ -341,14 +333,6 @@ public class ActivityRecordService {
         );
     }
 
-    private EnumMap<RecordType, Boolean> toRecordTypeMap(List<ActivityRecord> records) {
-        EnumMap<RecordType, Boolean> recordedTypes = new EnumMap<>(RecordType.class);
-        for (ActivityRecord record : records) {
-            recordedTypes.put(record.getRecordType(), true);
-        }
-        return recordedTypes;
-    }
-
     private int normalizeSize(int size) {
         if (size <= 0) {
             return DEFAULT_PAGE_SIZE;
@@ -495,10 +479,14 @@ public class ActivityRecordService {
     public record CommentCreateResult(Long commentId, Long recordId) {
     }
 
-    public record ActivityCalendarResult(List<ActivityDayResult> days) {
+    public record ActivityCalendarResult(
+        LocalDate weekStartDate,
+        LocalDate weekEndDate,
+        List<ActivityDayResult> days
+    ) {
     }
 
-    public record ActivityDayResult(LocalDate date, boolean mealRecorded, boolean exerciseRecorded) {
+    public record ActivityDayResult(LocalDate date, boolean hasRecord) {
     }
 
     public record RecordCursorResult(List<RecordSummaryResult> records, Long nextCursor, boolean hasNext) {

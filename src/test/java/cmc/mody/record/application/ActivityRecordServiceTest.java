@@ -32,7 +32,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -79,7 +78,7 @@ class ActivityRecordServiceTest {
     private ArgumentCaptor<RecordViewHistory> recordViewHistoryCaptor;
 
     @Test
-    @DisplayName("월별 활동 여부는 해당 월 전체 날짜의 기록 여부를 반환한다.")
+    @DisplayName("주간 활동 여부는 기준 날짜가 속한 일요일부터 토요일까지 그룹 전체 기록 여부를 반환한다.")
     void getActivityCalendar() {
         ActivityRecordService service = service();
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
@@ -91,29 +90,38 @@ class ActivityRecordServiceTest {
         )).willReturn(true);
         given(activityRecordRepository.findActiveGroupRecordsBetween(
             10L,
-            LocalDateTime.of(2026, 7, 1, 0, 0),
-            LocalDateTime.of(2026, 8, 1, 0, 0),
+            LocalDateTime.of(2026, 7, 12, 0, 0),
+            LocalDateTime.of(2026, 7, 19, 0, 0),
             GroupMemberStatus.JOINED
         )).willReturn(List.of(
-            mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30)),
-            exerciseRecord(101L, LocalDateTime.of(2026, 7, 1, 20, 0)),
-            exerciseRecord(102L, LocalDateTime.of(2026, 7, 3, 21, 0))
+            mealRecord(100L, LocalDateTime.of(2026, 7, 13, 12, 30)),
+            exerciseRecord(101L, LocalDateTime.of(2026, 7, 13, 20, 0)),
+            exerciseRecord(102L, LocalDateTime.of(2026, 7, 15, 21, 0))
         ));
 
         ActivityRecordService.ActivityCalendarResult result = service.getActivityCalendar(
             1L,
             10L,
-            YearMonth.of(2026, 7)
+            LocalDate.of(2026, 7, 13)
         );
 
-        assertThat(result.days()).hasSize(31);
-        assertThat(result.days().get(0).date()).isEqualTo(LocalDate.of(2026, 7, 1));
-        assertThat(result.days().get(0).mealRecorded()).isTrue();
-        assertThat(result.days().get(0).exerciseRecorded()).isTrue();
-        assertThat(result.days().get(1).mealRecorded()).isFalse();
-        assertThat(result.days().get(1).exerciseRecorded()).isFalse();
-        assertThat(result.days().get(2).mealRecorded()).isFalse();
-        assertThat(result.days().get(2).exerciseRecorded()).isTrue();
+        assertThat(result.weekStartDate()).isEqualTo(LocalDate.of(2026, 7, 12));
+        assertThat(result.weekEndDate()).isEqualTo(LocalDate.of(2026, 7, 18));
+        assertThat(result.days()).hasSize(7);
+        assertThat(result.days())
+            .extracting(ActivityRecordService.ActivityDayResult::date)
+            .containsExactly(
+                LocalDate.of(2026, 7, 12),
+                LocalDate.of(2026, 7, 13),
+                LocalDate.of(2026, 7, 14),
+                LocalDate.of(2026, 7, 15),
+                LocalDate.of(2026, 7, 16),
+                LocalDate.of(2026, 7, 17),
+                LocalDate.of(2026, 7, 18)
+            );
+        assertThat(result.days())
+            .extracting(ActivityRecordService.ActivityDayResult::hasRecord)
+            .containsExactly(false, true, false, true, false, false, false);
     }
 
     @Test

@@ -17,7 +17,6 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.YearMonth;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -46,12 +45,12 @@ public class ActivityRecordController {
     public ApiResponse<ActivityCalendarResponse> getActivityCalendar(
         @Parameter(hidden = true) @CurrentMember Long memberId,
         @PathVariable Long groupId,
-        @RequestParam @DateTimeFormat(pattern = "yyyy-MM") YearMonth yearMonth
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate baseDate
     ) {
         ActivityRecordService.ActivityCalendarResult result = activityRecordService.getActivityCalendar(
             memberId,
             groupId,
-            yearMonth
+            baseDate
         );
         return ApiResponse.ok(ActivityCalendarResponse.from(result));
     }
@@ -129,17 +128,25 @@ public class ActivityRecordController {
         return ApiResponse.created(CommentCreateResponse.from(result));
     }
 
-    public record ActivityCalendarResponse(List<ActivityDayResponse> days) {
+    public record ActivityCalendarResponse(
+        LocalDate weekStartDate,
+        LocalDate weekEndDate,
+        List<ActivityDayResponse> days
+    ) {
         public static ActivityCalendarResponse from(ActivityRecordService.ActivityCalendarResult result) {
-            return new ActivityCalendarResponse(result.days().stream()
-                .map(ActivityDayResponse::from)
-                .toList());
+            return new ActivityCalendarResponse(
+                result.weekStartDate(),
+                result.weekEndDate(),
+                result.days().stream()
+                    .map(ActivityDayResponse::from)
+                    .toList()
+            );
         }
     }
 
-    public record ActivityDayResponse(LocalDate date, boolean mealRecorded, boolean exerciseRecorded) {
+    public record ActivityDayResponse(LocalDate date, String dayOfWeek, boolean hasRecord) {
         public static ActivityDayResponse from(ActivityRecordService.ActivityDayResult result) {
-            return new ActivityDayResponse(result.date(), result.mealRecorded(), result.exerciseRecorded());
+            return new ActivityDayResponse(result.date(), result.date().getDayOfWeek().name(), result.hasRecord());
         }
     }
 

@@ -13,13 +13,13 @@
 ## 1. 목적 / 배경
 
 기록 업로드 API로 저장된 식사/운동 기록을
-그룹 화면에서 월 단위 활동 여부와 날짜별 피드로 조회한다.
+그룹 화면에서 주간 활동 여부와 날짜별 피드로 조회한다.
 
 ## 2. 범위
 
 ### In scope
 
-- 월 단위 식사/운동 기록 존재 여부 조회.
+- 주간 그룹 전체 기록 존재 여부 조회.
 - 날짜별 식사/운동 기록 커서 페이징 조회.
 - 날짜별 기록 조회에서 작성자별 현재 연속 기록 일수 응답.
 - 그룹 참여 여부 검증.
@@ -38,9 +38,12 @@
 모든 구현 API는 `Authorization: Bearer {accessToken}`을 사용한다.
 
 ```http
-GET /api/v1/groups/{groupId}/activities/calendar?yearMonth=2026-07
+GET /api/v1/groups/{groupId}/activities/calendar?baseDate=2026-07-13
 GET /api/v1/groups/{groupId}/records?date=2026-07-01&cursor=100&size=20
 ```
+
+활동 달력은 `baseDate`가 속한 주의 일요일~토요일 7일을 반환한다.
+각 날짜는 그룹 전체 기록이 하나라도 있으면 `hasRecord=true`다.
 
 기록 목록 응답은 최신순이며 `nextCursor`는 마지막 record id다.
 다음 페이지는 `cursor={nextCursor}`로 요청한다.
@@ -63,7 +66,8 @@ GET /api/v1/groups/{groupId}/records?date=2026-07-01&cursor=100&size=20
 1. `@CurrentMember`가 access token에서 회원 id를 추출한다.
 2. 활성 회원을 조회한다.
 3. 요청자가 해당 그룹의 `JOINED` 회원인지 확인한다.
-4. 달력 조회는 월 시작일 이상, 다음 달 시작일 미만의 기록을 조회한다.
+4. 달력 조회는 기준 날짜가 속한 주의 일요일 이상, 다음 주 일요일 미만의 기록을 조회한다.
+   응답은 일요일부터 토요일까지 항상 7개 날짜를 포함한다.
 5. 피드 조회는 날짜 시작 시각 이상, 다음 날짜 시작 시각 미만의 기록을 조회한다.
    정렬은 `id desc`를 사용한다.
 6. 커서가 있으면 `record.id < cursor` 조건을 추가한다.
@@ -76,11 +80,12 @@ GET /api/v1/groups/{groupId}/records?date=2026-07-01&cursor=100&size=20
 - 회원 없음: `MEMBER302`.
 - 그룹 없음: `GROUP302`.
 - 그룹 참여 정보 없음: `GROUP306`.
-- 날짜/월 파라미터 형식 오류: `RECORD301`.
+- 날짜 파라미터 형식 오류: `RECORD301`.
 
 ## 7. 인수조건 (Acceptance Criteria)
 
-- [x] 그룹 참여 회원이 월 단위 활동 여부를 조회할 수 있다.
+- [x] 그룹 참여 회원이 주간 활동 여부를 조회할 수 있다.
+- [x] 주간 활동 여부는 그룹 전체 기록 기준으로 계산된다.
 - [x] 그룹 참여 회원이 날짜별 기록 목록을 커서 기반으로 조회할 수 있다.
 - [x] 날짜별 기록 목록에서 작성자별 현재 연속 기록 일수를 확인할 수 있다.
 - [x] 삭제 처리된 기록과 현재 그룹원이 아닌 작성자의 기록은 조회되지 않는다.
