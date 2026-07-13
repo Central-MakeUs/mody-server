@@ -28,6 +28,7 @@ upload:
 
 invite:
   app-store-url: ${MODY_INVITE_APP_STORE_URL:https://www.apple.com/kr/app-store/}
+  google-play-url: ${MODY_INVITE_GOOGLE_PLAY_URL:https://play.google.com/store}
 
 error-alert:
   slack:

@@ -1,0 +1,22 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.makeus.mody.dev",
+      "sha256_cert_fingerprints": [
+        "47:FE:35:36:CE:04:6F:BB:BD:72:04:73:87:15:00:74:CC:04:9F:28:AE:11:4A:DA:40:7D:A6:84:C2:08:31:45"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.makeus.mody",
+      "sha256_cert_fingerprints": [
+        "58:46:CF:69:9F:A8:9A:17:6C:8E:1E:59:0B:86:4A:1A:D0:39:2C:D6:34:5D:97:5A:BE:BA:65:AF:49:45:96:3A"
+      ]
+    }
+  }
+]
