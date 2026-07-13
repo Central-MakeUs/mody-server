@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface WeightRecordRepository extends JpaRepository<WeightRecord, Long> {
     Optional<WeightRecord> findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(Long memberId);
 
+    Optional<WeightRecord> findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnAscCreatedAtAsc(Long memberId);
+
     List<WeightRecord> findByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(Long memberId);
 
     List<WeightRecord> findByMemberIdAndDeletedAtIsNull(Long memberId);

@@ -112,13 +112,16 @@ public class MypageService {
 
     @Transactional(readOnly = true)
     public WeightHistoryResult getWeightHistory(Long memberId) {
-        getMember(memberId);
-        List<WeightRecordResult> weights = weightRecordRepository
-            .findByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(memberId)
-            .stream()
-            .map(WeightRecordResult::from)
-            .toList();
-        return new WeightHistoryResult(weights);
+        Member member = getMember(memberId);
+        BigDecimal startWeightKg = weightRecordRepository
+            .findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnAscCreatedAtAsc(memberId)
+            .map(WeightRecord::getWeightKg)
+            .orElse(null);
+        BigDecimal currentWeightKg = weightRecordRepository
+            .findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(memberId)
+            .map(WeightRecord::getWeightKg)
+            .orElse(null);
+        return new WeightHistoryResult(startWeightKg, currentWeightKg, member.getTargetWeightKg());
     }
 
     @Transactional
@@ -406,23 +409,11 @@ public class MypageService {
     public record ProfileUpdateResult(String nickname, LocalDate birthDate) {
     }
 
-    public record WeightHistoryResult(List<WeightRecordResult> weights) {
-    }
-
-    public record WeightRecordResult(
-        Long weightRecordId,
-        LocalDate recordedOn,
-        BigDecimal weightKg,
-        BigDecimal changeFromPreviousKg
+    public record WeightHistoryResult(
+        BigDecimal startWeightKg,
+        BigDecimal currentWeightKg,
+        BigDecimal targetWeightKg
     ) {
-        public static WeightRecordResult from(WeightRecord weightRecord) {
-            return new WeightRecordResult(
-                weightRecord.getId(),
-                weightRecord.getRecordedOn(),
-                weightRecord.getWeightKg(),
-                weightRecord.getChangeFromPreviousKg()
-            );
-        }
     }
 
     public record WeightCreateCommand(BigDecimal weightKg) {
