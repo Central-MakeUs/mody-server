@@ -13,7 +13,6 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -73,26 +72,35 @@ public class ActivityRecordController {
         return ApiResponse.ok(RecordCursorResponse.from(result));
     }
 
-    @GetMapping("/records/{recordId}")
+    @GetMapping("/groups/{groupId}/records/{recordId}")
     public ApiResponse<RecordDetailResponse> getRecordDetail(
         @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long groupId,
         @PathVariable Long recordId,
         @RequestParam(required = false) Long cursor,
         @RequestParam(defaultValue = "20") int size
     ) {
-        ActivityRecordService.RecordDetailPageResult result = activityRecordService.getRecordDetail(memberId, recordId, cursor, size);
+        ActivityRecordService.RecordDetailPageResult result = activityRecordService.getRecordDetail(
+            memberId,
+            groupId,
+            recordId,
+            cursor,
+            size
+        );
         return ApiResponse.ok(RecordDetailResponse.from(result));
     }
 
-    @GetMapping("/records/{recordId}/comments")
+    @GetMapping("/groups/{groupId}/records/{recordId}/comments")
     public ApiResponse<CommentCursorResponse> getRecordComments(
         @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long groupId,
         @PathVariable Long recordId,
         @RequestParam(required = false) Long cursor,
         @RequestParam(defaultValue = "20") int size
     ) {
         ActivityRecordService.CommentCursorResult result = activityRecordService.getRecordComments(
             memberId,
+            groupId,
             recordId,
             cursor,
             size
@@ -113,15 +121,17 @@ public class ActivityRecordController {
         return ApiResponse.created(RecordCreateResponse.from(result));
     }
 
-    @PostMapping("/records/{recordId}/comments")
+    @PostMapping("/groups/{groupId}/records/{recordId}/comments")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<CommentCreateResponse> createComment(
         @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long groupId,
         @PathVariable Long recordId,
         @Valid @RequestBody CommentCreateRequest request
     ) {
         ActivityRecordService.CommentCreateResult result = activityRecordService.createComment(
             memberId,
+            groupId,
             recordId,
             request.toCommand()
         );
@@ -265,8 +275,6 @@ public class ActivityRecordController {
     }
 
     public record RecordCreateRequest(
-        @Positive(message = "그룹 id는 양수여야 합니다.")
-        Long groupId,
         @NotNull(message = "기록 타입은 필수입니다.")
         RecordType recordType,
         @NotBlank(message = "이미지 키는 필수입니다.")
@@ -315,7 +323,6 @@ public class ActivityRecordController {
 
         public RecordCreateCommand toCommand() {
             return new RecordCreateCommand(
-                groupId,
                 recordType,
                 imageKey,
                 mealTime,
@@ -339,9 +346,9 @@ public class ActivityRecordController {
         }
     }
 
-    public record RecordCreateResponse(Long recordId) {
+    public record RecordCreateResponse(Long recordId, List<Long> groupIds) {
         public static RecordCreateResponse from(ActivityRecordService.RecordCreateResult result) {
-            return new RecordCreateResponse(result.recordId());
+            return new RecordCreateResponse(result.recordId(), result.groupIds());
         }
     }
 

@@ -22,8 +22,12 @@ import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.notification.application.NotificationRequestService;
+import cmc.mody.record.domain.ActivityRecordGroup;
+import cmc.mody.record.domain.RecordComment;
+import cmc.mody.record.infrastructure.repository.ActivityRecordGroupRepository;
 import cmc.mody.record.domain.RecordViewHistory;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
+import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
 import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -57,6 +61,12 @@ class GroupServiceTest {
 
     @Mock
     private ActivityRecordRepository activityRecordRepository;
+
+    @Mock
+    private ActivityRecordGroupRepository activityRecordGroupRepository;
+
+    @Mock
+    private RecordCommentRepository recordCommentRepository;
 
     @Mock
     private RecordViewHistoryRepository recordViewHistoryRepository;
@@ -187,15 +197,27 @@ class GroupServiceTest {
     void leaveGroup() {
         GroupService service = service();
         GroupMember groupMember = new GroupMember(20L, 1L, 10L, LocalDateTime.now());
+        ActivityRecordGroup recordGroup = new ActivityRecordGroup(30L, 100L, 10L, 1L, LocalDateTime.now());
+        RecordComment recordComment = new RecordComment(40L, 100L, 10L, 2L, "기록 댓글");
+        RecordComment myComment = new RecordComment(41L, 200L, 10L, 1L, "내 댓글");
         given(groupMemberRepository.findByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
             1L,
             10L,
             GroupMemberStatus.JOINED
         )).willReturn(Optional.of(groupMember));
+        given(activityRecordGroupRepository.findByMemberIdAndGroupIdAndDeletedAtIsNull(1L, 10L))
+            .willReturn(List.of(recordGroup));
+        given(recordCommentRepository.findByRecordIdInAndGroupIdAndDeletedAtIsNull(List.of(100L), 10L))
+            .willReturn(List.of(recordComment));
+        given(recordCommentRepository.findActiveCommentsByMemberIdAndGroupId(1L, 10L))
+            .willReturn(List.of(myComment));
 
         service.leaveGroup(1L, 10L);
 
         assertThat(groupMember.getGroupMemberStatus()).isEqualTo(GroupMemberStatus.LEFT);
+        assertThat(recordGroup.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(recordComment.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(myComment.getStatus()).isEqualTo(Status.INACTIVE);
         assertThat(groupMember.getLeftAt()).isNotNull();
         assertThat(groupMember.getStatus()).isEqualTo(Status.INACTIVE);
         assertThat(groupMember.getDeletedAt()).isNotNull();
@@ -246,6 +268,8 @@ class GroupServiceTest {
             groupMemberRepository,
             notificationRequestService,
             activityRecordRepository,
+            activityRecordGroupRepository,
+            recordCommentRepository,
             recordViewHistoryRepository
         );
     }

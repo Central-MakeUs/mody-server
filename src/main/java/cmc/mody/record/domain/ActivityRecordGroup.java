@@ -5,6 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,13 +14,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(
-        name = "record_comment",
+        name = "activity_record_group",
         indexes = {
-                @Index(name = "idx_record_comment_record", columnList = "record_id"),
-                @Index(name = "idx_record_comment_group_record", columnList = "group_id, record_id")
+                @Index(name = "idx_activity_record_group_group_uploaded", columnList = "group_id, uploaded_at"),
+                @Index(name = "idx_activity_record_group_record", columnList = "record_id"),
+                @Index(name = "idx_activity_record_group_member", columnList = "member_id")
         }
 )
-public class RecordComment extends BaseEntity {
+public class ActivityRecordGroup extends BaseEntity {
     @Column(name = "record_id", nullable = false)
     private Long recordId;
 
@@ -29,14 +31,14 @@ public class RecordComment extends BaseEntity {
     @Column(name = "member_id", nullable = false)
     private Long memberId;
 
-    @Column(nullable = false, length = 100)
-    private String content;
+    @Column(name = "uploaded_at", nullable = false)
+    private LocalDateTime uploadedAt;
 
-    public RecordComment(Long id, Long recordId, Long groupId, Long memberId, String content) {
+    public ActivityRecordGroup(Long id, Long recordId, Long groupId, Long memberId, LocalDateTime uploadedAt) {
         super(id);
         this.recordId = recordId;
         this.groupId = groupId;
         this.memberId = memberId;
-        this.content = content;
+        this.uploadedAt = uploadedAt;
     }
 }

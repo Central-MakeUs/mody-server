@@ -13,9 +13,11 @@ import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.notification.application.NotificationRequestService;
 import cmc.mody.record.domain.ActivityRecord;
+import cmc.mody.record.domain.ActivityRecordGroup;
 import cmc.mody.record.domain.RecordComment;
 import cmc.mody.record.domain.RecordType;
 import cmc.mody.record.domain.RecordViewHistory;
+import cmc.mody.record.infrastructure.repository.ActivityRecordGroupRepository;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
 import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
@@ -44,6 +46,7 @@ public class ActivityRecordService {
     private final ModyGroupRepository modyGroupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final ActivityRecordRepository activityRecordRepository;
+    private final ActivityRecordGroupRepository activityRecordGroupRepository;
     private final RecordCommentRepository recordCommentRepository;
     private final RecordViewHistoryRepository recordViewHistoryRepository;
     private final UploadProperties uploadProperties;
@@ -109,23 +112,20 @@ public class ActivityRecordService {
     }
 
     @Transactional
-    public RecordDetailPageResult getRecordDetail(Long memberId, Long recordId, Long cursor, int size) {
-        Member member = getMember(memberId);
-        ActivityRecord record = getAccessibleRecord(memberId, recordId);
+    public RecordDetailPageResult getRecordDetail(Long memberId, Long groupId, Long recordId, Long cursor, int size) {
+        getMember(memberId);
+        ActivityRecord record = getAccessibleRecord(memberId, groupId, recordId);
 
-        if (record.getGroupId() == null) {
-            return toPersonalRecordDetailPage(member, record, cursor, size);
-        }
-
-        Map<Long, GroupMember> groupMembers = getJoinedGroupMembers(record.getGroupId());
+        Map<Long, GroupMember> groupMembers = getJoinedGroupMembers(groupId);
         GroupMember recordWriter = groupMembers.get(record.getMemberId());
         if (recordWriter == null) {
             throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
         }
-        updateRecordViewHistory(memberId, record);
+        updateRecordViewHistory(memberId, groupId, record);
 
         return toRecordDetailPage(
             record,
+            groupId,
             cursor,
             size,
             recordWriter.getDisplayNickname(),
@@ -134,20 +134,18 @@ public class ActivityRecordService {
     }
 
     @Transactional(readOnly = true)
-    public CommentCursorResult getRecordComments(Long memberId, Long recordId, Long cursor, int size) {
+    public CommentCursorResult getRecordComments(Long memberId, Long groupId, Long recordId, Long cursor, int size) {
         Member member = getMember(memberId);
-        ActivityRecord record = getAccessibleRecord(memberId, recordId);
+        ActivityRecord record = getAccessibleRecord(memberId, groupId, recordId);
         int pageSize = normalizeSize(size);
-        Map<Long, GroupMember> groupMembers = record.getGroupId() == null
-            ? Map.of()
-            : getJoinedGroupMembers(record.getGroupId());
-        if (record.getGroupId() != null && !groupMembers.containsKey(record.getMemberId())) {
+        Map<Long, GroupMember> groupMembers = getJoinedGroupMembers(groupId);
+        if (!groupMembers.containsKey(record.getMemberId())) {
             throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
         }
 
         List<RecordComment> comments = recordCommentRepository.findActiveCommentsByCursor(
             record.getId(),
-            record.getGroupId(),
+            groupId,
             memberId,
             cursor,
             GroupMemberStatus.JOINED,
@@ -165,7 +163,11 @@ public class ActivityRecordService {
     @Transactional
     public RecordCreateResult createRecord(Long memberId, RecordCreateCommand command) {
         getMember(memberId);
-        validateGroupMembership(memberId, command.groupId());
+        List<GroupMember> joinedGroups = groupMemberRepository
+            .findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(memberId, GroupMemberStatus.JOINED);
+        if (joinedGroups.isEmpty()) {
+            throw new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND);
+        }
 
         Long recordId = idGenerator.nextId();
         LocalDateTime uploadedAt = LocalDateTime.now();
@@ -173,7 +175,7 @@ public class ActivityRecordService {
             case MEAL -> ActivityRecord.meal(
                 recordId,
                 memberId,
-                command.groupId(),
+                null,
                 command.mealTime(),
                 command.menu(),
                 command.imageKey(),
@@ -182,7 +184,7 @@ public class ActivityRecordService {
             case EXERCISE -> ActivityRecord.exercise(
                 recordId,
                 memberId,
-                command.groupId(),
+                null,
                 command.exerciseDurationMinutes(),
                 command.exerciseName(),
                 command.imageKey(),
@@ -191,24 +193,35 @@ public class ActivityRecordService {
         };
 
         ActivityRecord savedRecord = activityRecordRepository.save(activityRecord);
-        return new RecordCreateResult(savedRecord.getId());
+        List<Long> groupIds = joinedGroups.stream()
+            .map(GroupMember::getGroupId)
+            .toList();
+        for (Long groupId : groupIds) {
+            activityRecordGroupRepository.save(new ActivityRecordGroup(
+                idGenerator.nextId(),
+                savedRecord.getId(),
+                groupId,
+                memberId,
+                uploadedAt
+            ));
+        }
+        return new RecordCreateResult(savedRecord.getId(), groupIds);
     }
 
     @Transactional
-    public CommentCreateResult createComment(Long memberId, Long recordId, CommentCreateCommand command) {
+    public CommentCreateResult createComment(Long memberId, Long groupId, Long recordId, CommentCreateCommand command) {
         getMember(memberId);
-        ActivityRecord record = getAccessibleRecord(memberId, recordId);
-        if (record.getGroupId() != null) {
-            Map<Long, GroupMember> groupMembers = getJoinedGroupMembers(record.getGroupId());
-            if (!groupMembers.containsKey(record.getMemberId())) {
-                throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
-            }
+        ActivityRecord record = getAccessibleRecord(memberId, groupId, recordId);
+        Map<Long, GroupMember> groupMembers = getJoinedGroupMembers(groupId);
+        if (!groupMembers.containsKey(record.getMemberId())) {
+            throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
         }
 
         Long commentId = idGenerator.nextId();
         RecordComment savedComment = recordCommentRepository.save(new RecordComment(
             commentId,
             recordId,
+            groupId,
             memberId,
             command.content().trim()
         ));
@@ -216,28 +229,19 @@ public class ActivityRecordService {
         return new CommentCreateResult(savedComment.getId(), recordId);
     }
 
-    private ActivityRecord getAccessibleRecord(Long memberId, Long recordId) {
+    private ActivityRecord getAccessibleRecord(Long memberId, Long groupId, Long recordId) {
+        validateGroupMembership(memberId, groupId);
         ActivityRecord record = activityRecordRepository.findById(recordId)
             .filter(ActivityRecord::isActive)
             .orElseThrow(() -> new GeneralException(ErrorStatus.RECORD_NOT_FOUND));
-
-        if (record.getGroupId() == null) {
-            if (!record.getMemberId().equals(memberId)) {
-                throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
-            }
-            return record;
-        }
-
-        validateGroupMembership(memberId, record.getGroupId());
+        activityRecordGroupRepository.findByRecordIdAndGroupIdAndDeletedAtIsNull(recordId, groupId)
+            .orElseThrow(() -> new GeneralException(ErrorStatus.RECORD_NOT_FOUND));
         return record;
-    }
-
-    private RecordDetailPageResult toPersonalRecordDetailPage(Member member, ActivityRecord record, Long cursor, int size) {
-        return toRecordDetailPage(record, cursor, size, member.getNickname(), member.getProfileImageKey());
     }
 
     private RecordDetailPageResult toRecordDetailPage(
         ActivityRecord record,
+        Long groupId,
         Long cursor,
         int size,
         String nickname,
@@ -248,7 +252,7 @@ public class ActivityRecordService {
         Long queryCursor = (cursor == null) ? record.getId() - 1 : cursor;
 
         List<ActivityRecord> foundRecords = activityRecordRepository.findActiveRecordsForDetailCarousel(
-            record.getGroupId(),
+            groupId,
             record.getMemberId(),
             recordDate.atStartOfDay(),
             recordDate.plusDays(1).atStartOfDay(),
@@ -265,7 +269,7 @@ public class ActivityRecordService {
             .toList();
 
         long totalCount = activityRecordRepository.countActiveRecordsForDetailCarousel(
-            record.getGroupId(),
+            groupId,
             record.getMemberId(),
             recordDate.atStartOfDay(),
             recordDate.plusDays(1).atStartOfDay(),
@@ -377,11 +381,11 @@ public class ActivityRecordService {
         return streakDays;
     }
 
-    private void updateRecordViewHistory(Long viewerMemberId, ActivityRecord record) {
+    private void updateRecordViewHistory(Long viewerMemberId, Long groupId, ActivityRecord record) {
         recordViewHistoryRepository
             .findByViewerMemberIdAndGroupIdAndWriterMemberIdAndDeletedAtIsNull(
                 viewerMemberId,
-                record.getGroupId(),
+                groupId,
                 record.getMemberId()
             )
             .ifPresentOrElse(
@@ -389,7 +393,7 @@ public class ActivityRecordService {
                 () -> recordViewHistoryRepository.save(new RecordViewHistory(
                     idGenerator.nextId(),
                     viewerMemberId,
-                    record.getGroupId(),
+                    groupId,
                     record.getMemberId(),
                     LocalDateTime.now()
                 ))
@@ -460,7 +464,6 @@ public class ActivityRecordService {
     }
 
     public record RecordCreateCommand(
-        Long groupId,
         RecordType recordType,
         String imageKey,
         LocalTime mealTime,
@@ -470,7 +473,7 @@ public class ActivityRecordService {
     ) {
     }
 
-    public record RecordCreateResult(Long recordId) {
+    public record RecordCreateResult(Long recordId, List<Long> groupIds) {
     }
 
     public record CommentCreateCommand(String content) {

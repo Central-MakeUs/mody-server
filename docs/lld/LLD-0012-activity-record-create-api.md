@@ -2,6 +2,9 @@
 
 > Low-Level Design. 이 문서는 기록 업로드 API 구현과 PR 본문의 **오라클(ground truth)** 이다.
 
+> 최신 정책: 기록 업로드는 특정 그룹을 선택하지 않고 작성자가 참여 중인 모든 그룹에 노출된다.
+> 현재 구현 기준은 `docs/lld/LLD-0031-record-upload-all-groups.md`를 따른다.
+
 | 항목 | 값 |
 | --- | --- |
 | 상태 | Accepted |

@@ -12,7 +12,12 @@ import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.notification.application.NotificationRequestService;
 import cmc.mody.record.domain.RecordViewHistory;
+import cmc.mody.record.domain.ActivityRecord;
+import cmc.mody.record.domain.ActivityRecordGroup;
+import cmc.mody.record.domain.RecordComment;
+import cmc.mody.record.infrastructure.repository.ActivityRecordGroupRepository;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
+import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
 import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -36,6 +41,8 @@ public class GroupService {
     private final GroupMemberRepository groupMemberRepository;
     private final NotificationRequestService notificationRequestService;
     private final ActivityRecordRepository activityRecordRepository;
+    private final ActivityRecordGroupRepository activityRecordGroupRepository;
+    private final RecordCommentRepository recordCommentRepository;
     private final RecordViewHistoryRepository recordViewHistoryRepository;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -123,6 +130,7 @@ public class GroupService {
         GroupMember groupMember = groupMemberRepository
             .findByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(memberId, groupId, GroupMemberStatus.JOINED)
             .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND));
+        deleteGroupRecordsAndComments(memberId, groupId);
         groupMember.leave(LocalDateTime.now());
     }
 
@@ -210,6 +218,23 @@ public class GroupService {
             GroupMemberStatus.JOINED
         );
         return Math.toIntExact(unreadCount);
+    }
+
+    private void deleteGroupRecordsAndComments(Long memberId, Long groupId) {
+        List<ActivityRecordGroup> recordGroups =
+            activityRecordGroupRepository.findByMemberIdAndGroupIdAndDeletedAtIsNull(memberId, groupId);
+        List<Long> recordIds = recordGroups.stream()
+            .map(ActivityRecordGroup::getRecordId)
+            .toList();
+        if (!recordIds.isEmpty()) {
+            recordCommentRepository.findByRecordIdInAndGroupIdAndDeletedAtIsNull(recordIds, groupId)
+                .forEach(RecordComment::delete);
+            recordGroups.forEach(ActivityRecordGroup::delete);
+        }
+        recordCommentRepository.findActiveCommentsByMemberIdAndGroupId(memberId, groupId)
+            .forEach(RecordComment::delete);
+        recordViewHistoryRepository.findActiveByMemberIdAndGroupId(memberId, groupId)
+            .forEach(RecordViewHistory::delete);
     }
 
     private String generateUniqueCode() {

@@ -48,13 +48,13 @@ class NotificationStreakRiskSchedulerTest {
         )).willReturn(List.of(unrecordedMember, recordedMember));
         given(notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(Optional.empty());
         given(notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(2L)).willReturn(Optional.empty());
-        given(activityRecordRepository.existsByMemberIdAndGroupIdAndUploadedAtGreaterThanEqualAndUploadedAtLessThanAndDeletedAtIsNull(
+        given(activityRecordRepository.existsActiveRecordByMemberIdAndGroupIdBetween(
             1L,
             10L,
             date.atStartOfDay(),
             date.plusDays(1).atStartOfDay()
         )).willReturn(false);
-        given(activityRecordRepository.existsByMemberIdAndGroupIdAndUploadedAtGreaterThanEqualAndUploadedAtLessThanAndDeletedAtIsNull(
+        given(activityRecordRepository.existsActiveRecordByMemberIdAndGroupIdBetween(
             2L,
             10L,
             date.atStartOfDay(),

@@ -2,6 +2,8 @@
 
 > Low-Level Design. 이 문서는 온보딩 및 피드 API 스펙 정리 구현과 PR 본문의 **오라클(ground truth)** 이다.
 
+> 최신 기록 정책: 기록 생성/상세/댓글의 현재 구현 기준은 `docs/lld/LLD-0031-record-upload-all-groups.md`를 따른다.
+
 | 항목 | 값 |
 | --- | --- |
 | 상태 | Accepted |

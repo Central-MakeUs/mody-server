@@ -57,7 +57,7 @@ public class NotificationStreakRiskScheduler {
     private boolean hasRecord(GroupMember groupMember, LocalDate date) {
         LocalDateTime startAt = date.atStartOfDay();
         LocalDateTime endAt = date.plusDays(1).atStartOfDay();
-        return activityRecordRepository.existsByMemberIdAndGroupIdAndUploadedAtGreaterThanEqualAndUploadedAtLessThanAndDeletedAtIsNull(
+        return activityRecordRepository.existsActiveRecordByMemberIdAndGroupIdBetween(
             groupMember.getMemberId(),
             groupMember.getGroupId(),
             startAt,
