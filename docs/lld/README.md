@@ -36,3 +36,4 @@
 | [LLD-0028](LLD-0028-detailed-error-status.md) | 세부 에러 코드 매핑 | Accepted | #85 |
 | [LLD-0029](LLD-0029-server-error-slack-alert.md) | 500 에러 Slack 알림 | Accepted | #92 |
 | [LLD-0030](LLD-0030-database-migration-versioning.md) | DB 마이그레이션 형상관리 | Accepted | #96 |
+| [LLD-0031](LLD-0031-record-upload-all-groups.md) | 기록 업로드 전체 그룹 노출 | Accepted | #103 |

@@ -12,20 +12,22 @@ import org.springframework.data.repository.query.Param;
 public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, Long> {
     @Query("""
         select record
-        from ActivityRecord record
-        where record.groupId = :groupId
+        from ActivityRecord record, ActivityRecordGroup recordGroup
+        where recordGroup.recordId = record.id
+          and recordGroup.groupId = :groupId
+          and recordGroup.deletedAt is null
           and record.deletedAt is null
-          and record.uploadedAt >= :startAt
-          and record.uploadedAt < :endAt
+          and recordGroup.uploadedAt >= :startAt
+          and recordGroup.uploadedAt < :endAt
           and exists (
               select 1
               from GroupMember groupMember
-              where groupMember.groupId = record.groupId
-                and groupMember.memberId = record.memberId
+              where groupMember.groupId = recordGroup.groupId
+                and groupMember.memberId = recordGroup.memberId
                 and groupMember.groupMemberStatus = :joinedStatus
                 and groupMember.deletedAt is null
           )
-        order by record.uploadedAt asc, record.id asc
+        order by recordGroup.uploadedAt asc, record.id asc
         """)
     List<ActivityRecord> findActiveGroupRecordsBetween(
         @Param("groupId") Long groupId,
@@ -36,17 +38,19 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
 
     @Query("""
         select record
-        from ActivityRecord record
-        where record.groupId = :groupId
+        from ActivityRecord record, ActivityRecordGroup recordGroup
+        where recordGroup.recordId = record.id
+          and recordGroup.groupId = :groupId
+          and recordGroup.deletedAt is null
           and record.deletedAt is null
-          and record.uploadedAt >= :startAt
-          and record.uploadedAt < :endAt
+          and recordGroup.uploadedAt >= :startAt
+          and recordGroup.uploadedAt < :endAt
           and (:cursor is null or record.id < :cursor)
           and exists (
               select 1
               from GroupMember groupMember
-              where groupMember.groupId = record.groupId
-                and groupMember.memberId = record.memberId
+              where groupMember.groupId = recordGroup.groupId
+                and groupMember.memberId = recordGroup.memberId
                 and groupMember.groupMemberStatus = :joinedStatus
                 and groupMember.deletedAt is null
           )
@@ -63,20 +67,22 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
 
     @Query("""
         select record
-        from ActivityRecord record
-        where record.groupId = :groupId
-          and record.memberId = :memberId
+        from ActivityRecord record, ActivityRecordGroup recordGroup
+        where recordGroup.recordId = record.id
+          and recordGroup.groupId = :groupId
+          and recordGroup.memberId = :memberId
+          and recordGroup.deletedAt is null
           and record.deletedAt is null
-          and record.uploadedAt < :endAt
+          and recordGroup.uploadedAt < :endAt
           and exists (
               select 1
               from GroupMember groupMember
-              where groupMember.groupId = record.groupId
-                and groupMember.memberId = record.memberId
+              where groupMember.groupId = recordGroup.groupId
+                and groupMember.memberId = recordGroup.memberId
                 and groupMember.groupMemberStatus = :joinedStatus
                 and groupMember.deletedAt is null
           )
-        order by record.uploadedAt desc, record.id desc
+        order by recordGroup.uploadedAt desc, record.id desc
         """)
     List<ActivityRecord> findActiveGroupRecordsByMemberBefore(
         @Param("groupId") Long groupId,
@@ -87,16 +93,18 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
 
     @Query("""
         select count(record)
-        from ActivityRecord record
-        where record.groupId = :groupId
-          and record.memberId = :memberId
+        from ActivityRecord record, ActivityRecordGroup recordGroup
+        where recordGroup.recordId = record.id
+          and recordGroup.groupId = :groupId
+          and recordGroup.memberId = :memberId
+          and recordGroup.deletedAt is null
           and record.deletedAt is null
-          and record.uploadedAt > :after
+          and recordGroup.uploadedAt > :after
           and exists (
               select 1
               from GroupMember groupMember
-              where groupMember.groupId = record.groupId
-                and groupMember.memberId = record.memberId
+              where groupMember.groupId = recordGroup.groupId
+                and groupMember.memberId = recordGroup.memberId
                 and groupMember.groupMemberStatus = :joinedStatus
                 and groupMember.deletedAt is null
           )
@@ -110,26 +118,22 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
 
     @Query("""
         select record
-        from ActivityRecord record
-        where record.memberId = :memberId
+        from ActivityRecord record, ActivityRecordGroup recordGroup
+        where recordGroup.recordId = record.id
+          and recordGroup.groupId = :groupId
+          and recordGroup.memberId = :memberId
+          and recordGroup.deletedAt is null
           and record.deletedAt is null
-          and record.uploadedAt >= :startAt
-          and record.uploadedAt < :endAt
+          and recordGroup.uploadedAt >= :startAt
+          and recordGroup.uploadedAt < :endAt
           and (:cursor is null or record.id > :cursor)
-          and (
-              (:groupId is null and record.groupId is null)
-              or record.groupId = :groupId
-          )
-          and (
-              :groupId is null
-              or exists (
-                  select 1
-                  from GroupMember groupMember
-                  where groupMember.groupId = record.groupId
-                    and groupMember.memberId = record.memberId
-                    and groupMember.groupMemberStatus = :joinedStatus
-                    and groupMember.deletedAt is null
-              )
+          and exists (
+              select 1
+              from GroupMember groupMember
+              where groupMember.groupId = recordGroup.groupId
+                and groupMember.memberId = recordGroup.memberId
+                and groupMember.groupMemberStatus = :joinedStatus
+                and groupMember.deletedAt is null
           )
         order by record.id asc
         """)
@@ -145,25 +149,21 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
 
     @Query("""
         select count(record)
-        from ActivityRecord record
-        where record.memberId = :memberId
+        from ActivityRecord record, ActivityRecordGroup recordGroup
+        where recordGroup.recordId = record.id
+          and recordGroup.groupId = :groupId
+          and recordGroup.memberId = :memberId
+          and recordGroup.deletedAt is null
           and record.deletedAt is null
-          and record.uploadedAt >= :startAt
-          and record.uploadedAt < :endAt
-          and (
-              (:groupId is null and record.groupId is null)
-              or record.groupId = :groupId
-          )
-          and (
-              :groupId is null
-              or exists (
-                  select 1
-                  from GroupMember groupMember
-                  where groupMember.groupId = record.groupId
-                    and groupMember.memberId = record.memberId
-                    and groupMember.groupMemberStatus = :joinedStatus
-                    and groupMember.deletedAt is null
-              )
+          and recordGroup.uploadedAt >= :startAt
+          and recordGroup.uploadedAt < :endAt
+          and exists (
+              select 1
+              from GroupMember groupMember
+              where groupMember.groupId = recordGroup.groupId
+                and groupMember.memberId = recordGroup.memberId
+                and groupMember.groupMemberStatus = :joinedStatus
+                and groupMember.deletedAt is null
           )
         """)
     long countActiveRecordsForDetailCarousel(
@@ -176,12 +176,35 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
 
     List<ActivityRecord> findByMemberIdAndDeletedAtIsNull(Long memberId);
 
-    List<ActivityRecord> findByMemberIdAndGroupIdAndDeletedAtIsNull(Long memberId, Long groupId);
+    @Query("""
+        select record
+        from ActivityRecord record, ActivityRecordGroup recordGroup
+        where recordGroup.recordId = record.id
+          and recordGroup.memberId = :memberId
+          and recordGroup.groupId = :groupId
+          and recordGroup.deletedAt is null
+          and record.deletedAt is null
+        """)
+    List<ActivityRecord> findActiveRecordsByMemberIdAndGroupId(
+        @Param("memberId") Long memberId,
+        @Param("groupId") Long groupId
+    );
 
-    boolean existsByMemberIdAndGroupIdAndUploadedAtGreaterThanEqualAndUploadedAtLessThanAndDeletedAtIsNull(
-        Long memberId,
-        Long groupId,
-        LocalDateTime startAt,
-        LocalDateTime endAt
+    @Query("""
+        select count(record) > 0
+        from ActivityRecord record, ActivityRecordGroup recordGroup
+        where recordGroup.recordId = record.id
+          and recordGroup.memberId = :memberId
+          and recordGroup.groupId = :groupId
+          and recordGroup.deletedAt is null
+          and record.deletedAt is null
+          and recordGroup.uploadedAt >= :startAt
+          and recordGroup.uploadedAt < :endAt
+        """)
+    boolean existsActiveRecordByMemberIdAndGroupIdBetween(
+        @Param("memberId") Long memberId,
+        @Param("groupId") Long groupId,
+        @Param("startAt") LocalDateTime startAt,
+        @Param("endAt") LocalDateTime endAt
     );
 }

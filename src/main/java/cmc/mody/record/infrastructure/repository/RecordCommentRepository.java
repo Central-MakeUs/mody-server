@@ -17,21 +17,16 @@ public interface RecordCommentRepository extends JpaRepository<RecordComment, Lo
         select comment
         from RecordComment comment
         where comment.recordId = :recordId
+          and comment.groupId = :groupId
           and comment.deletedAt is null
           and (:cursor is null or comment.id > :cursor)
-          and (
-              (:groupId is null and comment.memberId = :memberId)
-              or (
-                  :groupId is not null
-                  and exists (
-                      select 1
-                      from GroupMember groupMember
-                      where groupMember.groupId = :groupId
-                        and groupMember.memberId = comment.memberId
-                        and groupMember.groupMemberStatus = :joinedStatus
-                        and groupMember.deletedAt is null
-                  )
-              )
+          and exists (
+              select 1
+              from GroupMember groupMember
+              where groupMember.groupId = :groupId
+                and groupMember.memberId = comment.memberId
+                and groupMember.groupMemberStatus = :joinedStatus
+                and groupMember.deletedAt is null
           )
         order by comment.id asc
         """)
@@ -48,16 +43,13 @@ public interface RecordCommentRepository extends JpaRepository<RecordComment, Lo
         select comment
         from RecordComment comment
         where comment.memberId = :memberId
+          and comment.groupId = :groupId
           and comment.deletedAt is null
-          and exists (
-              select 1
-              from ActivityRecord record
-              where record.id = comment.recordId
-                and record.groupId = :groupId
-          )
         """)
     List<RecordComment> findActiveCommentsByMemberIdAndGroupId(
         @Param("memberId") Long memberId,
         @Param("groupId") Long groupId
     );
+
+    List<RecordComment> findByRecordIdInAndGroupIdAndDeletedAtIsNull(List<Long> recordIds, Long groupId);
 }

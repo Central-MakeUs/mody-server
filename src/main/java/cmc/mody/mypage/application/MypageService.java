@@ -33,8 +33,10 @@ import cmc.mody.notification.infrastructure.repository.MemberPushTokenRepository
 import cmc.mody.notification.infrastructure.repository.NotificationRepository;
 import cmc.mody.notification.infrastructure.repository.NotificationSettingRepository;
 import cmc.mody.record.domain.ActivityRecord;
+import cmc.mody.record.domain.ActivityRecordGroup;
 import cmc.mody.record.domain.RecordComment;
 import cmc.mody.record.domain.RecordViewHistory;
+import cmc.mody.record.infrastructure.repository.ActivityRecordGroupRepository;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
 import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
@@ -65,6 +67,7 @@ public class MypageService {
     private final NotificationRepository notificationRepository;
     private final MemberPushTokenRepository memberPushTokenRepository;
     private final ActivityRecordRepository activityRecordRepository;
+    private final ActivityRecordGroupRepository activityRecordGroupRepository;
     private final RecordCommentRepository recordCommentRepository;
     private final RecordViewHistoryRepository recordViewHistoryRepository;
     private final GroupChallengeRepository groupChallengeRepository;
@@ -293,6 +296,7 @@ public class MypageService {
     private void deleteMemberRecordsAndComments(Long memberId) {
         List<ActivityRecord> records = activityRecordRepository.findByMemberIdAndDeletedAtIsNull(memberId);
         deleteCommentsOnRecords(records);
+        deleteRecordGroups(records);
         recordCommentRepository.findByMemberIdAndDeletedAtIsNull(memberId)
             .forEach(RecordComment::delete);
         records.forEach(ActivityRecord::delete);
@@ -311,14 +315,18 @@ public class MypageService {
     }
 
     private void deleteGroupRecordsAndComments(Long memberId, Long groupId) {
-        List<ActivityRecord> records = activityRecordRepository.findByMemberIdAndGroupIdAndDeletedAtIsNull(
-            memberId,
-            groupId
-        );
-        deleteCommentsOnRecords(records);
+        List<ActivityRecordGroup> recordGroups =
+            activityRecordGroupRepository.findByMemberIdAndGroupIdAndDeletedAtIsNull(memberId, groupId);
+        List<Long> recordIds = recordGroups.stream()
+            .map(ActivityRecordGroup::getRecordId)
+            .toList();
+        if (!recordIds.isEmpty()) {
+            recordCommentRepository.findByRecordIdInAndGroupIdAndDeletedAtIsNull(recordIds, groupId)
+                .forEach(RecordComment::delete);
+            recordGroups.forEach(ActivityRecordGroup::delete);
+        }
         recordCommentRepository.findActiveCommentsByMemberIdAndGroupId(memberId, groupId)
             .forEach(RecordComment::delete);
-        records.forEach(ActivityRecord::delete);
     }
 
     private void deleteGroupRecordViewHistories(Long memberId, Long groupId) {
@@ -350,6 +358,17 @@ public class MypageService {
         }
         recordCommentRepository.findByRecordIdInAndDeletedAtIsNull(recordIds)
             .forEach(RecordComment::delete);
+    }
+
+    private void deleteRecordGroups(List<ActivityRecord> records) {
+        List<Long> recordIds = records.stream()
+            .map(ActivityRecord::getId)
+            .toList();
+        if (recordIds.isEmpty()) {
+            return;
+        }
+        activityRecordGroupRepository.findByRecordIdInAndDeletedAtIsNull(recordIds)
+            .forEach(ActivityRecordGroup::delete);
     }
 
     private int calculateDaysTogether(Member member) {

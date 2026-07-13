@@ -2,6 +2,9 @@
 
 > Low-Level Design. 이 문서는 기록 상세 및 댓글 API 구현과 PR 본문의 **오라클(ground truth)** 이다.
 
+> 최신 정책: 기록 상세와 댓글은 `groupId + recordId` 컨텍스트로 접근하며, 댓글은 그룹별로 분리된다.
+> 현재 구현 기준은 `docs/lld/LLD-0031-record-upload-all-groups.md`를 따른다.
+
 | 항목 | 값 |
 | --- | --- |
 | 상태 | Accepted |

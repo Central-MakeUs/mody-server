@@ -291,7 +291,7 @@ class ActivityRecordControllerDocsTest {
     @Test
     void getRecordDetail() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
-        given(activityRecordService.getRecordDetail(1L, 1L, null, 20))
+        given(activityRecordService.getRecordDetail(1L, 1L, 1L, null, 20))
             .willReturn(new RecordDetailPageResult(
                 2,
                 0,
@@ -325,7 +325,7 @@ class ActivityRecordControllerDocsTest {
                 false
             ));
 
-        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}", 1L, 1L)
                 .param("size", "20")
                 .header("Authorization", "Bearer access-token"))
             .andExpect(status().isOk())
@@ -382,7 +382,7 @@ class ActivityRecordControllerDocsTest {
     @Test
     void getRecordComments() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
-        given(activityRecordService.getRecordComments(1L, 1L, null, 20))
+        given(activityRecordService.getRecordComments(1L, 1L, 1L, null, 20))
             .willReturn(new CommentCursorResult(
                 List.of(
                     new CommentResult(
@@ -406,7 +406,7 @@ class ActivityRecordControllerDocsTest {
                 true
             ));
 
-        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
                 .header("Authorization", "Bearer access-token")
                 .param("size", "20"))
             .andExpect(status().isOk())
@@ -453,9 +453,9 @@ class ActivityRecordControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.RECORD_NOT_FOUND))
             .given(activityRecordService)
-            .getRecordDetail(anyLong(), anyLong(), any(), anyInt());
+            .getRecordDetail(anyLong(), anyLong(), anyLong(), any(), anyInt());
 
-        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}", 1L, 1L)
                 .header("Authorization", "Bearer access-token"))
             .andExpect(status().isNotFound())
             .andDo(documentError("record-detail-record-not-found", "기록 상세 조회"));
@@ -466,9 +466,9 @@ class ActivityRecordControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
             .given(activityRecordService)
-            .getRecordDetail(anyLong(), anyLong(), any(), anyInt());
+            .getRecordDetail(anyLong(), anyLong(), anyLong(), any(), anyInt());
 
-        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}", 1L, 1L)
                 .header("Authorization", "Bearer access-token"))
             .andExpect(status().isNotFound())
             .andDo(documentError("record-detail-member-not-found", "기록 상세 조회"));
@@ -479,9 +479,9 @@ class ActivityRecordControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.GROUP_NOT_FOUND))
             .given(activityRecordService)
-            .getRecordDetail(anyLong(), anyLong(), any(), anyInt());
+            .getRecordDetail(anyLong(), anyLong(), anyLong(), any(), anyInt());
 
-        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}", 1L, 1L)
                 .header("Authorization", "Bearer access-token"))
             .andExpect(status().isNotFound())
             .andDo(documentError("record-detail-group-not-found", "기록 상세 조회"));
@@ -492,9 +492,9 @@ class ActivityRecordControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND))
             .given(activityRecordService)
-            .getRecordDetail(anyLong(), anyLong(), any(), anyInt());
+            .getRecordDetail(anyLong(), anyLong(), anyLong(), any(), anyInt());
 
-        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}", 1L, 1L)
                 .header("Authorization", "Bearer access-token"))
             .andExpect(status().isNotFound())
             .andDo(documentError("record-detail-group-member-not-found", "기록 상세 조회"));
@@ -502,14 +502,14 @@ class ActivityRecordControllerDocsTest {
 
     @Test
     void getRecordDetailWithoutAuthorization() throws Exception {
-        mockMvc.perform(get("/api/v1/records/{recordId}", 1L))
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}", 1L, 1L))
             .andExpect(status().isUnauthorized())
             .andDo(documentError("record-detail-auth-missing", "기록 상세 조회"));
     }
 
     @Test
     void getRecordDetailWithEmptyToken() throws Exception {
-        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}", 1L, 1L)
                 .header("Authorization", "Bearer "))
             .andExpect(status().isUnauthorized())
             .andDo(documentError("record-detail-auth-empty-token", "기록 상세 조회"));
@@ -517,7 +517,7 @@ class ActivityRecordControllerDocsTest {
 
     @Test
     void getRecordDetailWithInvalidAuthorizationHeader() throws Exception {
-        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}", 1L, 1L)
                 .header("Authorization", "access-token"))
             .andExpect(status().isUnauthorized())
             .andDo(documentError("record-detail-auth-invalid-header", "기록 상세 조회"));
@@ -529,7 +529,7 @@ class ActivityRecordControllerDocsTest {
             .given(tokenProvider)
             .getMemberIdByAccessToken("invalid-token");
 
-        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}", 1L, 1L)
                 .header("Authorization", "Bearer invalid-token"))
             .andExpect(status().isUnauthorized())
             .andDo(documentError("record-detail-auth-invalid-token", "기록 상세 조회"));
@@ -541,7 +541,7 @@ class ActivityRecordControllerDocsTest {
             .given(tokenProvider)
             .getMemberIdByAccessToken("expired-token");
 
-        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}", 1L, 1L)
                 .header("Authorization", "Bearer expired-token"))
             .andExpect(status().isUnauthorized())
             .andDo(documentError("record-detail-auth-expired-token", "기록 상세 조회"));
@@ -553,7 +553,7 @@ class ActivityRecordControllerDocsTest {
             .given(tokenProvider)
             .getMemberIdByAccessToken("unsupported-token");
 
-        mockMvc.perform(get("/api/v1/records/{recordId}", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}", 1L, 1L)
                 .header("Authorization", "Bearer unsupported-token"))
             .andExpect(status().isUnauthorized())
             .andDo(documentError("record-detail-auth-unsupported-token", "기록 상세 조회"));
@@ -564,9 +564,9 @@ class ActivityRecordControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.RECORD_NOT_FOUND))
             .given(activityRecordService)
-            .getRecordComments(1L, 1L, null, 20);
+            .getRecordComments(1L, 1L, 1L, null, 20);
 
-        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
                 .header("Authorization", "Bearer access-token")
                 .param("size", "20"))
             .andExpect(status().isNotFound())
@@ -578,9 +578,9 @@ class ActivityRecordControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
             .given(activityRecordService)
-            .getRecordComments(1L, 1L, null, 20);
+            .getRecordComments(1L, 1L, 1L, null, 20);
 
-        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
                 .header("Authorization", "Bearer access-token")
                 .param("size", "20"))
             .andExpect(status().isNotFound())
@@ -592,9 +592,9 @@ class ActivityRecordControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.GROUP_NOT_FOUND))
             .given(activityRecordService)
-            .getRecordComments(1L, 1L, null, 20);
+            .getRecordComments(1L, 1L, 1L, null, 20);
 
-        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
                 .header("Authorization", "Bearer access-token")
                 .param("size", "20"))
             .andExpect(status().isNotFound())
@@ -606,9 +606,9 @@ class ActivityRecordControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND))
             .given(activityRecordService)
-            .getRecordComments(1L, 1L, null, 20);
+            .getRecordComments(1L, 1L, 1L, null, 20);
 
-        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
                 .header("Authorization", "Bearer access-token")
                 .param("size", "20"))
             .andExpect(status().isNotFound())
@@ -617,7 +617,7 @@ class ActivityRecordControllerDocsTest {
 
     @Test
     void getRecordCommentsWithoutAuthorization() throws Exception {
-        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
                 .param("size", "20"))
             .andExpect(status().isUnauthorized())
             .andDo(documentError("record-comment-list-auth-missing", "기록 댓글 목록 조회"));
@@ -625,7 +625,7 @@ class ActivityRecordControllerDocsTest {
 
     @Test
     void getRecordCommentsWithEmptyToken() throws Exception {
-        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
                 .header("Authorization", "Bearer ")
                 .param("size", "20"))
             .andExpect(status().isUnauthorized())
@@ -634,7 +634,7 @@ class ActivityRecordControllerDocsTest {
 
     @Test
     void getRecordCommentsWithInvalidAuthorizationHeader() throws Exception {
-        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
                 .header("Authorization", "access-token")
                 .param("size", "20"))
             .andExpect(status().isUnauthorized())
@@ -647,7 +647,7 @@ class ActivityRecordControllerDocsTest {
             .given(tokenProvider)
             .getMemberIdByAccessToken("invalid-token");
 
-        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
                 .header("Authorization", "Bearer invalid-token")
                 .param("size", "20"))
             .andExpect(status().isUnauthorized())
@@ -660,7 +660,7 @@ class ActivityRecordControllerDocsTest {
             .given(tokenProvider)
             .getMemberIdByAccessToken("expired-token");
 
-        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
                 .header("Authorization", "Bearer expired-token")
                 .param("size", "20"))
             .andExpect(status().isUnauthorized())
@@ -673,7 +673,7 @@ class ActivityRecordControllerDocsTest {
             .given(tokenProvider)
             .getMemberIdByAccessToken("unsupported-token");
 
-        mockMvc.perform(get("/api/v1/records/{recordId}/comments", 1L)
+        mockMvc.perform(get("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
                 .header("Authorization", "Bearer unsupported-token")
                 .param("size", "20"))
             .andExpect(status().isUnauthorized())
@@ -684,7 +684,7 @@ class ActivityRecordControllerDocsTest {
     void createMealRecord() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(activityRecordService.createRecord(eq(1L), any(RecordCreateCommand.class)))
-            .willReturn(new RecordCreateResult(10L));
+            .willReturn(new RecordCreateResult(10L, List.of(1L, 2L)));
 
         mockMvc.perform(postCreateRecord())
             .andExpect(status().isCreated())
@@ -694,10 +694,6 @@ class ActivityRecordControllerDocsTest {
                     .summary("기록 입력")
                     .description(RECORD_DESCRIPTION)
                     .requestFields(
-                        fieldWithPath("groupId")
-                            .type(JsonFieldType.NUMBER)
-                            .optional()
-                            .description("그룹 id. 개인 기록이면 null"),
                         fieldWithPath("recordType")
                             .type(JsonFieldType.STRING)
                             .description("기록 타입: MEAL, EXERCISE"),
@@ -726,7 +722,10 @@ class ActivityRecordControllerDocsTest {
                             .description("운동명. EXERCISE일 때 필수")
                     )
                     .responseFields(commonResponseFields(
-                        fieldWithPath("result.recordId").type(JsonFieldType.NUMBER).description("생성된 기록 id")
+                        fieldWithPath("result.recordId").type(JsonFieldType.NUMBER).description("생성된 기록 id"),
+                        fieldWithPath("result.groupIds")
+                            .type(JsonFieldType.ARRAY)
+                            .description("기록이 노출된 그룹 id 목록")
                     ))
                     .build())
             ));
@@ -736,14 +735,13 @@ class ActivityRecordControllerDocsTest {
     void createExerciseRecord() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(activityRecordService.createRecord(eq(1L), any(RecordCreateCommand.class)))
-            .willReturn(new RecordCreateResult(11L));
+            .willReturn(new RecordCreateResult(11L, List.of(1L, 2L)));
 
         mockMvc.perform(post("/api/v1/records")
                 .header("Authorization", "Bearer access-token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "groupId": 1,
 	                      "recordType": "EXERCISE",
 	                      "imageKey": "records/1/2026/07/4111584723969.jpg",
 	                      "mealTime": null,
@@ -760,7 +758,10 @@ class ActivityRecordControllerDocsTest {
                     .summary("기록 입력")
                     .description(RECORD_DESCRIPTION)
                     .responseFields(commonResponseFields(
-                        fieldWithPath("result.recordId").type(JsonFieldType.NUMBER).description("생성된 기록 id")
+                        fieldWithPath("result.recordId").type(JsonFieldType.NUMBER).description("생성된 기록 id"),
+                        fieldWithPath("result.groupIds")
+                            .type(JsonFieldType.ARRAY)
+                            .description("기록이 노출된 그룹 id 목록")
                     ))
                     .build())
             ));
@@ -775,7 +776,6 @@ class ActivityRecordControllerDocsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "groupId": 1,
                       "recordType": "MEAL",
                       "imageKey": "profiles/1/2026/07/profile.jpg",
                       "mealTime": "12:30",
@@ -798,7 +798,6 @@ class ActivityRecordControllerDocsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "groupId": 1,
                       "recordType": "MEAL",
                       "imageKey": "records/1/2026/07/4111584723968.jpg",
                       "mealTime": null,
@@ -822,7 +821,6 @@ class ActivityRecordControllerDocsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "groupId": 1,
                       "recordType": "EXERCISE",
                       "imageKey": "records/1/2026/07/4111584723969.jpg",
                       "mealTime": null,
@@ -846,7 +844,6 @@ class ActivityRecordControllerDocsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "groupId": 1,
 	                      "recordType": "UNKNOWN",
 	                      "imageKey": "records/1/2026/07/4111584723968.jpg",
 	                      "mealTime": "12:30",
@@ -946,10 +943,10 @@ class ActivityRecordControllerDocsTest {
     @Test
     void createComment() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
-        given(activityRecordService.createComment(eq(1L), eq(1L), any(CommentCreateCommand.class)))
+        given(activityRecordService.createComment(eq(1L), eq(1L), eq(1L), any(CommentCreateCommand.class)))
             .willReturn(new CommentCreateResult(10L, 1L));
 
-        mockMvc.perform(post("/api/v1/records/{recordId}/comments", 1L)
+        mockMvc.perform(post("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
                 .header("Authorization", "Bearer access-token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -983,7 +980,7 @@ class ActivityRecordControllerDocsTest {
     void createCommentValidationError() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
 
-        mockMvc.perform(post("/api/v1/records/{recordId}/comments", 1L)
+        mockMvc.perform(post("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
                 .header("Authorization", "Bearer access-token")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -1001,7 +998,7 @@ class ActivityRecordControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.RECORD_NOT_FOUND))
             .given(activityRecordService)
-            .createComment(eq(1L), eq(1L), any(CommentCreateCommand.class));
+            .createComment(eq(1L), eq(1L), eq(1L), any(CommentCreateCommand.class));
 
         mockMvc.perform(postCreateComment())
             .andExpect(status().isNotFound())
@@ -1013,7 +1010,7 @@ class ActivityRecordControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND))
             .given(activityRecordService)
-            .createComment(eq(1L), eq(1L), any(CommentCreateCommand.class));
+            .createComment(eq(1L), eq(1L), eq(1L), any(CommentCreateCommand.class));
 
         mockMvc.perform(postCreateComment())
             .andExpect(status().isNotFound())
@@ -1038,7 +1035,7 @@ class ActivityRecordControllerDocsTest {
     }
 
     private MockHttpServletRequestBuilder postCreateCommentWithoutAuthorization() {
-        return post("/api/v1/records/{recordId}/comments", 1L)
+        return post("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -1052,7 +1049,6 @@ class ActivityRecordControllerDocsTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
-                  "groupId": 1,
                   "recordType": "MEAL",
                   "imageKey": "records/1/2026/07/4111584723968.jpg",
                   "mealTime": "12:30",

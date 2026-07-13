@@ -49,8 +49,10 @@ import cmc.mody.notification.infrastructure.repository.MemberPushTokenRepository
 import cmc.mody.notification.infrastructure.repository.NotificationRepository;
 import cmc.mody.notification.infrastructure.repository.NotificationSettingRepository;
 import cmc.mody.record.domain.ActivityRecord;
+import cmc.mody.record.domain.ActivityRecordGroup;
 import cmc.mody.record.domain.RecordComment;
 import cmc.mody.record.domain.RecordViewHistory;
+import cmc.mody.record.infrastructure.repository.ActivityRecordGroupRepository;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
 import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
@@ -109,6 +111,9 @@ class MypageServiceTest {
 
     @Mock
     private ActivityRecordRepository activityRecordRepository;
+
+    @Mock
+    private ActivityRecordGroupRepository activityRecordGroupRepository;
 
     @Mock
     private RecordCommentRepository recordCommentRepository;
@@ -358,8 +363,8 @@ class MypageServiceTest {
         );
         GroupMember groupMember = new GroupMember(17L, 1L, 100L, LocalDateTime.now());
         ActivityRecord record = mealRecord(18L, 1L, 100L);
-        RecordComment myComment = new RecordComment(19L, 200L, 1L, "내 댓글");
-        RecordComment recordComment = new RecordComment(20L, 18L, 2L, "기록 댓글");
+        RecordComment myComment = new RecordComment(19L, 200L, 100L, 1L, "내 댓글");
+        RecordComment recordComment = new RecordComment(20L, 18L, 100L, 2L, "기록 댓글");
         RecordViewHistory recordViewHistory = new RecordViewHistory(21L, 1L, 100L, 2L, LocalDateTime.now());
         ChallengeProof challengeProof = new ChallengeProof(22L, 300L, 1L, "challenge/proof.jpg", LocalDateTime.now());
         StepRecord stepRecord = new StepRecord(23L, 301L, 1L, LocalDate.now(), 1000, StepSource.HEALTH_KIT);
@@ -435,8 +440,9 @@ class MypageServiceTest {
         MypageService service = service();
         GroupMember groupMember = new GroupMember(20L, 1L, 100L, LocalDateTime.now());
         ActivityRecord record = mealRecord(30L, 1L, 100L);
-        RecordComment myComment = new RecordComment(31L, 200L, 1L, "내 댓글");
-        RecordComment recordComment = new RecordComment(32L, 30L, 2L, "기록 댓글");
+        ActivityRecordGroup recordGroup = new ActivityRecordGroup(40L, 30L, 100L, 1L, LocalDateTime.now());
+        RecordComment myComment = new RecordComment(31L, 200L, 100L, 1L, "내 댓글");
+        RecordComment recordComment = new RecordComment(32L, 30L, 100L, 2L, "기록 댓글");
         RecordViewHistory recordViewHistory = new RecordViewHistory(33L, 2L, 100L, 1L, LocalDateTime.now());
         GroupChallenge groupChallenge = new GroupChallenge(
             34L,
@@ -454,8 +460,10 @@ class MypageServiceTest {
             100L,
             GroupMemberStatus.JOINED
         )).willReturn(Optional.of(groupMember));
-        given(activityRecordRepository.findByMemberIdAndGroupIdAndDeletedAtIsNull(1L, 100L)).willReturn(List.of(record));
-        given(recordCommentRepository.findByRecordIdInAndDeletedAtIsNull(List.of(30L))).willReturn(List.of(recordComment));
+        given(activityRecordGroupRepository.findByMemberIdAndGroupIdAndDeletedAtIsNull(1L, 100L))
+            .willReturn(List.of(recordGroup));
+        given(recordCommentRepository.findByRecordIdInAndGroupIdAndDeletedAtIsNull(List.of(30L), 100L))
+            .willReturn(List.of(recordComment));
         given(recordCommentRepository.findActiveCommentsByMemberIdAndGroupId(1L, 100L)).willReturn(List.of(myComment));
         given(recordViewHistoryRepository.findActiveByMemberIdAndGroupId(1L, 100L)).willReturn(List.of(recordViewHistory));
         given(groupChallengeRepository.findByGroupIdAndDeletedAtIsNull(100L)).willReturn(List.of(groupChallenge));
@@ -467,7 +475,8 @@ class MypageServiceTest {
         service.leaveGroup(1L, 100L);
 
         assertThat(groupMember.getGroupMemberStatus()).isEqualTo(GroupMemberStatus.LEFT);
-        assertThat(record.getStatus()).isEqualTo(Status.INACTIVE);
+        assertThat(record.getStatus()).isEqualTo(Status.ACTIVE);
+        assertThat(recordGroup.getStatus()).isEqualTo(Status.INACTIVE);
         assertThat(myComment.getStatus()).isEqualTo(Status.INACTIVE);
         assertThat(recordComment.getStatus()).isEqualTo(Status.INACTIVE);
         assertThat(recordViewHistory.getStatus()).isEqualTo(Status.INACTIVE);
@@ -490,6 +499,7 @@ class MypageServiceTest {
             notificationRepository,
             memberPushTokenRepository,
             activityRecordRepository,
+            activityRecordGroupRepository,
             recordCommentRepository,
             recordViewHistoryRepository,
             groupChallengeRepository,
