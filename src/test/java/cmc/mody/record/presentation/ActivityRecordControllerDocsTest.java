@@ -107,32 +107,41 @@ class ActivityRecordControllerDocsTest {
     void getActivityCalendar() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(activityRecordService.getActivityCalendar(eq(1L), eq(1L), any()))
-            .willReturn(new ActivityRecordService.ActivityCalendarResult(List.of(
-                new ActivityRecordService.ActivityDayResult(java.time.LocalDate.of(2026, 6, 1), false, false),
-                new ActivityRecordService.ActivityDayResult(java.time.LocalDate.of(2026, 6, 27), true, true)
-            )));
+            .willReturn(new ActivityRecordService.ActivityCalendarResult(
+                java.time.LocalDate.of(2026, 7, 12),
+                java.time.LocalDate.of(2026, 7, 18),
+                List.of(
+                    new ActivityRecordService.ActivityDayResult(java.time.LocalDate.of(2026, 7, 12), false),
+                    new ActivityRecordService.ActivityDayResult(java.time.LocalDate.of(2026, 7, 13), true),
+                    new ActivityRecordService.ActivityDayResult(java.time.LocalDate.of(2026, 7, 14), false),
+                    new ActivityRecordService.ActivityDayResult(java.time.LocalDate.of(2026, 7, 15), true),
+                    new ActivityRecordService.ActivityDayResult(java.time.LocalDate.of(2026, 7, 16), false),
+                    new ActivityRecordService.ActivityDayResult(java.time.LocalDate.of(2026, 7, 17), false),
+                    new ActivityRecordService.ActivityDayResult(java.time.LocalDate.of(2026, 7, 18), false)
+                )
+            ));
 
         mockMvc.perform(get("/api/v1/groups/{groupId}/activities/calendar", 1L)
                 .header("Authorization", "Bearer access-token")
-                .param("yearMonth", "2026-06"))
+                .param("baseDate", "2026-07-13"))
             .andExpect(status().isOk())
             .andDo(document("activity-calendar",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Feed")
-                    .summary("월/주차별 활동 유무 조회")
+                    .summary("주간 활동 유무 조회")
                     .description("""
-                        월 단위로 식사/운동 기록 존재 여부를 조회한다.
-                        yearMonth에 포함된 날짜만 응답하며, 클라이언트는 달력 UI의 표시 여부에 사용한다.
+                        baseDate가 속한 주의 일요일부터 토요일까지 7일을 조회한다.
+                        그룹 전체 기록이 하나라도 있는 날짜는 hasRecord=true로 응답한다.
                         """)
-                    .queryParameters(parameterWithName("yearMonth").description("조회 월, yyyy-MM"))
+                    .queryParameters(parameterWithName("baseDate").description("조회 기준 날짜, yyyy-MM-dd"))
                     .responseFields(commonResponseFields(
+                        fieldWithPath("result.weekStartDate").type(JsonFieldType.STRING).description("주 시작일, 일요일"),
+                        fieldWithPath("result.weekEndDate").type(JsonFieldType.STRING).description("주 종료일, 토요일"),
                         fieldWithPath("result.days[].date").type(JsonFieldType.STRING).description("날짜"),
-                        fieldWithPath("result.days[].mealRecorded")
+                        fieldWithPath("result.days[].dayOfWeek").type(JsonFieldType.STRING).description("요일"),
+                        fieldWithPath("result.days[].hasRecord")
                             .type(JsonFieldType.BOOLEAN)
-                            .description("해당 날짜에 식사 기록이 1개 이상 있으면 true"),
-                        fieldWithPath("result.days[].exerciseRecorded")
-                            .type(JsonFieldType.BOOLEAN)
-                            .description("해당 날짜에 운동 기록이 1개 이상 있으면 true")
+                            .description("해당 날짜에 그룹 전체 기록이 1개 이상 있으면 true")
                     ))
                     .build())
             ));
@@ -220,9 +229,9 @@ class ActivityRecordControllerDocsTest {
     @Test
     void getActivityCalendarWithoutAuthorization() throws Exception {
         mockMvc.perform(get("/api/v1/groups/{groupId}/activities/calendar", 1L)
-                .param("yearMonth", "2026-06"))
+                .param("baseDate", "2026-07-13"))
             .andExpect(status().isUnauthorized())
-            .andDo(documentError("activity-calendar-auth-missing", "월/주차별 활동 유무 조회"));
+            .andDo(documentError("activity-calendar-auth-missing", "주간 활동 유무 조회"));
     }
 
     @Test
