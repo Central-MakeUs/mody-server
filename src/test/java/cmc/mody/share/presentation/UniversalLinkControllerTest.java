@@ -32,8 +32,22 @@ class UniversalLinkControllerTest {
     }
 
     @Test
-    void invite() throws Exception {
-        mockMvc.perform(get("/invite").param("code", "ABCD2345"))
+    void assetLinks() throws Exception {
+        mockMvc.perform(get("/.well-known/assetlinks.json"))
+            .andExpect(status().isOk())
+            .andExpect(redirectedUrl(null))
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$[0].relation[0]").value("delegate_permission/common.handle_all_urls"))
+            .andExpect(jsonPath("$[0].target.namespace").value("android_app"))
+            .andExpect(jsonPath("$[0].target.package_name").value("com.makeus.mody.dev"))
+            .andExpect(jsonPath("$[1].target.package_name").value("com.makeus.mody"));
+    }
+
+    @Test
+    void inviteForIos() throws Exception {
+        mockMvc.perform(get("/invite")
+                .param("code", "ABCD2345")
+                .header(HttpHeaders.USER_AGENT, "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"))
             .andExpect(status().isOk())
             .andExpect(redirectedUrl(null))
             .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
@@ -41,5 +55,18 @@ class UniversalLinkControllerTest {
             .andExpect(content().string(containsString("ABCD2345")))
             .andExpect(content().string(containsString("App Store로 이동")))
             .andExpect(content().string(containsString("https://www.apple.com/kr/app-store/")));
+    }
+
+    @Test
+    void inviteForAndroid() throws Exception {
+        mockMvc.perform(get("/invite")
+                .param("code", "ABCD2345")
+                .header(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Linux; Android 14; Pixel 8)"))
+            .andExpect(status().isOk())
+            .andExpect(redirectedUrl(null))
+            .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+            .andExpect(content().string(containsString("ABCD2345")))
+            .andExpect(content().string(containsString("Google Play로 이동")))
+            .andExpect(content().string(containsString("https://play.google.com/store")));
     }
 }
