@@ -154,26 +154,16 @@ public class MypageController {
         return ApiResponse.ok();
     }
 
-    public record WeightHistoryResponse(List<WeightRecordResponse> weights) {
-        public static WeightHistoryResponse from(MypageService.WeightHistoryResult result) {
-            return new WeightHistoryResponse(result.weights().stream()
-                .map(WeightRecordResponse::from)
-                .toList());
-        }
-    }
-
-    public record WeightRecordResponse(
-        Long weightRecordId,
-        LocalDate recordedOn,
-        BigDecimal weightKg,
-        BigDecimal changeFromPreviousKg
+    public record WeightHistoryResponse(
+        BigDecimal startWeightKg,
+        BigDecimal currentWeightKg,
+        BigDecimal targetWeightKg
     ) {
-        public static WeightRecordResponse from(MypageService.WeightRecordResult result) {
-            return new WeightRecordResponse(
-                result.weightRecordId(),
-                result.recordedOn(),
-                result.weightKg(),
-                result.changeFromPreviousKg()
+        public static WeightHistoryResponse from(MypageService.WeightHistoryResult result) {
+            return new WeightHistoryResponse(
+                result.startWeightKg(),
+                result.currentWeightKg(),
+                result.targetWeightKg()
             );
         }
     }

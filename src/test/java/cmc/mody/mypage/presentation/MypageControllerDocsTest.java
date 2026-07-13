@@ -41,7 +41,6 @@ import cmc.mody.mypage.application.MypageService.ProfileUpdateResult;
 import cmc.mody.mypage.application.MypageService.WeightCreateCommand;
 import cmc.mody.mypage.application.MypageService.WeightCreateResult;
 import cmc.mody.mypage.application.MypageService.WeightHistoryResult;
-import cmc.mody.mypage.application.MypageService.WeightRecordResult;
 import cmc.mody.notification.domain.MealType;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import java.math.BigDecimal;
@@ -111,14 +110,11 @@ class MypageControllerDocsTest {
     void getWeightHistory() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(mypageService.getWeightHistory(1L))
-            .willReturn(new WeightHistoryResult(List.of(
-                new WeightRecordResult(
-                    10L,
-                    LocalDate.of(2026, 6, 28),
-                    new BigDecimal("72.50"),
-                    new BigDecimal("-0.50")
-                )
-            )));
+            .willReturn(new WeightHistoryResult(
+                new BigDecimal("73.00"),
+                new BigDecimal("72.50"),
+                new BigDecimal("68.00")
+            ));
 
         mockMvc.perform(get("/api/v1/mypage/weights")
                 .header("Authorization", "Bearer access-token"))
@@ -126,19 +122,21 @@ class MypageControllerDocsTest {
             .andDo(document("mypage-weight-history",
                 resource(ResourceSnippetParameters.builder()
                     .tag("Mypage")
-                    .summary("체중 기록 변화 조회")
+                    .summary("체중 요약 조회")
                     .description(MYPAGE_DESCRIPTION)
                     .responseFields(commonResponseFields(
-                        fieldWithPath("result.weights[].weightRecordId")
+                        fieldWithPath("result.startWeightKg")
                             .type(JsonFieldType.NUMBER)
-                            .description("체중 기록 id"),
-                        fieldWithPath("result.weights[].recordedOn")
-                            .type(JsonFieldType.STRING)
-                            .description("기록 날짜"),
-                        fieldWithPath("result.weights[].weightKg").type(JsonFieldType.NUMBER).description("체중 kg"),
-                        fieldWithPath("result.weights[].changeFromPreviousKg")
+                            .description("시작 체중 kg. 최초 체중 기록 기준이며 기록이 없으면 null")
+                            .optional(),
+                        fieldWithPath("result.currentWeightKg")
                             .type(JsonFieldType.NUMBER)
-                            .description("이전 체중 기록 대비 증감 kg. 이전 기록이 없으면 0")
+                            .description("현재 체중 kg. 가장 최근 체중 기록 기준이며 기록이 없으면 null")
+                            .optional(),
+                        fieldWithPath("result.targetWeightKg")
+                            .type(JsonFieldType.NUMBER)
+                            .description("목표 체중 kg. 회원 개인 정보의 목표 체중")
+                            .optional()
                     ))
                     .build())
             ));
@@ -692,7 +690,7 @@ class MypageControllerDocsTest {
         return Stream.of(
             new MypageEndpoint(
                 "mypage-weight-history",
-                "체중 기록 변화 조회",
+                "체중 요약 조회",
                 () -> get("/api/v1/mypage/weights")
             ),
             new MypageEndpoint(

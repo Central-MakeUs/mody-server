@@ -213,20 +213,41 @@ class MypageServiceTest {
     }
 
     @Test
-    @DisplayName("체중 목록은 최신 기록 순서로 반환한다.")
+    @DisplayName("체중 조회 시 시작, 현재, 목표 체중을 반환한다.")
     void getWeightHistory() {
         MypageService service = service();
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
-        given(weightRecordRepository.findByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(1L))
-            .willReturn(List.of(
-                new WeightRecord(11L, 1L, LocalDate.of(2026, 6, 28), new BigDecimal("72.50"), new BigDecimal("-0.50")),
+        given(weightRecordRepository.findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnAscCreatedAtAsc(1L))
+            .willReturn(Optional.of(
                 new WeightRecord(10L, 1L, LocalDate.of(2026, 6, 27), new BigDecimal("73.00"), BigDecimal.ZERO)
+            ));
+        given(weightRecordRepository.findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(1L))
+            .willReturn(Optional.of(
+                new WeightRecord(11L, 1L, LocalDate.of(2026, 6, 28), new BigDecimal("72.50"), new BigDecimal("-0.50"))
             ));
 
         MypageService.WeightHistoryResult result = service.getWeightHistory(1L);
 
-        assertThat(result.weights()).hasSize(2);
-        assertThat(result.weights().get(0).weightRecordId()).isEqualTo(11L);
+        assertThat(result.startWeightKg()).isEqualByComparingTo("73.00");
+        assertThat(result.currentWeightKg()).isEqualByComparingTo("72.50");
+        assertThat(result.targetWeightKg()).isEqualByComparingTo("68.0");
+    }
+
+    @Test
+    @DisplayName("체중 기록이 없으면 시작 체중과 현재 체중은 비어있다.")
+    void getWeightHistoryWithoutWeightRecords() {
+        MypageService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(weightRecordRepository.findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnAscCreatedAtAsc(1L))
+            .willReturn(Optional.empty());
+        given(weightRecordRepository.findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(1L))
+            .willReturn(Optional.empty());
+
+        MypageService.WeightHistoryResult result = service.getWeightHistory(1L);
+
+        assertThat(result.startWeightKg()).isNull();
+        assertThat(result.currentWeightKg()).isNull();
+        assertThat(result.targetWeightKg()).isEqualByComparingTo("68.0");
     }
 
     @Test
