@@ -13,7 +13,6 @@ import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.domain.Status;
 import cmc.mody.common.id.IdGenerator;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,12 +39,16 @@ class RefreshTokenServiceTest {
         RefreshTokenService service = new RefreshTokenService(idGenerator, refreshTokenRepository);
 
         given(refreshTokenRepository.findAllByMemberIdAndDeletedAtIsNull(10L)).willReturn(List.of(oldToken));
+        given(refreshTokenRepository.findAllByTokenAndDeletedAtIsNullOrderByCreatedAtDescIdDesc("new-refresh"))
+            .willReturn(List.of());
         given(idGenerator.nextId()).willReturn(2L);
         given(refreshTokenRepository.save(any(RefreshToken.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         service.replace(10L, "new-refresh");
 
         assertThat(oldToken.getStatus()).isEqualTo(Status.INACTIVE);
+        then(refreshTokenRepository).should()
+            .findAllByTokenAndDeletedAtIsNullOrderByCreatedAtDescIdDesc("new-refresh");
         then(refreshTokenRepository).should().save(refreshTokenCaptor.capture());
         assertThat(refreshTokenCaptor.getValue().getId()).isEqualTo(2L);
         assertThat(refreshTokenCaptor.getValue().getToken()).isEqualTo("new-refresh");
@@ -55,19 +58,35 @@ class RefreshTokenServiceTest {
     @DisplayName("저장된 활성 refresh token이면 검증을 통과한다.")
     void validateRefreshToken() {
         RefreshTokenService service = new RefreshTokenService(idGenerator, refreshTokenRepository);
-        given(refreshTokenRepository.findByTokenAndDeletedAtIsNull("refresh"))
-            .willReturn(Optional.of(new RefreshToken(1L, 10L, "refresh")));
+        given(refreshTokenRepository.findAllByTokenAndDeletedAtIsNullOrderByCreatedAtDescIdDesc("refresh"))
+            .willReturn(List.of(new RefreshToken(1L, 10L, "refresh")));
 
         service.validate(10L, "refresh");
 
-        then(refreshTokenRepository).should().findByTokenAndDeletedAtIsNull("refresh");
+        then(refreshTokenRepository).should().findAllByTokenAndDeletedAtIsNullOrderByCreatedAtDescIdDesc("refresh");
+    }
+
+    @Test
+    @DisplayName("중복 저장된 활성 refresh token은 최신 1개만 사용하고 나머지는 비활성화한다.")
+    void validateRefreshTokenWithDuplicatedActiveTokens() {
+        RefreshToken latestToken = new RefreshToken(2L, 10L, "refresh");
+        RefreshToken duplicatedToken = new RefreshToken(1L, 10L, "refresh");
+        RefreshTokenService service = new RefreshTokenService(idGenerator, refreshTokenRepository);
+        given(refreshTokenRepository.findAllByTokenAndDeletedAtIsNullOrderByCreatedAtDescIdDesc("refresh"))
+            .willReturn(List.of(latestToken, duplicatedToken));
+
+        service.validate(10L, "refresh");
+
+        assertThat(latestToken.getStatus()).isEqualTo(Status.ACTIVE);
+        assertThat(duplicatedToken.getStatus()).isEqualTo(Status.INACTIVE);
     }
 
     @Test
     @DisplayName("저장되지 않은 refresh token은 검증할 수 없다.")
     void throwInvalidRefreshTokenWhenNotStored() {
         RefreshTokenService service = new RefreshTokenService(idGenerator, refreshTokenRepository);
-        given(refreshTokenRepository.findByTokenAndDeletedAtIsNull("refresh")).willReturn(Optional.empty());
+        given(refreshTokenRepository.findAllByTokenAndDeletedAtIsNullOrderByCreatedAtDescIdDesc("refresh"))
+            .willReturn(List.of());
 
         assertThatThrownBy(() -> service.validate(10L, "refresh"))
             .isInstanceOfSatisfying(GeneralException.class, exception ->
@@ -78,8 +97,8 @@ class RefreshTokenServiceTest {
     @DisplayName("회원 id가 다른 refresh token은 검증할 수 없다.")
     void throwInvalidRefreshTokenWhenMemberDiffers() {
         RefreshTokenService service = new RefreshTokenService(idGenerator, refreshTokenRepository);
-        given(refreshTokenRepository.findByTokenAndDeletedAtIsNull("refresh"))
-            .willReturn(Optional.of(new RefreshToken(1L, 20L, "refresh")));
+        given(refreshTokenRepository.findAllByTokenAndDeletedAtIsNullOrderByCreatedAtDescIdDesc("refresh"))
+            .willReturn(List.of(new RefreshToken(1L, 20L, "refresh")));
 
         assertThatThrownBy(() -> service.validate(10L, "refresh"))
             .isInstanceOfSatisfying(GeneralException.class, exception ->
@@ -91,7 +110,8 @@ class RefreshTokenServiceTest {
     void deleteRefreshToken() {
         RefreshToken token = new RefreshToken(1L, 10L, "refresh");
         RefreshTokenService service = new RefreshTokenService(idGenerator, refreshTokenRepository);
-        given(refreshTokenRepository.findByTokenAndDeletedAtIsNull("refresh")).willReturn(Optional.of(token));
+        given(refreshTokenRepository.findAllByTokenAndDeletedAtIsNullOrderByCreatedAtDescIdDesc("refresh"))
+            .willReturn(List.of(token));
 
         service.delete(10L, "refresh");
 

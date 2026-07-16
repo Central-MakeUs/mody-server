@@ -51,7 +51,7 @@ class OAuthMemberProcessorTest {
     @DisplayName("메인 진입 조건을 만족하면 가능 상태를 반환한다.")
     void ensureExistingMember() {
         OAuthMemberProcessor processor = processor();
-        OAuthProfile profile = new OAuthProfile(LoginType.KAKAO, "provider-1", null, "민석", null);
+        OAuthProfile profile = new OAuthProfile(LoginType.KAKAO, "provider-1", null, "민석", "kakao-profile");
         given(socialAccountRepository.findByLoginTypeAndProviderUserIdAndDeletedAtIsNull(LoginType.KAKAO, "provider-1"))
             .willReturn(Optional.of(new SocialAccount(10L, 1L, LoginType.KAKAO, "provider-1")));
         Member member = completedMember();
@@ -63,6 +63,7 @@ class OAuthMemberProcessorTest {
         OAuthMemberResult result = processor.ensure(profile);
 
         assertThat(result).isEqualTo(new OAuthMemberResult(1L, true, true, true));
+        assertThat(member.getProfileImageKey()).isEqualTo("kakao-profile");
         then(memberRepository).should().findById(1L);
     }
 

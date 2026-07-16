@@ -210,12 +210,15 @@ public class ActivityRecordService {
 
     @Transactional
     public CommentCreateResult createComment(Long memberId, Long groupId, Long recordId, CommentCreateCommand command) {
-        getMember(memberId);
+        Member member = getMember(memberId);
         ActivityRecord record = getAccessibleRecord(memberId, groupId, recordId);
         Map<Long, GroupMember> groupMembers = getJoinedGroupMembers(groupId);
         if (!groupMembers.containsKey(record.getMemberId())) {
             throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
         }
+        String commenterNickname = groupMembers.containsKey(memberId)
+            ? groupMembers.get(memberId).getDisplayNickname()
+            : member.getNickname();
 
         Long commentId = idGenerator.nextId();
         RecordComment savedComment = recordCommentRepository.save(new RecordComment(
@@ -225,7 +228,7 @@ public class ActivityRecordService {
             memberId,
             command.content().trim()
         ));
-        notificationRequestService.requestCommentCreated(recordId, memberId);
+        notificationRequestService.requestCommentCreated(recordId, memberId, commenterNickname);
         return new CommentCreateResult(savedComment.getId(), recordId);
     }
 

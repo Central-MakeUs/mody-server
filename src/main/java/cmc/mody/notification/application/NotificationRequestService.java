@@ -20,12 +20,13 @@ public class NotificationRequestService {
         eventPublisher.publishEvent(event);
     }
 
-    public void requestCommentCreated(Long recordId, Long commenterMemberId) {
+    public void requestCommentCreated(Long recordId, Long commenterMemberId, String nickname) {
         request(NotificationRequestedEvent.immediate(
             NotificationType.COMMENT_CREATED,
             Map.of(
                 "recordId", recordId,
-                "commenterMemberId", commenterMemberId
+                "commenterMemberId", commenterMemberId,
+                "nickname", nickname
             ),
             "RECORD",
             recordId
@@ -107,10 +108,13 @@ public class NotificationRequestService {
         ));
     }
 
-    public void requestWeeklyChallengeCompleted(Long groupId, Long groupChallengeId) {
+    public void requestWeeklyChallengeCompleted(Long groupId, String groupName, Long groupChallengeId) {
         request(NotificationRequestedEvent.immediate(
             NotificationType.WEEKLY_CHALLENGE_COMPLETED,
-            Map.of("groupId", groupId),
+            Map.of(
+                "groupId", groupId,
+                "groupName", groupName
+            ),
             "CHALLENGE",
             groupChallengeId
         ));

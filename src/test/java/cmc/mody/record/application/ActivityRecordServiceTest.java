@@ -468,7 +468,7 @@ class ActivityRecordServiceTest {
         assertThat(savedComment.getGroupId()).isEqualTo(10L);
         assertThat(savedComment.getMemberId()).isEqualTo(1L);
         assertThat(savedComment.getContent()).isEqualTo("좋다");
-        then(notificationRequestService).should().requestCommentCreated(100L, 1L);
+        then(notificationRequestService).should().requestCommentCreated(100L, 1L, "민석");
     }
 
     @Test

@@ -213,7 +213,7 @@ class WeeklyChallengeServiceTest {
 
         assertThat(groupChallenge.getGroupChallengeStatus()).isEqualTo(GroupChallengeStatus.COMPLETED);
         assertThat(groupChallenge.getCompletedAt()).isNotNull();
-        then(notificationRequestService).should().requestWeeklyChallengeCompleted(10L, 100L);
+        then(notificationRequestService).should().requestWeeklyChallengeCompleted(10L, "모디", 100L);
     }
 
     @Test

@@ -124,8 +124,10 @@ interface OAuthMemberService {
 2. `OAuthService`가 `OAuthStrategyFactory`에서 provider 전략을 선택한다.
 3. 전략이 authorization code로 provider token을 교환하고 외부 프로필을 조회해 `OAuthProfile`을 만든다.
 4. `OAuthMemberService`가 `loginType + providerUserId`로 활성 소셜 계정을 조회한다.
-5. 활성 계정이 있으면 연결된 활성 회원의 `memberId`, 개인 정보 입력 완료 여부, 메인 진입 가능 여부, 그룹 온보딩 완료 이력을 반환한다.
-6. 활성 계정이 없으면 `member`와 `social_account`를 생성하고 `personalInfoCompleted=false`, `mainAccessible=false`, `groupOnboardingCompleted=false`를 반환한다.
+5. 활성 계정이 있으면 provider 프로필 이미지가 비어 있지 않을 때 회원 `profile_image_key`를 최신 값으로 갱신한 뒤,
+   연결된 활성 회원의 `memberId`, 개인 정보 입력 완료 여부, 메인 진입 가능 여부, 그룹 온보딩 완료 이력을 반환한다.
+6. 활성 계정이 없으면 provider 프로필 이미지를 초기 프로필 이미지로 사용해 `member`와 `social_account`를 생성하고
+   `personalInfoCompleted=false`, `mainAccessible=false`, `groupOnboardingCompleted=false`를 반환한다.
 7. `TokenProvider`가 access/refresh token을 발급한다.
 8. 기존 refresh token을 비활성화 또는 삭제한 뒤 새 refresh token을 DB에 저장한다.
 9. `TokenDto(id, accessToken, refreshToken, personalInfoCompleted, mainAccessible, groupOnboardingCompleted)`를 반환한다.

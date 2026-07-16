@@ -22,7 +22,26 @@ class NotificationTemplateRendererTest {
         ));
 
         assertThat(template.title()).isEqualTo("모디그룹에 새 버디가 참여했어요!");
-        assertThat(template.content()).isEqualTo("민석님을 환영해주세요!");
+        assertThat(template.content()).isEqualTo("민석님을 환영해주세요.");
+    }
+
+    @Test
+    @DisplayName("변경된 알림 템플릿을 렌더링한다.")
+    void renderUpdatedTemplates() {
+        assertThat(renderer.render(NotificationType.EXERCISE_REMINDER, Map.of()).content())
+            .isEqualTo("오운완 사진 찍어서 기록해주세요.");
+        assertThat(renderer.render(NotificationType.MEAL_REMINDER, Map.of()).content())
+            .isEqualTo("오늘은 어떤 식사를 하셨나요? 궁금해요!");
+        assertThat(renderer.render(NotificationType.COMMENT_CREATED, Map.of("nickname", "예은")).title())
+            .isEqualTo("예은님이 댓글을 남겼어요.");
+        assertThat(renderer.render(NotificationType.BUDDY_NUDGE, Map.of("nickname", "예은")).content())
+            .isEqualTo("예은님의 응원을 받고 얼른 기록해주세요!");
+        assertThat(renderer.render(NotificationType.STEP_CHALLENGE_COMPLETED, Map.of("destination", "수원")).content())
+            .isEqualTo("수원을 걸어서 방문하다니 멋진걸요?");
+        assertThat(renderer.render(NotificationType.WEEKLY_CHALLENGE_COMPLETED, Map.of("groupName", "2키로만")).title())
+            .isEqualTo("이번 주 챌린지 완료!");
+        assertThat(renderer.render(NotificationType.WEEKLY_CHALLENGE_COMPLETED, Map.of("groupName", "2키로만")).content())
+            .isEqualTo("2키로만 그룹에서 챌린지 1개를 완료했어요!");
     }
 
     @Test
