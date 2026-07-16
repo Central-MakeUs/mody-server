@@ -158,6 +158,7 @@ class MypageControllerDocsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
+                      "recordedOn": "2026-06-28",
                       "weightKg": 72.5
                     }
                     """))
@@ -168,7 +169,10 @@ class MypageControllerDocsTest {
                     .summary("체중 추가")
                     .description(MYPAGE_DESCRIPTION)
                     .requestFields(
-                        fieldWithPath("weightKg").type(JsonFieldType.NUMBER).description("체중 kg. 당일 체중 기록으로 저장")
+                        fieldWithPath("recordedOn")
+                            .type(JsonFieldType.STRING)
+                            .description("체중 기록 날짜. 필수, 오늘 또는 과거 날짜, yyyy-MM-dd 형식"),
+                        fieldWithPath("weightKg").type(JsonFieldType.NUMBER).description("체중 kg")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.weightRecordId")
@@ -357,6 +361,7 @@ class MypageControllerDocsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
+                      "recordedOn": "2026-06-28",
                       "weightKg": 10.0
                     }
                     """))
@@ -700,6 +705,7 @@ class MypageControllerDocsTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("""
                         {
+                          "recordedOn": "2026-06-28",
                           "weightKg": 72.5
                         }
                         """)

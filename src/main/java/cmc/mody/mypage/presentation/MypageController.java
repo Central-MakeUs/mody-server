@@ -19,6 +19,7 @@ import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
+import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
@@ -169,6 +170,9 @@ public class MypageController {
     }
 
     public record WeightCreateRequest(
+        @NotNull(message = "체중 기록일은 필수입니다.")
+        @PastOrPresent(message = "체중 기록일은 오늘 또는 과거 날짜여야 합니다.")
+        LocalDate recordedOn,
         @NotNull(message = "체중은 필수입니다.")
         @DecimalMin(value = "20.0", message = "체중은 20kg 이상이어야 합니다.")
         @DecimalMax(value = "300.0", message = "체중은 300kg 이하여야 합니다.")
@@ -176,7 +180,7 @@ public class MypageController {
         BigDecimal weightKg
     ) {
         public WeightCreateCommand toCommand() {
-            return new WeightCreateCommand(weightKg);
+            return new WeightCreateCommand(recordedOn, weightKg);
         }
     }
 

@@ -128,14 +128,14 @@ public class MypageService {
     public WeightCreateResult createWeight(Long memberId, WeightCreateCommand command) {
         getMember(memberId);
         BigDecimal changeFromPreviousKg = weightRecordRepository
-            .findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(memberId)
+            .findLatestOnOrBeforeRecordedOn(memberId, command.recordedOn())
             .map(previous -> command.weightKg().subtract(previous.getWeightKg()))
             .orElse(BigDecimal.ZERO);
 
         WeightRecord weightRecord = weightRecordRepository.save(new WeightRecord(
             idGenerator.nextId(),
             memberId,
-            LocalDate.now(),
+            command.recordedOn(),
             command.weightKg(),
             changeFromPreviousKg
         ));
@@ -416,7 +416,7 @@ public class MypageService {
     ) {
     }
 
-    public record WeightCreateCommand(BigDecimal weightKg) {
+    public record WeightCreateCommand(LocalDate recordedOn, BigDecimal weightKg) {
     }
 
     public record WeightCreateResult(
