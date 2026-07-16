@@ -50,9 +50,9 @@ PATCH /api/v1/notifications/{notificationId}/read
   "notifications": [
     {
       "notificationId": 1,
-      "type": "COMMENT",
-      "title": "새 댓글",
-      "description": "친구가 기록에 댓글을 남겼어요.",
+      "type": "COMMENT_CREATED",
+      "title": "예은님이 댓글을 남겼어요.",
+      "description": "어떤 이야기를 남겼는지 확인하러 가요!",
       "createdAt": "2026-07-04T10:00:00",
       "read": false
     }

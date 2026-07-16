@@ -105,7 +105,7 @@ public class WeeklyChallengeService {
         Long groupChallengeId,
         WeeklyChallengeProofCreateCommand command
     ) {
-        validateGroupMembership(memberId, groupId);
+        ModyGroup group = validateGroupMembership(memberId, groupId);
         GroupChallenge groupChallenge = getWeeklyGroupChallenge(groupId, groupChallengeId);
         if (groupChallenge.getGroupChallengeStatus() == GroupChallengeStatus.COMPLETED) {
             throw new GeneralException(ErrorStatus.CHALLENGE_ALREADY_COMPLETED);
@@ -125,7 +125,7 @@ public class WeeklyChallengeService {
             command.imageKey(),
             LocalDateTime.now()
         ));
-        completeIfAllMembersProved(groupChallenge);
+        completeIfAllMembersProved(groupChallenge, group.getName());
         return new WeeklyChallengeProofCreateResult(proof.getId(), groupChallenge.getId(), toImageUrl(proof.getImageKey()));
     }
 
@@ -160,7 +160,7 @@ public class WeeklyChallengeService {
         );
     }
 
-    private void completeIfAllMembersProved(GroupChallenge groupChallenge) {
+    private void completeIfAllMembersProved(GroupChallenge groupChallenge, String groupName) {
         long joinedMemberCount = groupMemberRepository.countByGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
             groupChallenge.getGroupId(),
             GroupMemberStatus.JOINED
@@ -175,7 +175,11 @@ public class WeeklyChallengeService {
         }
 
         groupChallenge.complete(LocalDateTime.now());
-        notificationRequestService.requestWeeklyChallengeCompleted(groupChallenge.getGroupId(), groupChallenge.getId());
+        notificationRequestService.requestWeeklyChallengeCompleted(
+            groupChallenge.getGroupId(),
+            groupName,
+            groupChallenge.getId()
+        );
     }
 
     private List<GroupChallenge> getCurrentWeeklyGroupChallenges(Long groupId, List<Challenge> weeklyChallenges) {
@@ -281,9 +285,9 @@ public class WeeklyChallengeService {
             .orElseThrow(() -> new GeneralException(ErrorStatus.MEMBER_NOT_FOUND));
     }
 
-    private void validateGroupMembership(Long memberId, Long groupId) {
+    private ModyGroup validateGroupMembership(Long memberId, Long groupId) {
         validateMember(memberId);
-        modyGroupRepository.findById(groupId)
+        ModyGroup group = modyGroupRepository.findById(groupId)
             .filter(ModyGroup::isActive)
             .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
         boolean joined = groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
@@ -294,6 +298,7 @@ public class WeeklyChallengeService {
         if (!joined) {
             throw new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND);
         }
+        return group;
     }
 
     private String toImageUrl(String imageKey) {

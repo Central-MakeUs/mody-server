@@ -90,9 +90,9 @@ class NotificationControllerDocsTest {
         given(notificationService.getNotifications(1L, null, 20)).willReturn(new NotificationListResult(List.of(
             new NotificationResult(
                 10L,
-                NotificationType.COMMENT,
-                "새 댓글",
-                "친구가 기록에 댓글을 남겼어요.",
+                NotificationType.COMMENT_CREATED,
+                "예은님이 댓글을 남겼어요.",
+                "어떤 이야기를 남겼는지 확인하러 가요!",
                 LocalDateTime.of(2026, 7, 4, 10, 0),
                 false
             )

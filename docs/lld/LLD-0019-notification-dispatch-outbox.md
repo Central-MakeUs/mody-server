@@ -151,14 +151,14 @@ public record NotificationRequestedEvent(
 
 | 타입 | title | body |
 | --- | --- | --- |
-| GROUP_MEMBER_JOINED | ${groupName}에 새 버디가 참여했어요! | ${nickname}님을 환영해주세요! |
-| EXERCISE_REMINDER | 운동할 시간! | 오운완 사진 찍어서 기록해주세요! |
-| MEAL_REMINDER | 식사할 시간! | 오늘은 어떤 식사를 하셨나요? 궁금해요~ |
-| COMMENT_CREATED | 버디가 내 게시물에 코멘트를 달았어요 | 어떤 이야기를 남겼는지 확인하러 가요! |
+| GROUP_MEMBER_JOINED | ${groupName}에 새 버디가 참여했어요! | ${nickname}님을 환영해주세요. |
+| EXERCISE_REMINDER | 운동할 시간! | 오운완 사진 찍어서 기록해주세요. |
+| MEAL_REMINDER | 식사할 시간! | 오늘은 어떤 식사를 하셨나요? 궁금해요! |
+| COMMENT_CREATED | ${nickname}님이 댓글을 남겼어요. | 어떤 이야기를 남겼는지 확인하러 가요! |
 | GROUP_RECORD_STREAK_RISK | ${nickname}님 어디가셨나요 ㅠㅠ | 오늘 기록하지 않으면 그룹 연속 기록이 깨져요! |
-| BUDDY_NUDGE | ${nickname}님이 콕 찔렀어요! | ${nickname}님의 응원을 받고 기록해주세요! |
-| STEP_CHALLENGE_COMPLETED | ${destination}까지 걸어가기 완료! | ${destination}을 걸어서 방문했어요 |
-| WEEKLY_CHALLENGE_COMPLETED | 이번주 챌린지 완료! | 모두 인증해서 이번주 챌린지 1개를 완료했어요 |
+| BUDDY_NUDGE | ${nickname}님이 콕 찔렀어요! | ${nickname}님의 응원을 받고 얼른 기록해주세요! |
+| STEP_CHALLENGE_COMPLETED | ${destination}까지 걸어가기 완료! | ${destination}을 걸어서 방문하다니 멋진걸요? |
+| WEEKLY_CHALLENGE_COMPLETED | 이번 주 챌린지 완료! | ${groupName} 그룹에서 챌린지 1개를 완료했어요! |
 
 필수 payload가 없으면 `NOTIFICATION301` 계열 검증 에러로 처리한다.
 

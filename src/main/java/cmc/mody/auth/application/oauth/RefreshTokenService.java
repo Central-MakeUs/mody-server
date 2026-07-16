@@ -20,10 +20,13 @@ public class RefreshTokenService {
     public void replace(Long memberId, String refreshToken) {
         List<RefreshToken> activeTokens = refreshTokenRepository.findAllByMemberIdAndDeletedAtIsNull(memberId);
         activeTokens.forEach(RefreshToken::delete);
+        List<RefreshToken> duplicatedTokens = refreshTokenRepository
+            .findAllByTokenAndDeletedAtIsNullOrderByCreatedAtDescIdDesc(refreshToken);
+        duplicatedTokens.forEach(RefreshToken::delete);
         refreshTokenRepository.save(new RefreshToken(idGenerator.nextId(), memberId, refreshToken));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public void validate(Long memberId, String refreshToken) {
         RefreshToken token = getActiveRefreshToken(refreshToken);
         if (!token.getMemberId().equals(memberId)) {
@@ -44,7 +47,14 @@ public class RefreshTokenService {
         if (refreshToken == null || refreshToken.isBlank()) {
             throw new GeneralException(ErrorStatus.INVALID_REFRESH_TOKEN);
         }
-        return refreshTokenRepository.findByTokenAndDeletedAtIsNull(refreshToken)
-            .orElseThrow(() -> new GeneralException(ErrorStatus.INVALID_REFRESH_TOKEN));
+        List<RefreshToken> tokens = refreshTokenRepository
+            .findAllByTokenAndDeletedAtIsNullOrderByCreatedAtDescIdDesc(refreshToken);
+        if (tokens.isEmpty()) {
+            throw new GeneralException(ErrorStatus.INVALID_REFRESH_TOKEN);
+        }
+        tokens.stream()
+            .skip(1)
+            .forEach(RefreshToken::delete);
+        return tokens.get(0);
     }
 }

@@ -32,12 +32,13 @@ public class OAuthMemberProcessor {
                 profile.loginType(),
                 profile.providerUserId()
             )
-            .map(account -> buildExistingMemberResult(account.getMemberId()))
+            .map(account -> buildExistingMemberResult(account.getMemberId(), profile))
             .orElseGet(() -> createMember(profile));
     }
 
-    private OAuthMemberResult buildExistingMemberResult(Long memberId) {
+    private OAuthMemberResult buildExistingMemberResult(Long memberId, OAuthProfile profile) {
         Member member = getMember(memberId);
+        member.updateProfileImage(profile.profileImageUrl());
         boolean personalInfoCompleted = member.isPersonalInfoCompleted();
         boolean mainAccessible = personalInfoCompleted && hasJoinedGroup(memberId);
         return new OAuthMemberResult(

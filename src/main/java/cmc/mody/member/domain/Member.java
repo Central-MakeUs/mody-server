@@ -75,6 +75,12 @@ public class Member extends BaseEntity {
         this.birthDate = birthDate;
     }
 
+    public void updateProfileImage(String profileImageKey) {
+        if (profileImageKey != null && !profileImageKey.isBlank()) {
+            this.profileImageKey = profileImageKey;
+        }
+    }
+
     public void updateHealthConnection(boolean connected) {
         this.healthConnectionStatus = connected
             ? HealthConnectionStatus.CONNECTED
