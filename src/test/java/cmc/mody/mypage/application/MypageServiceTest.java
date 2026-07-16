@@ -254,18 +254,24 @@ class MypageServiceTest {
     @DisplayName("체중 추가 시 이전 기록 대비 증감을 저장한다.")
     void createWeight() {
         MypageService service = service();
+        LocalDate recordedOn = LocalDate.of(2026, 6, 28);
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
-        given(weightRecordRepository.findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(1L))
+        given(weightRecordRepository.findLatestOnOrBeforeRecordedOn(1L, recordedOn))
             .willReturn(Optional.of(
-                new WeightRecord(10L, 1L, LocalDate.now().minusDays(1), new BigDecimal("73.00"), BigDecimal.ZERO)
+                new WeightRecord(10L, 1L, recordedOn.minusDays(1), new BigDecimal("73.00"), BigDecimal.ZERO)
             ));
         given(idGenerator.nextId()).willReturn(11L);
         given(weightRecordRepository.save(any(WeightRecord.class))).willAnswer(invocation -> invocation.getArgument(0));
 
-        WeightCreateResult result = service.createWeight(1L, new WeightCreateCommand(new BigDecimal("72.50")));
+        WeightCreateResult result = service.createWeight(
+            1L,
+            new WeightCreateCommand(recordedOn, new BigDecimal("72.50"))
+        );
 
+        assertThat(result.recordedOn()).isEqualTo(recordedOn);
         assertThat(result.changeFromPreviousKg()).isEqualByComparingTo(new BigDecimal("-0.50"));
         then(weightRecordRepository).should().save(weightRecordCaptor.capture());
+        assertThat(weightRecordCaptor.getValue().getRecordedOn()).isEqualTo(recordedOn);
         assertThat(weightRecordCaptor.getValue().getChangeFromPreviousKg()).isEqualByComparingTo("-0.50");
     }
 
@@ -273,13 +279,17 @@ class MypageServiceTest {
     @DisplayName("이전 체중 기록이 없으면 증감 값은 0이다.")
     void createWeightWithoutPreviousRecord() {
         MypageService service = service();
+        LocalDate recordedOn = LocalDate.of(2026, 6, 28);
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
-        given(weightRecordRepository.findTopByMemberIdAndDeletedAtIsNullOrderByRecordedOnDescCreatedAtDesc(1L))
+        given(weightRecordRepository.findLatestOnOrBeforeRecordedOn(1L, recordedOn))
             .willReturn(Optional.empty());
         given(idGenerator.nextId()).willReturn(10L);
         given(weightRecordRepository.save(any(WeightRecord.class))).willAnswer(invocation -> invocation.getArgument(0));
 
-        WeightCreateResult result = service.createWeight(1L, new WeightCreateCommand(new BigDecimal("72.50")));
+        WeightCreateResult result = service.createWeight(
+            1L,
+            new WeightCreateCommand(recordedOn, new BigDecimal("72.50"))
+        );
 
         assertThat(result.changeFromPreviousKg()).isEqualByComparingTo(BigDecimal.ZERO);
     }
