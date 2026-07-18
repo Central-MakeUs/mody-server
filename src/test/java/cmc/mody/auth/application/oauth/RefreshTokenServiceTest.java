@@ -38,7 +38,7 @@ class RefreshTokenServiceTest {
         RefreshToken oldToken = new RefreshToken(1L, 10L, "old-refresh");
         RefreshTokenService service = new RefreshTokenService(idGenerator, refreshTokenRepository);
 
-        given(refreshTokenRepository.findAllByMemberIdAndDeletedAtIsNull(10L)).willReturn(List.of(oldToken));
+        given(refreshTokenRepository.findAllByMemberIdAndDeletedAtIsNullOrderByIdAsc(10L)).willReturn(List.of(oldToken));
         given(refreshTokenRepository.findAllByTokenAndDeletedAtIsNullOrderByCreatedAtDescIdDesc("new-refresh"))
             .willReturn(List.of());
         given(idGenerator.nextId()).willReturn(2L);
@@ -49,6 +49,8 @@ class RefreshTokenServiceTest {
         assertThat(oldToken.getStatus()).isEqualTo(Status.INACTIVE);
         then(refreshTokenRepository).should()
             .findAllByTokenAndDeletedAtIsNullOrderByCreatedAtDescIdDesc("new-refresh");
+        then(refreshTokenRepository).should()
+            .findAllByMemberIdAndDeletedAtIsNullOrderByIdAsc(10L);
         then(refreshTokenRepository).should().save(refreshTokenCaptor.capture());
         assertThat(refreshTokenCaptor.getValue().getId()).isEqualTo(2L);
         assertThat(refreshTokenCaptor.getValue().getToken()).isEqualTo("new-refresh");

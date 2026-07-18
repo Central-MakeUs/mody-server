@@ -401,7 +401,8 @@ class MypageServiceTest {
         StepRecord stepRecord = new StepRecord(23L, 301L, 1L, LocalDate.now(), 1000, StepSource.HEALTH_KIT);
 
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
-        given(refreshTokenRepository.findAllByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(refreshToken));
+        given(refreshTokenRepository.findAllByMemberIdAndDeletedAtIsNullOrderByIdAsc(1L))
+            .willReturn(List.of(refreshToken));
         given(socialAccountRepository.findAllByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(socialAccount));
         given(weightRecordRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(weightRecord));
         given(notificationSettingRepository.findAllByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of(notificationSetting));

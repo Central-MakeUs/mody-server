@@ -265,7 +265,7 @@ public class MypageService {
     }
 
     private void deleteRefreshTokens(Long memberId) {
-        refreshTokenRepository.findAllByMemberIdAndDeletedAtIsNull(memberId)
+        refreshTokenRepository.findAllByMemberIdAndDeletedAtIsNullOrderByIdAsc(memberId)
             .forEach(RefreshToken::delete);
     }
 
