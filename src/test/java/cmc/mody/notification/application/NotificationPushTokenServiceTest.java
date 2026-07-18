@@ -87,7 +87,7 @@ class NotificationPushTokenServiceTest {
     }
 
     @Test
-    @DisplayName("동일 FCM 토큰이 다른 디바이스에 있으면 이전 토큰을 비활성화한다.")
+    @DisplayName("동일 FCM 토큰이 다른 디바이스에 있으면 이전 토큰을 삭제한 뒤 저장한다.")
     void disableDuplicatedFcmToken() {
         NotificationPushTokenService service = service();
         MemberPushToken duplicated = new MemberPushToken(
@@ -108,6 +108,9 @@ class NotificationPushTokenServiceTest {
         service.register(1L, new RegisterPushTokenCommand("ios-device", PushPlatform.IOS, "fcm-token"));
 
         assertThat(duplicated.isEnabled()).isFalse();
+        assertThat(duplicated.isActive()).isFalse();
+        assertThat(duplicated.getDeletedAt()).isNotNull();
+        verify(memberPushTokenRepository).flush();
         verify(memberPushTokenRepository).save(any(MemberPushToken.class));
     }
 

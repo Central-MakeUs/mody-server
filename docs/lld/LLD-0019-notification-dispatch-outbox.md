@@ -240,6 +240,9 @@ FCM token은 회원과 별도 테이블로 관리한다.
 
 동일 기기 재등록 시 `device_id` 기준으로 token을 갱신한다.
 device id를 안정적으로 받을 수 없으면 `fcm_token` 기준으로 중복을 방지한다.
+동일 FCM token이 다른 회원/기기에서 재등록되면 기존 row는 `deleted_at`을 채워 소프트 삭제한 뒤 새 row를 저장한다.
+운영 DB의 unique 제약은 `enabled`가 아니라 `deleted_at IS NULL` 기준의 생성 컬럼으로 관리하므로,
+단순 `enabled=false`만으로는 중복 token 제약을 해소하지 않는다.
 
 ## 10. 알림 생성 트랜잭션
 
