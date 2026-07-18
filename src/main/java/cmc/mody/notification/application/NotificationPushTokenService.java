@@ -27,7 +27,11 @@ public class NotificationPushTokenService {
 
         memberPushTokenRepository.findByFcmTokenAndDeletedAtIsNull(command.fcmToken())
             .filter(found -> !found.belongsTo(memberId, command.deviceId()))
-            .ifPresent(MemberPushToken::disable);
+            .ifPresent(duplicated -> {
+                duplicated.disable();
+                duplicated.delete();
+                memberPushTokenRepository.flush();
+            });
 
         MemberPushToken memberPushToken = memberPushTokenRepository
             .findByMemberIdAndDeviceIdAndDeletedAtIsNull(memberId, command.deviceId())
