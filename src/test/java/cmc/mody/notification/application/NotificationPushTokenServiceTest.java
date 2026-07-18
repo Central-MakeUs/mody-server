@@ -19,6 +19,7 @@ import cmc.mody.notification.infrastructure.repository.MemberPushTokenRepository
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -129,6 +130,36 @@ class NotificationPushTokenServiceTest {
         service.disable(1L, new DisablePushTokenCommand("ios-device"));
 
         assertThat(pushToken.isEnabled()).isFalse();
+    }
+
+    @Test
+    @DisplayName("회원의 모든 푸시 토큰을 비활성화한다.")
+    void disableAllPushTokens() {
+        NotificationPushTokenService service = service();
+        MemberPushToken iosToken = new MemberPushToken(
+            10L,
+            1L,
+            "ios-device",
+            PushPlatform.IOS,
+            "ios-token",
+            LocalDateTime.of(2026, 7, 4, 10, 0)
+        );
+        MemberPushToken androidToken = new MemberPushToken(
+            11L,
+            1L,
+            "android-device",
+            PushPlatform.ANDROID,
+            "android-token",
+            LocalDateTime.of(2026, 7, 4, 10, 0)
+        );
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(memberPushTokenRepository.findByMemberIdAndDeletedAtIsNull(1L))
+            .willReturn(List.of(iosToken, androidToken));
+
+        service.disableAll(1L);
+
+        assertThat(iosToken.isEnabled()).isFalse();
+        assertThat(androidToken.isEnabled()).isFalse();
     }
 
     @Test

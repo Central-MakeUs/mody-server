@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.then;
 import cmc.mody.auth.application.oauth.RefreshTokenService;
 import cmc.mody.auth.application.token.TokenProvider;
 import cmc.mody.auth.presentation.dto.TokenDto;
+import cmc.mody.notification.application.NotificationPushTokenService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,10 +22,13 @@ class AuthServiceTest {
     @Mock
     private RefreshTokenService refreshTokenService;
 
+    @Mock
+    private NotificationPushTokenService notificationPushTokenService;
+
     @Test
     @DisplayName("refresh token을 검증하고 새 토큰으로 교체한다.")
     void reissue() {
-        AuthService service = new AuthService(tokenProvider, refreshTokenService);
+        AuthService service = service();
         given(tokenProvider.getMemberIdByRefreshToken("refresh")).willReturn(1L);
         given(tokenProvider.createToken(1L)).willReturn(TokenDto.of(1L, "new-access", "new-refresh"));
 
@@ -39,11 +43,16 @@ class AuthServiceTest {
     @Test
     @DisplayName("로그아웃 시 refresh token을 비활성화한다.")
     void logout() {
-        AuthService service = new AuthService(tokenProvider, refreshTokenService);
+        AuthService service = service();
         given(tokenProvider.getMemberIdByRefreshToken("refresh")).willReturn(1L);
 
         service.logout("refresh");
 
         then(refreshTokenService).should().delete(1L, "refresh");
+        then(notificationPushTokenService).should().disableAll(1L);
+    }
+
+    private AuthService service() {
+        return new AuthService(tokenProvider, refreshTokenService, notificationPushTokenService);
     }
 }

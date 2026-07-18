@@ -15,7 +15,8 @@
 
 소셜 로그인 후 발급된 access token은 만료될 수 있으므로
 refresh token으로 새 토큰을 발급해야 한다.
-로그아웃 시에는 DB에 저장된 refresh token을 논리 삭제해 이후 재사용을 막는다.
+로그아웃 시에는 DB에 저장된 refresh token을 논리 삭제해 이후 재사용을 막고,
+해당 회원의 활성 FCM token도 함께 비활성화해 로그아웃 이후 알림 수신을 중단한다.
 
 ## 2. 범위
 
@@ -24,11 +25,12 @@ refresh token으로 새 토큰을 발급해야 한다.
 - 토큰 재발급.
 - 로그아웃.
 - refresh token DB 검증, 교체, 삭제.
+- 로그아웃 시 회원의 활성 push token 비활성화.
 - Swagger 성공/예외 응답 명세.
 
 ### Out of scope
 
-- 전체 기기 로그아웃.
+- 다른 기기 세션별 로그아웃 정책.
 - refresh token rotation 탐지 및 계정 보호 정책.
 - Redis 기반 세션 저장소.
 
@@ -62,6 +64,8 @@ POST /api/v1/auth/logout
   - `member_id`, `token`을 저장한다.
   - 재발급 성공 시 기존 활성 refresh token은 논리 삭제하고 새 refresh token을 저장한다.
   - 로그아웃 시 요청 refresh token만 논리 삭제한다.
+- `member_push_token`
+  - 로그아웃 시 해당 회원의 활성 push token을 모두 비활성화한다.
 
 외래키 제약조건은 사용하지 않고 id 값으로만 참조한다.
 
@@ -84,6 +88,7 @@ POST /api/v1/auth/logout
 3. DB에서 동일한 활성 refresh token 목록을 조회한다. 중복 활성 토큰이 있으면 최신 1개만 사용하고 나머지는 논리 삭제한다.
 4. 사용 대상 refresh token의 회원 id가 JWT의 회원 id와 일치하는지 확인한다.
 5. 해당 refresh token을 논리 삭제한다.
+6. 해당 회원의 활성 push token을 모두 비활성화한다.
 
 ## 6. 예외 / 에러 처리
 
@@ -96,6 +101,7 @@ POST /api/v1/auth/logout
 - [x] 저장된 refresh token으로 토큰을 재발급할 수 있다.
 - [x] 재발급 성공 시 기존 refresh token은 비활성화되고 새 refresh token이 저장된다.
 - [x] 로그아웃 시 요청 refresh token은 비활성화된다.
+- [x] 로그아웃 시 해당 회원의 push token은 모두 비활성화된다.
 - [x] 유효하지 않은 refresh token은 `AUTH406`으로 응답한다.
 - [x] Swagger에 성공/예외 응답이 반영된다.
 - [x] `./gradlew build`가 통과한다.

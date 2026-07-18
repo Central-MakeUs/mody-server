@@ -51,6 +51,13 @@ public class NotificationPushTokenService {
             .ifPresent(MemberPushToken::disable);
     }
 
+    @Transactional
+    public void disableAll(Long memberId) {
+        getMember(memberId);
+        memberPushTokenRepository.findByMemberIdAndDeletedAtIsNull(memberId)
+            .forEach(MemberPushToken::disable);
+    }
+
     private Member getMember(Long memberId) {
         return memberRepository.findById(memberId)
             .filter(Member::isActive)

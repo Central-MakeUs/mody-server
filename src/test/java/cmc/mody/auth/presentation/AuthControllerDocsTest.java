@@ -30,6 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 class AuthControllerDocsTest {
     private static final String AUTH_DESCRIPTION = """
         refresh token 기반 세션 관리 API다.
+        로그아웃 시 요청 refresh token을 비활성화하고, 해당 회원의 FCM push token도 모두 비활성화한다.
 
         발생 가능한 예외 코드:
         - AUTH404: 만료된 refresh token
