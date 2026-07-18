@@ -3,6 +3,8 @@ package cmc.mody.auth.presentation;
 import cmc.mody.auth.application.AuthService;
 import cmc.mody.auth.presentation.dto.TokenDto;
 import cmc.mody.common.api.ApiResponse;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,7 +24,7 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ApiResponse<Void> logout(@RequestBody TokenLogoutRequest request) {
+    public ApiResponse<Void> logout(@Valid @RequestBody TokenLogoutRequest request) {
         authService.logout(request.refreshToken());
         return ApiResponse.ok();
     }
@@ -42,6 +44,7 @@ public class AuthController {
     }
 
     public record TokenLogoutRequest(
+        @NotBlank(message = "refresh token은 필수입니다.")
         String refreshToken
     ) {
     }
