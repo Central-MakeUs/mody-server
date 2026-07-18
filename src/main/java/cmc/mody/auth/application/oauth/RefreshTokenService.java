@@ -18,7 +18,7 @@ public class RefreshTokenService {
 
     @Transactional
     public void replace(Long memberId, String refreshToken) {
-        List<RefreshToken> activeTokens = refreshTokenRepository.findAllByMemberIdAndDeletedAtIsNull(memberId);
+        List<RefreshToken> activeTokens = refreshTokenRepository.findAllByMemberIdAndDeletedAtIsNullOrderByIdAsc(memberId);
         activeTokens.forEach(RefreshToken::delete);
         List<RefreshToken> duplicatedTokens = refreshTokenRepository
             .findAllByTokenAndDeletedAtIsNullOrderByCreatedAtDescIdDesc(refreshToken);

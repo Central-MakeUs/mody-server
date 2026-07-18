@@ -81,6 +81,9 @@ POST /api/v1/auth/logout
 6. 기존 회원 활성 refresh token과 새 refresh token 값으로 남아 있는 활성 중복 토큰을 논리 삭제한 뒤 새 refresh token을 저장한다.
 7. 새 access/refresh token을 반환한다.
 
+동시 재발급 요청으로 MySQL deadlock이 발생하면 같은 작업을 제한된 횟수만 재시도한다.
+refresh token 조회는 token 또는 member 단위 활성 row에 쓰기 잠금을 걸고, member 단위 정리는 id 오름차순으로 처리해 잠금 순서를 안정화한다.
+
 ### 로그아웃
 
 1. 요청 본문의 refresh token이 비어 있으면 `AUTH406`을 반환한다.
@@ -111,6 +114,7 @@ POST /api/v1/auth/logout
 - `auth` 패키지에 세션 관리 service가 추가된다.
 - `refresh_token` repository는 token 활성 목록 조회를 사용해 중복 활성 데이터로 인한 단건 조회 예외를 방지한다.
 - `V4__deduplicate_active_refresh_tokens.sql`에서 기존 활성 refresh token 중복을 정리하고 token 조회 인덱스를 추가한다.
+- `V6__add_refresh_token_member_index.sql`에서 member 단위 활성 refresh token 정리에 사용하는 인덱스를 추가한다.
 - 기존 stub Auth API가 DB 기반 구현으로 교체된다.
 
 ## 9. 미결정 사항 (Open Questions)
