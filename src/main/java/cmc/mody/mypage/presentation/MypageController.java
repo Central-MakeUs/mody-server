@@ -3,12 +3,12 @@ package cmc.mody.mypage.presentation;
 import cmc.mody.auth.presentation.support.CurrentMember;
 import cmc.mody.common.api.ApiResponse;
 import cmc.mody.mypage.application.MypageService;
-import cmc.mody.mypage.application.MypageService.ExerciseScheduleUpdateCommand;
 import cmc.mody.mypage.application.MypageService.ProfileUpdateCommand;
-import cmc.mody.mypage.application.MypageService.MealTimeUpdateCommand;
 import cmc.mody.mypage.application.MypageService.NotificationSettingCommand;
+import cmc.mody.mypage.application.MypageService.ScheduleUpdateCommand;
 import cmc.mody.mypage.application.MypageService.WeightCreateCommand;
 import cmc.mody.notification.domain.MealType;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.constraints.AssertTrue;
@@ -113,28 +113,16 @@ public class MypageController {
         return ApiResponse.ok(NotificationSettingResponse.from(result));
     }
 
-    @PutMapping("/exercise-schedules")
-    public ApiResponse<ExerciseScheduleResponse> updateExerciseSchedules(
+    @PutMapping("/schedules")
+    public ApiResponse<ScheduleResponse> updateSchedules(
         @Parameter(hidden = true) @CurrentMember Long memberId,
-        @Valid @RequestBody ExerciseScheduleRequest request
+        @Valid @RequestBody ScheduleRequest request
     ) {
-        MypageService.ExerciseScheduleUpdateResult result = mypageService.updateExerciseSchedules(
+        MypageService.ScheduleUpdateResult result = mypageService.updateSchedules(
             memberId,
             request.toCommand()
         );
-        return ApiResponse.ok(ExerciseScheduleResponse.from(result));
-    }
-
-    @PutMapping("/meal-times")
-    public ApiResponse<MealTimeResponse> updateMealTimes(
-        @Parameter(hidden = true) @CurrentMember Long memberId,
-        @Valid @RequestBody MealTimeRequest request
-    ) {
-        MypageService.MealTimeUpdateResult result = mypageService.updateMealTimes(
-            memberId,
-            request.toCommand()
-        );
-        return ApiResponse.ok(MealTimeResponse.from(result));
+        return ApiResponse.ok(ScheduleResponse.from(result));
     }
 
     @GetMapping("/groups/{groupId}/members")
@@ -283,29 +271,11 @@ public class MypageController {
         }
     }
 
-    public record ExerciseScheduleRequest(
-        @NotNull(message = "운동 일정은 필수입니다.")
-        List<@Valid ExerciseScheduleItem> schedules
-    ) {
-        public ExerciseScheduleUpdateCommand toCommand() {
-            return new ExerciseScheduleUpdateCommand(schedules.stream()
-                .map(ExerciseScheduleItem::toCommand)
-                .toList());
-        }
-    }
-
-    public record ExerciseScheduleResponse(List<ExerciseScheduleItem> schedules) {
-        public static ExerciseScheduleResponse from(MypageService.ExerciseScheduleUpdateResult result) {
-            return new ExerciseScheduleResponse(result.schedules().stream()
-                .map(ExerciseScheduleItem::from)
-                .toList());
-        }
-    }
-
     public record ExerciseScheduleItem(
         @NotNull(message = "운동 요일은 필수입니다.")
         DayOfWeek dayOfWeek,
         @NotNull(message = "운동 시간은 필수입니다.")
+        @JsonFormat(pattern = "HH:mm")
         LocalTime time
     ) {
         public ExerciseScheduleItem {
@@ -323,6 +293,7 @@ public class MypageController {
     public record MealScheduleItem(
         @NotNull(message = "식사 타입은 필수입니다.")
         MealType mealType,
+        @JsonFormat(pattern = "HH:mm")
         LocalTime time,
         boolean skipped
     ) {
@@ -343,10 +314,12 @@ public class MypageController {
         }
     }
 
-    public record MealTimeRequest(
+    public record ScheduleRequest(
         @NotNull(message = "식사 설정은 필수입니다.")
         @Size(min = 3, max = 3, message = "식사 설정은 아침, 점심, 저녁 3개를 입력해주세요.")
-        List<@Valid MealScheduleItem> mealSchedules
+        List<@Valid MealScheduleItem> mealSchedules,
+        @NotNull(message = "운동 일정은 필수입니다.")
+        List<@Valid ExerciseScheduleItem> exerciseSchedules
     ) {
         @JsonIgnore
         @AssertTrue(message = "식사 설정은 아침, 점심, 저녁을 각각 1개씩 입력해주세요.")
@@ -361,18 +334,31 @@ public class MypageController {
             return mealTypes.equals(EnumSet.allOf(MealType.class));
         }
 
-        public MealTimeUpdateCommand toCommand() {
-            return new MealTimeUpdateCommand(mealSchedules.stream()
-                .map(MealScheduleItem::toCommand)
-                .toList());
+        public ScheduleUpdateCommand toCommand() {
+            return new ScheduleUpdateCommand(
+                mealSchedules.stream()
+                    .map(MealScheduleItem::toCommand)
+                    .toList(),
+                exerciseSchedules.stream()
+                    .map(ExerciseScheduleItem::toCommand)
+                    .toList()
+            );
         }
     }
 
-    public record MealTimeResponse(List<MealScheduleItem> mealSchedules) {
-        public static MealTimeResponse from(MypageService.MealTimeUpdateResult result) {
-            return new MealTimeResponse(result.mealSchedules().stream()
-                .map(MealScheduleItem::from)
-                .toList());
+    public record ScheduleResponse(
+        List<MealScheduleItem> mealSchedules,
+        List<ExerciseScheduleItem> exerciseSchedules
+    ) {
+        public static ScheduleResponse from(MypageService.ScheduleUpdateResult result) {
+            return new ScheduleResponse(
+                result.mealSchedules().stream()
+                    .map(MealScheduleItem::from)
+                    .toList(),
+                result.exerciseSchedules().stream()
+                    .map(ExerciseScheduleItem::from)
+                    .toList()
+            );
         }
     }
 

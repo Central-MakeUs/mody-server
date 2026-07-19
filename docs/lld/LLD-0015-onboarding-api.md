@@ -76,9 +76,9 @@ POST /api/v1/onboarding/groups
   - 기록 알림 수신 여부는 API에서 `recordReminderEnabled` 하나로 받고,
     내부 `meal_reminder_enabled`, `exercise_reminder_enabled`에는 같은 값을 저장한다.
   - 댓글/챌린지 알림 수신 여부를 저장한다.
-  - 식사 시간은 통합 프로필 입력 또는 마이페이지 식사 시간 수정 API에서 저장한다.
+  - 식사 시간은 통합 프로필 입력 또는 마이페이지 시간표 수정 API에서 저장한다.
 - `exercise_schedule`
-  - 통합 프로필 입력 시 요일별 운동 일정을 저장한다.
+  - 통합 프로필 입력 또는 마이페이지 시간표 수정 API에서 요일별 운동 일정을 저장한다.
 
 외래키 제약조건은 사용하지 않고 id 값으로만 참조한다.
 

@@ -330,47 +330,37 @@ class MypageServiceTest {
     }
 
     @Test
-    @DisplayName("식사 시간 수정 시 공통 설정 서비스에 위임한다.")
-    void updateMealTimes() {
+    @DisplayName("식사 시간과 운동 일정 수정 시 공통 설정 서비스에 위임한다.")
+    void updateSchedules() {
         MypageService service = service();
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
         given(notificationPreferenceService.updateMealTimes(
             eq(1L),
             any()
         )).willReturn(preferences());
-
-        MypageService.MealTimeUpdateResult result = service.updateMealTimes(
-            1L,
-            new MypageService.MealTimeUpdateCommand(List.of(
-                new MypageService.MealScheduleCommand(MealType.BREAKFAST, LocalTime.of(8, 0), false),
-                new MypageService.MealScheduleCommand(MealType.LUNCH, null, true),
-                new MypageService.MealScheduleCommand(MealType.DINNER, LocalTime.of(18, 0), false)
-            ))
-        );
-
-        assertThat(result.mealSchedules()).hasSize(3);
-    }
-
-    @Test
-    @DisplayName("운동 일정 수정 시 공통 설정 서비스에 위임한다.")
-    void updateExerciseSchedules() {
-        MypageService service = service();
-        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
         given(notificationPreferenceService.updateExerciseSchedules(eq(1L), any()))
             .willReturn(new NotificationPreferenceService.ExerciseScheduleUpdateResult(
                 preferences().exerciseSchedules()
             ));
 
-        MypageService.ExerciseScheduleUpdateResult result = service.updateExerciseSchedules(
+        MypageService.ScheduleUpdateResult result = service.updateSchedules(
             1L,
-            new MypageService.ExerciseScheduleUpdateCommand(List.of(
-                new MypageService.ExerciseScheduleCommand(DayOfWeek.MONDAY, LocalTime.of(7, 30)),
-                new MypageService.ExerciseScheduleCommand(DayOfWeek.WEDNESDAY, LocalTime.of(20, 0)),
-                new MypageService.ExerciseScheduleCommand(DayOfWeek.FRIDAY, LocalTime.of(9, 0))
-            ))
+            new MypageService.ScheduleUpdateCommand(
+                List.of(
+                    new MypageService.MealScheduleCommand(MealType.BREAKFAST, LocalTime.of(8, 0), false),
+                    new MypageService.MealScheduleCommand(MealType.LUNCH, null, true),
+                    new MypageService.MealScheduleCommand(MealType.DINNER, LocalTime.of(18, 0), false)
+                ),
+                List.of(
+                    new MypageService.ExerciseScheduleCommand(DayOfWeek.MONDAY, LocalTime.of(7, 30)),
+                    new MypageService.ExerciseScheduleCommand(DayOfWeek.WEDNESDAY, LocalTime.of(20, 0)),
+                    new MypageService.ExerciseScheduleCommand(DayOfWeek.FRIDAY, LocalTime.of(9, 0))
+                )
+            )
         );
 
-        assertThat(result.schedules()).hasSize(3);
+        assertThat(result.mealSchedules()).hasSize(3);
+        assertThat(result.exerciseSchedules()).hasSize(3);
     }
 
     @Test

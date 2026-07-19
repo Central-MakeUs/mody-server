@@ -56,8 +56,9 @@ PUT /api/v1/onboarding/notifications
 }
 ```
 
-식사 시간은 `POST /api/v1/onboarding/profile` 또는 `PUT /api/v1/mypage/meal-times`에서만 입력한다.
-운동 일정은 `POST /api/v1/onboarding/profile` 또는 `PUT /api/v1/mypage/exercise-schedules`에서만 입력한다.
+식사 시간과 운동 일정은 `POST /api/v1/onboarding/profile` 또는
+`PUT /api/v1/mypage/schedules`에서만 입력한다.
+시간 필드는 요청과 응답 모두 초 단위 없이 `HH:mm` 형식으로 사용한다.
 
 ### 마이페이지 알림 설정
 
@@ -156,7 +157,8 @@ GET /api/v1/notifications?cursor=100&size=20
 ## 5. 처리 흐름
 
 1. 알림 설정 API는 수신 여부만 수정하고 식사 시간/운동 일정은 변경하지 않는다.
-2. 기록 입력 API는 운동 시간/분을 총 분으로 환산해 저장한다.
+2. 마이페이지 시간표 수정 API는 식사 시간과 운동 일정을 하나의 요청으로 함께 변경한다.
+3. 기록 입력 API는 운동 시간/분을 총 분으로 환산해 저장한다.
 3. 날짜별 기록 조회는 페이지에 포함된 작성자별로 기준 날짜까지의 기록 날짜를 조회해 연속 일수를 계산한다.
 4. 기록 상세 진입 시 그룹 기록이면 `record_view_history`를 생성하거나 `last_viewed_at`을 갱신한다.
 5. 그룹원 조회는 `record_view_history.last_viewed_at` 이후의 활성 기록 수를 `unreadRecordCount`로 응답한다.

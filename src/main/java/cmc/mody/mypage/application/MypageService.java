@@ -181,39 +181,27 @@ public class MypageService {
     }
 
     @Transactional
-    public ExerciseScheduleUpdateResult updateExerciseSchedules(
+    public ScheduleUpdateResult updateSchedules(
         Long memberId,
-        ExerciseScheduleUpdateCommand command
+        ScheduleUpdateCommand command
     ) {
         getMember(memberId);
-        NotificationPreferenceService.ExerciseScheduleUpdateResult result =
-            notificationPreferenceService.updateExerciseSchedules(
-                memberId,
-                command.schedules().stream()
-                    .map(schedule -> new NotificationPreferenceService.ExerciseScheduleCommand(
-                        schedule.dayOfWeek(),
-                        schedule.time()
-                    ))
-                    .toList()
-            );
-        return ExerciseScheduleUpdateResult.from(result);
-    }
-
-    @Transactional
-    public MealTimeUpdateResult updateMealTimes(Long memberId, MealTimeUpdateCommand command) {
-        getMember(memberId);
-        NotificationPreferenceService.NotificationPreferenceResult result =
-            notificationPreferenceService.updateMealTimes(
-                memberId,
-                command.mealSchedules().stream()
-                    .map(schedule -> new NotificationPreferenceService.MealScheduleCommand(
-                        schedule.mealType(),
-                        schedule.time(),
-                        schedule.skipped()
-                    ))
-                    .toList()
-            );
-        return MealTimeUpdateResult.from(result);
+        NotificationPreferenceService.NotificationPreferenceResult mealResult =
+            notificationPreferenceService.updateMealTimes(memberId, command.mealSchedules().stream()
+                .map(schedule -> new NotificationPreferenceService.MealScheduleCommand(
+                    schedule.mealType(),
+                    schedule.time(),
+                    schedule.skipped()
+                ))
+                .toList());
+        NotificationPreferenceService.ExerciseScheduleUpdateResult exerciseResult =
+            notificationPreferenceService.updateExerciseSchedules(memberId, command.exerciseSchedules().stream()
+                .map(schedule -> new NotificationPreferenceService.ExerciseScheduleCommand(
+                    schedule.dayOfWeek(),
+                    schedule.time()
+                ))
+                .toList());
+        return ScheduleUpdateResult.from(mealResult, exerciseResult);
     }
 
     @Transactional(readOnly = true)
@@ -498,27 +486,28 @@ public class MypageService {
         }
     }
 
-    public record ExerciseScheduleUpdateCommand(List<ExerciseScheduleCommand> schedules) {
+    public record ScheduleUpdateCommand(
+        List<MealScheduleCommand> mealSchedules,
+        List<ExerciseScheduleCommand> exerciseSchedules
+    ) {
     }
 
-    public record ExerciseScheduleUpdateResult(List<ExerciseScheduleResult> schedules) {
-        public static ExerciseScheduleUpdateResult from(
-            NotificationPreferenceService.ExerciseScheduleUpdateResult result
+    public record ScheduleUpdateResult(
+        List<MealScheduleResult> mealSchedules,
+        List<ExerciseScheduleResult> exerciseSchedules
+    ) {
+        public static ScheduleUpdateResult from(
+            NotificationPreferenceService.NotificationPreferenceResult mealResult,
+            NotificationPreferenceService.ExerciseScheduleUpdateResult exerciseResult
         ) {
-            return new ExerciseScheduleUpdateResult(result.schedules().stream()
-                .map(ExerciseScheduleResult::from)
-                .toList());
-        }
-    }
-
-    public record MealTimeUpdateCommand(List<MealScheduleCommand> mealSchedules) {
-    }
-
-    public record MealTimeUpdateResult(List<MealScheduleResult> mealSchedules) {
-        public static MealTimeUpdateResult from(NotificationPreferenceService.NotificationPreferenceResult result) {
-            return new MealTimeUpdateResult(result.mealSchedules().stream()
-                .map(MealScheduleResult::from)
-                .toList());
+            return new ScheduleUpdateResult(
+                mealResult.mealSchedules().stream()
+                    .map(MealScheduleResult::from)
+                    .toList(),
+                exerciseResult.schedules().stream()
+                    .map(ExerciseScheduleResult::from)
+                    .toList()
+            );
         }
     }
 

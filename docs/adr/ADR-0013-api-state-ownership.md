@@ -19,8 +19,8 @@
 
 상태별 소유 API를 하나로 고정한다.
 
-- 식사 시간과 `먹지 않음` 여부는 `profile` 초기 입력과 `mypage/meal-times`가 소유한다.
-- 운동 요일/시간 일정은 `profile` 초기 입력과 `mypage/exercise-schedules`가 소유한다.
+- 식사 시간과 `먹지 않음` 여부는 `profile` 초기 입력과 `mypage/schedules`가 소유한다.
+- 운동 요일/시간 일정은 `profile` 초기 입력과 `mypage/schedules`가 소유한다.
 - 식사/운동 기록 리마인더 수신 여부는 `recordReminderEnabled` 하나로 노출한다.
 - 알림 설정 API는 수신 여부만 수정하고 식사 시간이나 운동 일정을 변경하지 않는다.
 - 그룹 페이지의 그룹원 조회는 피드 진입에 필요한 표시 정보를 소유한다.
