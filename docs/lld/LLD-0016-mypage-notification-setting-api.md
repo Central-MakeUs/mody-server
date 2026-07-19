@@ -22,8 +22,7 @@
 
 - 알림 설정 조회.
 - 알림 on/off 수정.
-- 식사 시간 및 먹지 않음 수정.
-- 운동 요일/시간 일정 수정.
+- 식사 시간 및 운동 요일/시간 일정 통합 수정.
 - 온보딩 설정 저장 로직 공통화.
 - Swagger 성공/주요 예외 응답 명세.
 
@@ -41,8 +40,7 @@
 ```http
 GET /api/v1/mypage/notification-settings
 PATCH /api/v1/mypage/notification-settings
-PUT /api/v1/mypage/meal-times
-PUT /api/v1/mypage/exercise-schedules
+PUT /api/v1/mypage/schedules
 ```
 
 알림 설정 수정 요청:
@@ -55,7 +53,7 @@ PUT /api/v1/mypage/exercise-schedules
 }
 ```
 
-식사 시간 수정 요청:
+식사 시간 및 운동 일정 수정 요청:
 
 ```json
 {
@@ -63,21 +61,16 @@ PUT /api/v1/mypage/exercise-schedules
     {"mealType": "BREAKFAST", "time": "08:00", "skipped": false},
     {"mealType": "LUNCH", "time": null, "skipped": true},
     {"mealType": "DINNER", "time": "18:00", "skipped": false}
-  ]
-}
-```
-
-운동 일정 수정 요청:
-
-```json
-{
-  "schedules": [
+  ],
+  "exerciseSchedules": [
     {"dayOfWeek": "MONDAY", "time": "07:30"},
     {"dayOfWeek": "WEDNESDAY", "time": "20:00"},
     {"dayOfWeek": "FRIDAY", "time": "09:00"}
   ]
 }
 ```
+
+시간 필드는 요청과 응답 모두 초 단위 없이 `HH:mm` 형식으로 사용한다.
 
 ## 4. 데이터 모델
 
@@ -97,8 +90,9 @@ PUT /api/v1/mypage/exercise-schedules
 2. 마이페이지 서비스는 활성 회원인지 검증한다.
 3. `NotificationPreferenceService`가 알림 설정과 운동 일정을 조회/저장한다.
 4. 알림 on/off 수정은 시간표를 변경하지 않고 기록 알림 수신 여부를 하나의 값으로 저장한다.
-5. 식사 시간 수정은 아침/점심/저녁 3개를 모두 받아 `notification_setting`의 식사 시간만 갱신한다.
-6. 운동 일정 수정은 기존 활성 운동 일정을 soft delete 후 새 일정 목록을 저장한다.
+5. 시간표 수정은 아침/점심/저녁 3개와 운동 일정 목록을 하나의 요청으로 받는다.
+6. 식사 설정은 `notification_setting`의 식사 시간과 먹지 않음 여부를 갱신한다.
+7. 운동 일정은 기존 활성 운동 일정을 soft delete 후 새 일정 목록을 저장한다.
 
 ## 6. 검증 규칙
 
@@ -107,6 +101,7 @@ PUT /api/v1/mypage/exercise-schedules
 - `skipped == false`이면 식사 시간은 필수다.
 - 운동 일정은 최소 개수 제한이 없으며, 일정이 없으면 빈 배열로 입력한다.
 - 운동 일정은 `dayOfWeek`와 `time`을 모두 입력한다.
+- 식사 시간과 운동 시간은 `HH:mm` 형식으로 입력하고 응답도 `HH:mm`으로 내려간다.
 
 ## 7. 예외 / 에러 처리
 
