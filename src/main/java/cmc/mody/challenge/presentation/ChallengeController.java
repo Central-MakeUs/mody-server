@@ -6,9 +6,14 @@ import cmc.mody.challenge.application.StepChallengeService;
 import cmc.mody.challenge.application.WeeklyChallengeService;
 import cmc.mody.common.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Parameter;
+import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import java.math.BigDecimal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -367,6 +372,7 @@ public class ChallengeController {
     public record WeeklyChallengeProofResponse(
         Long proofId,
         String imageUrl,
+        ImageCropRegionResponse imageCropRegion,
         Long memberId,
         String nickname,
         String profileImageUrl
@@ -375,6 +381,7 @@ public class ChallengeController {
             return new WeeklyChallengeProofResponse(
                 result.proofId(),
                 result.imageUrl(),
+                ImageCropRegionResponse.from(result.imageCropRegion()),
                 result.memberId(),
                 result.nickname(),
                 result.profileImageUrl()
@@ -384,24 +391,94 @@ public class ChallengeController {
 
     public record WeeklyChallengeProofCreateRequest(
         @NotBlank(message = "이미지 key는 필수입니다.")
-        String imageKey
+        String imageKey,
+        @Valid
+        ImageCropRegionRequest imageCropRegion
     ) {
         public WeeklyChallengeService.WeeklyChallengeProofCreateCommand toCommand() {
-            return new WeeklyChallengeService.WeeklyChallengeProofCreateCommand(imageKey);
+            return new WeeklyChallengeService.WeeklyChallengeProofCreateCommand(
+                imageKey,
+                imageCropRegion == null ? null : imageCropRegion.toCommand()
+            );
         }
     }
 
-    public record WeeklyChallengeProofCreateResponse(Long proofId, Long groupChallengeId, String imageUrl) {
+    public record WeeklyChallengeProofCreateResponse(
+        Long proofId,
+        Long groupChallengeId,
+        String imageUrl,
+        ImageCropRegionResponse imageCropRegion
+    ) {
         public static WeeklyChallengeProofCreateResponse from(
             WeeklyChallengeService.WeeklyChallengeProofCreateResult result
         ) {
-            return new WeeklyChallengeProofCreateResponse(result.proofId(), result.groupChallengeId(), result.imageUrl());
+            return new WeeklyChallengeProofCreateResponse(
+                result.proofId(),
+                result.groupChallengeId(),
+                result.imageUrl(),
+                ImageCropRegionResponse.from(result.imageCropRegion())
+            );
         }
     }
 
-    public record WeeklyChallengeShareResponse(String imageUrl, int rows, int columns) {
+    public record WeeklyChallengeShareResponse(
+        String imageUrl,
+        ImageCropRegionResponse imageCropRegion,
+        int rows,
+        int columns
+    ) {
         public static WeeklyChallengeShareResponse from(WeeklyChallengeService.WeeklyChallengeShareResult result) {
-            return new WeeklyChallengeShareResponse(result.imageUrl(), result.rows(), result.columns());
+            return new WeeklyChallengeShareResponse(
+                result.imageUrl(),
+                ImageCropRegionResponse.from(result.imageCropRegion()),
+                result.rows(),
+                result.columns()
+            );
+        }
+    }
+
+    public record ImageCropRegionRequest(
+        @NotNull(message = "이미지 관심 영역 x 좌표는 필수입니다.")
+        @DecimalMin(value = "0.0", message = "이미지 관심 영역 x 좌표는 0 이상이어야 합니다.")
+        @DecimalMax(value = "1.0", message = "이미지 관심 영역 x 좌표는 1 이하여야 합니다.")
+        @Digits(integer = 1, fraction = 17, message = "이미지 관심 영역 x 좌표는 정규화 소수로 입력해주세요.")
+        BigDecimal x,
+        @NotNull(message = "이미지 관심 영역 y 좌표는 필수입니다.")
+        @DecimalMin(value = "0.0", message = "이미지 관심 영역 y 좌표는 0 이상이어야 합니다.")
+        @DecimalMax(value = "1.0", message = "이미지 관심 영역 y 좌표는 1 이하여야 합니다.")
+        @Digits(integer = 1, fraction = 17, message = "이미지 관심 영역 y 좌표는 정규화 소수로 입력해주세요.")
+        BigDecimal y,
+        @NotNull(message = "이미지 관심 영역 width는 필수입니다.")
+        @DecimalMin(value = "0.0", inclusive = false, message = "이미지 관심 영역 width는 0보다 커야 합니다.")
+        @DecimalMax(value = "1.0", message = "이미지 관심 영역 width는 1 이하여야 합니다.")
+        @Digits(integer = 1, fraction = 17, message = "이미지 관심 영역 width는 정규화 소수로 입력해주세요.")
+        BigDecimal width,
+        @NotNull(message = "이미지 관심 영역 height는 필수입니다.")
+        @DecimalMin(value = "0.0", inclusive = false, message = "이미지 관심 영역 height는 0보다 커야 합니다.")
+        @DecimalMax(value = "1.0", message = "이미지 관심 영역 height는 1 이하여야 합니다.")
+        @Digits(integer = 1, fraction = 17, message = "이미지 관심 영역 height는 정규화 소수로 입력해주세요.")
+        BigDecimal height
+    ) {
+        @AssertTrue(message = "이미지 관심 영역은 원본 이미지의 정규화 좌표 범위를 벗어날 수 없습니다.")
+        public boolean isRegionInsideImage() {
+            if (x == null || y == null || width == null || height == null) {
+                return true;
+            }
+            return x.add(width).compareTo(BigDecimal.ONE) <= 0
+                && y.add(height).compareTo(BigDecimal.ONE) <= 0;
+        }
+
+        public WeeklyChallengeService.ImageCropRegionCommand toCommand() {
+            return new WeeklyChallengeService.ImageCropRegionCommand(x, y, width, height);
+        }
+    }
+
+    public record ImageCropRegionResponse(BigDecimal x, BigDecimal y, BigDecimal width, BigDecimal height) {
+        public static ImageCropRegionResponse from(WeeklyChallengeService.ImageCropRegionResult result) {
+            if (result == null) {
+                return null;
+            }
+            return new ImageCropRegionResponse(result.x(), result.y(), result.width(), result.height());
         }
     }
 }

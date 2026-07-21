@@ -5,6 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -30,14 +31,44 @@ public class ChallengeProof extends BaseEntity {
     @Column(name = "image_key", nullable = false, length = 500)
     private String imageKey;
 
+    @Column(name = "crop_x", precision = 19, scale = 17)
+    private BigDecimal cropX;
+
+    @Column(name = "crop_y", precision = 19, scale = 17)
+    private BigDecimal cropY;
+
+    @Column(name = "crop_width", precision = 19, scale = 17)
+    private BigDecimal cropWidth;
+
+    @Column(name = "crop_height", precision = 19, scale = 17)
+    private BigDecimal cropHeight;
+
     @Column(name = "uploaded_at", nullable = false)
     private LocalDateTime uploadedAt;
 
     public ChallengeProof(Long id, Long groupChallengeId, Long memberId, String imageKey, LocalDateTime uploadedAt) {
+        this(id, groupChallengeId, memberId, imageKey, null, null, null, null, uploadedAt);
+    }
+
+    public ChallengeProof(
+        Long id,
+        Long groupChallengeId,
+        Long memberId,
+        String imageKey,
+        BigDecimal cropX,
+        BigDecimal cropY,
+        BigDecimal cropWidth,
+        BigDecimal cropHeight,
+        LocalDateTime uploadedAt
+    ) {
         super(id);
         this.groupChallengeId = groupChallengeId;
         this.memberId = memberId;
         this.imageKey = imageKey;
+        this.cropX = cropX;
+        this.cropY = cropY;
+        this.cropWidth = cropWidth;
+        this.cropHeight = cropHeight;
         this.uploadedAt = uploadedAt;
     }
 }

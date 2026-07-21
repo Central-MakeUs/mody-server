@@ -10,6 +10,8 @@ import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProo
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProofCreateResult;
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProofListResult;
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeListResult;
+import cmc.mody.challenge.application.WeeklyChallengeService.ImageCropRegionCommand;
+import cmc.mody.challenge.application.WeeklyChallengeService.ImageCropRegionResult;
 import cmc.mody.challenge.domain.Challenge;
 import cmc.mody.challenge.domain.ChallengeProof;
 import cmc.mody.challenge.domain.ChallengeType;
@@ -172,16 +174,34 @@ class WeeklyChallengeServiceTest {
             1L,
             10L,
             100L,
-            new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg")
+            new WeeklyChallengeProofCreateCommand(
+                "weekly-challenges/1/proof.jpg",
+                new ImageCropRegionCommand(
+                    new BigDecimal("0.22985781990521326"),
+                    new BigDecimal("0.3815165876777251"),
+                    new BigDecimal("0.5402843601895736"),
+                    new BigDecimal("0.23696682464454974")
+                )
+            )
         );
 
         then(challengeProofRepository).should().save(proofCaptor.capture());
         assertThat(proofCaptor.getValue().getGroupChallengeId()).isEqualTo(100L);
         assertThat(proofCaptor.getValue().getMemberId()).isEqualTo(1L);
+        assertThat(proofCaptor.getValue().getCropX()).isEqualByComparingTo("0.22985781990521326");
+        assertThat(proofCaptor.getValue().getCropY()).isEqualByComparingTo("0.3815165876777251");
+        assertThat(proofCaptor.getValue().getCropWidth()).isEqualByComparingTo("0.5402843601895736");
+        assertThat(proofCaptor.getValue().getCropHeight()).isEqualByComparingTo("0.23696682464454974");
         assertThat(result).isEqualTo(new WeeklyChallengeProofCreateResult(
             200L,
             100L,
-            "https://storage.example.com/weekly-challenges/1/proof.jpg"
+            "https://storage.example.com/weekly-challenges/1/proof.jpg",
+            new ImageCropRegionResult(
+                new BigDecimal("0.22985781990521326"),
+                new BigDecimal("0.3815165876777251"),
+                new BigDecimal("0.5402843601895736"),
+                new BigDecimal("0.23696682464454974")
+            )
         ));
     }
 
@@ -208,7 +228,7 @@ class WeeklyChallengeServiceTest {
             1L,
             10L,
             100L,
-            new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg")
+            new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg", null)
         );
 
         assertThat(groupChallenge.getGroupChallengeStatus()).isEqualTo(GroupChallengeStatus.COMPLETED);
@@ -232,7 +252,7 @@ class WeeklyChallengeServiceTest {
             1L,
             10L,
             100L,
-            new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg")
+            new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg", null)
         ))
             .isInstanceOfSatisfying(GeneralException.class, exception ->
                 assertThat(exception.getStatus()).isEqualTo(ErrorStatus.CHALLENGE_ALREADY_COMPLETED));
@@ -268,6 +288,7 @@ class WeeklyChallengeServiceTest {
         then(imageObjectStorage).should().write("weekly-challenge-shares/10/100.jpg", new byte[]{3}, "image/jpeg");
         assertThat(result).isEqualTo(new WeeklyChallengeService.WeeklyChallengeShareResult(
             "https://storage.example.com/weekly-challenge-shares/10/100.jpg",
+            null,
             1,
             2
         ));
@@ -350,7 +371,7 @@ class WeeklyChallengeServiceTest {
             1L,
             10L,
             100L,
-            new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg")
+            new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg", null)
         ))
             .isInstanceOfSatisfying(GeneralException.class, exception ->
                 assertThat(exception.getStatus()).isEqualTo(ErrorStatus.CHALLENGE_PROOF_ALREADY_EXISTS));
