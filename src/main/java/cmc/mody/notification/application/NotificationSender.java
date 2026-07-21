@@ -20,15 +20,18 @@ public class NotificationSender {
     private final NotificationRepository notificationRepository;
     private final MemberPushTokenRepository memberPushTokenRepository;
     private final PushNotificationClient pushNotificationClient;
+    private final NotificationFailureAlertService notificationFailureAlertService;
 
     public NotificationSender(
         NotificationRepository notificationRepository,
         MemberPushTokenRepository memberPushTokenRepository,
-        PushNotificationClient pushNotificationClient
+        PushNotificationClient pushNotificationClient,
+        NotificationFailureAlertService notificationFailureAlertService
     ) {
         this.notificationRepository = notificationRepository;
         this.memberPushTokenRepository = memberPushTokenRepository;
         this.pushNotificationClient = pushNotificationClient;
+        this.notificationFailureAlertService = notificationFailureAlertService;
     }
 
     @Async("notificationExecutor")
@@ -87,6 +90,7 @@ public class NotificationSender {
         }
 
         notification.markFailed(exception.getMessage());
+        notificationFailureAlertService.notifyPermanentFailure(notification, exception);
         log.warn("Notification push failed permanently. notificationId={}", notification.getId(), exception);
     }
 

@@ -22,7 +22,7 @@
 - 이번 주 진행 중인 주간 챌린지 목록 조회.
 - 주간 챌린지 상세 조회.
 - 그룹원 인증 이미지 조회.
-- 주간 챌린지 인증 imageKey 저장.
+- 주간 챌린지 인증 imageKey와 이미지 crop region 저장.
 - 그룹 구성원 권한 검증.
 - 중복 인증 방지.
 - Swagger 성공/예외 응답 문서화.
@@ -39,6 +39,8 @@
 - `challenge`: 주간 챌린지 마스터. `challengeType = PHOTO`.
 - `group_challenge`: 그룹에서 특정 기간 동안 진행하는 챌린지 인스턴스.
 - `challenge_proof`: 그룹 챌린지에 대한 회원별 사진 인증 기록.
+  - `image_key`: 원본 이미지 key.
+  - `crop_x`, `crop_y`, `crop_width`, `crop_height`: 원본 이미지 기준 관심 영역 정규화 좌표. 없으면 null.
 
 현재 구현은 DB에 이미 생성된 `PHOTO` 타입 `group_challenge`를 조회한다.
 서비스가 주간 챌린지를 자동으로 배정하거나 생성하지 않는다.
@@ -76,7 +78,7 @@ GET /api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs
 1. 요청 회원이 그룹에 참여 중인지 확인한다.
 2. `groupChallengeId`가 요청 그룹의 PHOTO 그룹 챌린지인지 확인한다.
 3. 인증 이미지를 업로드 순서대로 조회한다.
-4. 각 인증에 대해 이미지 URL, 회원 id, 그룹 내 닉네임, 프로필 이미지 URL을 반환한다.
+4. 각 인증에 대해 이미지 URL, 이미지 관심 영역 좌표, 회원 id, 그룹 내 닉네임, 프로필 이미지 URL을 반환한다.
 
 ### 주간 챌린지 인증 업로드
 
@@ -88,14 +90,21 @@ POST /api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs
 
 ```json
 {
-  "imageKey": "weekly-challenges/1/2026/07/4111584723969.jpg"
+  "imageKey": "weekly-challenges/1/2026/07/4111584723969.jpg",
+  "imageCropRegion": {
+    "x": 0.22985781990521326,
+    "y": 0.3815165876777251,
+    "width": 0.5402843601895736,
+    "height": 0.23696682464454974
+  }
 }
 ```
 
 1. 요청 회원이 그룹에 참여 중인지 확인한다.
 2. `groupChallengeId`가 요청 그룹의 PHOTO 그룹 챌린지인지 확인한다.
 3. 같은 회원이 같은 그룹 챌린지에 이미 인증했다면 `CHALLENGE304`를 반환한다.
-4. 인증 기록을 저장하고 인증 id, 그룹 챌린지 id, 이미지 URL을 반환한다.
+4. `imageCropRegion`이 있으면 `x/y/width/height`가 0~1 정규화 좌표이고 원본 범위를 넘지 않는지 검증한다.
+5. 인증 기록을 저장하고 인증 id, 그룹 챌린지 id, 이미지 URL, 이미지 관심 영역 좌표를 반환한다.
 
 ## 5. 예외 코드
 
@@ -112,7 +121,8 @@ POST /api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs
 - 이번 주 진행 중인 PHOTO 그룹 챌린지와 참여 현황을 조회한다.
 - PHOTO 챌린지 상세 정보를 조회한다.
 - 그룹원 인증 이미지와 회원 표시 정보를 조회한다.
-- 주간 챌린지 인증 imageKey를 저장한다.
+- 주간 챌린지 인증 imageKey와 imageCropRegion을 저장한다.
+- 주간 챌린지 인증 이미지 응답에는 imageCropRegion을 포함하고, 값이 없으면 null로 반환한다.
 - 이미 인증한 회원은 같은 그룹 챌린지에 중복 인증할 수 없다.
 - Swagger에 성공/예외 응답이 생성된다.
 

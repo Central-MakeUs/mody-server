@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 
 import cmc.mody.common.id.IdGenerator;
 import cmc.mody.notification.application.NotificationDispatchProperties;
+import cmc.mody.notification.application.NotificationLinkResolver;
 import cmc.mody.notification.application.NotificationRecipientResolver;
 import cmc.mody.notification.application.NotificationTemplate;
 import cmc.mody.notification.application.NotificationTemplateRenderer;
@@ -37,6 +38,9 @@ class NotificationRequestedEventListenerTest {
     private NotificationTemplateRenderer templateRenderer;
 
     @Mock
+    private NotificationLinkResolver linkResolver;
+
+    @Mock
     private NotificationRepository notificationRepository;
 
     @Captor
@@ -52,6 +56,7 @@ class NotificationRequestedEventListenerTest {
             .willReturn(new NotificationTemplate("댓글", "댓글이 달렸어요"));
         given(notificationRepository.existsByDedupeKeyAndDeletedAtIsNull("COMMENT_CREATED:RECORD:10:1"))
             .willReturn(false);
+        given(linkResolver.resolve(event)).willReturn("/records/10");
         given(idGenerator.nextId()).willReturn(100L);
 
         listener.createNotifications(event);
@@ -61,6 +66,7 @@ class NotificationRequestedEventListenerTest {
         assertThat(notification.getId()).isEqualTo(100L);
         assertThat(notification.getReceiverMemberId()).isEqualTo(1L);
         assertThat(notification.getNotificationType()).isEqualTo(NotificationType.COMMENT_CREATED);
+        assertThat(notification.getLink()).isEqualTo("/records/10");
         assertThat(notification.getDeliveryStatus()).isEqualTo(NotificationDeliveryStatus.PENDING);
         assertThat(notification.getDedupeKey()).isEqualTo("COMMENT_CREATED:RECORD:10:1");
     }
@@ -102,6 +108,7 @@ class NotificationRequestedEventListenerTest {
         given(notificationRepository.existsByDedupeKeyAndDeletedAtIsNull(
             "GROUP_RECORD_STREAK_RISK:DATE:10:1:2026-07-04"
         )).willReturn(false);
+        given(linkResolver.resolve(event)).willReturn("/groups/10/home");
         given(idGenerator.nextId()).willReturn(101L);
 
         listener.createNotifications(event);
@@ -119,6 +126,7 @@ class NotificationRequestedEventListenerTest {
             properties,
             recipientResolver,
             templateRenderer,
+            linkResolver,
             notificationRepository
         );
     }

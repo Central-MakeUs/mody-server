@@ -37,10 +37,13 @@ import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProo
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProofResult;
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeShareResult;
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeSummaryResult;
+import cmc.mody.challenge.application.WeeklyChallengeService.ImageCropRegionCommand;
+import cmc.mody.challenge.application.WeeklyChallengeService.ImageCropRegionResult;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.config.WebConfig;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -661,6 +664,7 @@ class ChallengeControllerDocsTest {
                 new WeeklyChallengeProofResult(
                     1L,
                     "https://storage.example.com/weekly-challenges/1/proof.jpg",
+                    imageCropRegionResult(),
                     1L,
                     "민석",
                     "https://storage.example.com/profiles/member-1.jpg"
@@ -678,6 +682,21 @@ class ChallengeControllerDocsTest {
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.proofs[].proofId").type(JsonFieldType.NUMBER).description("인증 id"),
                         fieldWithPath("result.proofs[].imageUrl").type(JsonFieldType.STRING).description("인증 이미지 URL"),
+                        fieldWithPath("result.proofs[].imageCropRegion")
+                            .type(JsonFieldType.OBJECT)
+                            .description("원본 이미지 기준 관심 영역 정규화 좌표. 없으면 null"),
+                        fieldWithPath("result.proofs[].imageCropRegion.x")
+                            .type(JsonFieldType.NUMBER)
+                            .description("좌상단 x 좌표. 0~1 정규화 값"),
+                        fieldWithPath("result.proofs[].imageCropRegion.y")
+                            .type(JsonFieldType.NUMBER)
+                            .description("좌상단 y 좌표. 0~1 정규화 값"),
+                        fieldWithPath("result.proofs[].imageCropRegion.width")
+                            .type(JsonFieldType.NUMBER)
+                            .description("관심 영역 width. 0~1 정규화 값"),
+                        fieldWithPath("result.proofs[].imageCropRegion.height")
+                            .type(JsonFieldType.NUMBER)
+                            .description("관심 영역 height. 0~1 정규화 값"),
                         fieldWithPath("result.proofs[].memberId").type(JsonFieldType.NUMBER).description("회원 id"),
                         fieldWithPath("result.proofs[].nickname").type(JsonFieldType.STRING).description("닉네임"),
                         fieldWithPath("result.proofs[].profileImageUrl").type(JsonFieldType.STRING)
@@ -694,11 +713,15 @@ class ChallengeControllerDocsTest {
             1L,
             1L,
             1L,
-            new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg")
+            new WeeklyChallengeProofCreateCommand(
+                "weekly-challenges/1/proof.jpg",
+                imageCropRegionCommand()
+            )
         )).willReturn(new WeeklyChallengeProofCreateResult(
             10L,
             1L,
-            "https://storage.example.com/weekly-challenges/1/proof.jpg"
+            "https://storage.example.com/weekly-challenges/1/proof.jpg",
+            imageCropRegionResult()
         ));
 
         mockMvc.perform(post("/api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs", 1L, 1L)
@@ -706,7 +729,13 @@ class ChallengeControllerDocsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "imageKey": "weekly-challenges/1/proof.jpg"
+                      "imageKey": "weekly-challenges/1/proof.jpg",
+                      "imageCropRegion": {
+                        "x": 0.22985781990521326,
+                        "y": 0.3815165876777251,
+                        "width": 0.5402843601895736,
+                        "height": 0.23696682464454974
+                      }
                     }
                     """))
             .andExpect(status().isCreated())
@@ -714,7 +743,23 @@ class ChallengeControllerDocsTest {
                 requestFields(
                     fieldWithPath("imageKey")
                         .type(JsonFieldType.STRING)
-                        .description("weekly-challenge 도메인으로 발급받은 업로드 이미지 key")
+                        .description("weekly-challenge 도메인으로 발급받은 업로드 이미지 key"),
+                    fieldWithPath("imageCropRegion")
+                        .type(JsonFieldType.OBJECT)
+                        .optional()
+                        .description("원본 이미지 기준 관심 영역 정규화 좌표. 생략 가능"),
+                    fieldWithPath("imageCropRegion.x")
+                        .type(JsonFieldType.NUMBER)
+                        .description("좌상단 x 좌표. 0~1 정규화 값"),
+                    fieldWithPath("imageCropRegion.y")
+                        .type(JsonFieldType.NUMBER)
+                        .description("좌상단 y 좌표. 0~1 정규화 값"),
+                    fieldWithPath("imageCropRegion.width")
+                        .type(JsonFieldType.NUMBER)
+                        .description("관심 영역 width. 0~1 정규화 값"),
+                    fieldWithPath("imageCropRegion.height")
+                        .type(JsonFieldType.NUMBER)
+                        .description("관심 영역 height. 0~1 정규화 값")
                 ),
                 resource(ResourceSnippetParameters.builder()
                     .tag("Weekly Challenge")
@@ -724,7 +769,22 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.proofId").type(JsonFieldType.NUMBER).description("인증 id"),
                         fieldWithPath("result.groupChallengeId").type(JsonFieldType.NUMBER)
                             .description("그룹 챌린지 id"),
-                        fieldWithPath("result.imageUrl").type(JsonFieldType.STRING).description("인증 이미지 URL")
+                        fieldWithPath("result.imageUrl").type(JsonFieldType.STRING).description("인증 이미지 URL"),
+                        fieldWithPath("result.imageCropRegion")
+                            .type(JsonFieldType.OBJECT)
+                            .description("원본 이미지 기준 관심 영역 정규화 좌표. 없으면 null"),
+                        fieldWithPath("result.imageCropRegion.x")
+                            .type(JsonFieldType.NUMBER)
+                            .description("좌상단 x 좌표. 0~1 정규화 값"),
+                        fieldWithPath("result.imageCropRegion.y")
+                            .type(JsonFieldType.NUMBER)
+                            .description("좌상단 y 좌표. 0~1 정규화 값"),
+                        fieldWithPath("result.imageCropRegion.width")
+                            .type(JsonFieldType.NUMBER)
+                            .description("관심 영역 width. 0~1 정규화 값"),
+                        fieldWithPath("result.imageCropRegion.height")
+                            .type(JsonFieldType.NUMBER)
+                            .description("관심 영역 height. 0~1 정규화 값")
                     ))
                     .build())
             ));
@@ -739,7 +799,7 @@ class ChallengeControllerDocsTest {
                 1L,
                 1L,
                 1L,
-                new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg")
+                new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg", null)
             );
 
         mockMvc.perform(post("/api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs", 1L, 1L)
@@ -763,7 +823,7 @@ class ChallengeControllerDocsTest {
                 1L,
                 1L,
                 1L,
-                new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg")
+                new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg", null)
             );
 
         mockMvc.perform(post("/api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs", 1L, 1L)
@@ -826,6 +886,7 @@ class ChallengeControllerDocsTest {
         given(weeklyChallengeService.shareWeeklyChallenge(1L, 1L, 1L))
             .willReturn(new WeeklyChallengeShareResult(
                 "https://storage.example.com/weekly-challenge-shares/1/1.jpg",
+                null,
                 2,
                 2
             ));
@@ -840,6 +901,9 @@ class ChallengeControllerDocsTest {
                     .description(WEEKLY_CHALLENGE_DESCRIPTION)
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.imageUrl").type(JsonFieldType.STRING).description("공유 이미지 URL"),
+                        fieldWithPath("result.imageCropRegion")
+                            .type(JsonFieldType.NULL)
+                            .description("공유 이미지는 서버 합성 이미지이므로 null"),
                         fieldWithPath("result.rows").type(JsonFieldType.NUMBER).description("그리드 행 수"),
                         fieldWithPath("result.columns").type(JsonFieldType.NUMBER).description("그리드 열 수")
                     ))
@@ -989,6 +1053,24 @@ class ChallengeControllerDocsTest {
                 .changeStepChallenge(1L, 1L, new StepChallengeChangeCommand(2L));
             default -> throw new IllegalArgumentException("지원하지 않는 걸음수 챌린지 문서 prefix입니다.");
         }
+    }
+
+    private ImageCropRegionCommand imageCropRegionCommand() {
+        return new ImageCropRegionCommand(
+            new BigDecimal("0.22985781990521326"),
+            new BigDecimal("0.3815165876777251"),
+            new BigDecimal("0.5402843601895736"),
+            new BigDecimal("0.23696682464454974")
+        );
+    }
+
+    private ImageCropRegionResult imageCropRegionResult() {
+        return new ImageCropRegionResult(
+            new BigDecimal("0.22985781990521326"),
+            new BigDecimal("0.3815165876777251"),
+            new BigDecimal("0.5402843601895736"),
+            new BigDecimal("0.23696682464454974")
+        );
     }
 
     private record StepEndpoint(

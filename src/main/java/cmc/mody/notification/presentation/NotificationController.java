@@ -128,6 +128,7 @@ public class NotificationController {
         NotificationType type,
         String title,
         String description,
+        String link,
         LocalDateTime createdAt,
         boolean read
     ) {
@@ -137,6 +138,7 @@ public class NotificationController {
                 result.type(),
                 result.title(),
                 result.description(),
+                result.link(),
                 result.createdAt(),
                 result.read()
             );

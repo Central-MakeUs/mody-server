@@ -21,6 +21,7 @@ import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.notification.application.NotificationRequestService;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -123,10 +124,19 @@ public class WeeklyChallengeService {
             groupChallenge.getId(),
             memberId,
             command.imageKey(),
+            command.imageCropRegion() == null ? null : command.imageCropRegion().x(),
+            command.imageCropRegion() == null ? null : command.imageCropRegion().y(),
+            command.imageCropRegion() == null ? null : command.imageCropRegion().width(),
+            command.imageCropRegion() == null ? null : command.imageCropRegion().height(),
             LocalDateTime.now()
         ));
         completeIfAllMembersProved(groupChallenge, group.getName());
-        return new WeeklyChallengeProofCreateResult(proof.getId(), groupChallenge.getId(), toImageUrl(proof.getImageKey()));
+        return new WeeklyChallengeProofCreateResult(
+            proof.getId(),
+            groupChallenge.getId(),
+            toImageUrl(proof.getImageKey()),
+            ImageCropRegionResult.from(proof)
+        );
     }
 
     @Transactional(readOnly = true)
@@ -155,6 +165,7 @@ public class WeeklyChallengeService {
         }
         return new WeeklyChallengeShareResult(
             imageObjectStorage.toUrl(shareImageKey),
+            null,
             gridSize.rows(),
             gridSize.columns()
         );
@@ -246,6 +257,7 @@ public class WeeklyChallengeService {
         return new WeeklyChallengeProofResult(
             proof.getId(),
             toImageUrl(proof.getImageKey()),
+            ImageCropRegionResult.from(proof),
             groupMember.getMemberId(),
             groupMember.getDisplayNickname(),
             toImageUrl(groupMember.getDisplayProfileImageKey())
@@ -337,18 +349,59 @@ public class WeeklyChallengeService {
     public record WeeklyChallengeProofResult(
         Long proofId,
         String imageUrl,
+        ImageCropRegionResult imageCropRegion,
         Long memberId,
         String nickname,
         String profileImageUrl
     ) {
     }
 
-    public record WeeklyChallengeProofCreateCommand(String imageKey) {
+    public record WeeklyChallengeProofCreateCommand(String imageKey, ImageCropRegionCommand imageCropRegion) {
     }
 
-    public record WeeklyChallengeProofCreateResult(Long proofId, Long groupChallengeId, String imageUrl) {
+    public record WeeklyChallengeProofCreateResult(
+        Long proofId,
+        Long groupChallengeId,
+        String imageUrl,
+        ImageCropRegionResult imageCropRegion
+    ) {
     }
 
-    public record WeeklyChallengeShareResult(String imageUrl, int rows, int columns) {
+    public record WeeklyChallengeShareResult(
+        String imageUrl,
+        ImageCropRegionResult imageCropRegion,
+        int rows,
+        int columns
+    ) {
+    }
+
+    public record ImageCropRegionCommand(
+        BigDecimal x,
+        BigDecimal y,
+        BigDecimal width,
+        BigDecimal height
+    ) {
+    }
+
+    public record ImageCropRegionResult(
+        BigDecimal x,
+        BigDecimal y,
+        BigDecimal width,
+        BigDecimal height
+    ) {
+        public static ImageCropRegionResult from(ChallengeProof proof) {
+            if (proof.getCropX() == null
+                || proof.getCropY() == null
+                || proof.getCropWidth() == null
+                || proof.getCropHeight() == null) {
+                return null;
+            }
+            return new ImageCropRegionResult(
+                proof.getCropX(),
+                proof.getCropY(),
+                proof.getCropWidth(),
+                proof.getCropHeight()
+            );
+        }
     }
 }

@@ -148,7 +148,7 @@ class NotificationServiceTest {
     }
 
     private NotificationService service() {
-        return new NotificationService(memberRepository, notificationRepository);
+        return new NotificationService(memberRepository, notificationRepository, new NotificationLinkResolver());
     }
 
     private Member member() {

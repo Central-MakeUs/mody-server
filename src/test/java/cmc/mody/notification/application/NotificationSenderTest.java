@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 
 import cmc.mody.notification.domain.MemberPushToken;
 import cmc.mody.notification.domain.Notification;
@@ -33,6 +34,9 @@ class NotificationSenderTest {
 
     @Mock
     private PushNotificationClient pushNotificationClient;
+
+    @Mock
+    private NotificationFailureAlertService notificationFailureAlertService;
 
     @Test
     @DisplayName("PROCESSING 알림을 FCM token으로 발송하고 SENT로 변경한다.")
@@ -101,26 +105,34 @@ class NotificationSenderTest {
         assertThat(notification.getRetryCount()).isEqualTo(1);
         assertThat(notification.getNextRetryAt()).isNotNull();
         assertThat(notification.getLastError()).isEqualTo("failed");
+        then(notificationFailureAlertService).should(never()).notifyPermanentFailure(any(), any());
     }
 
     @Test
-    @DisplayName("재시도 한도를 초과하면 FAILED로 변경한다.")
+    @DisplayName("재시도 한도를 초과하면 FAILED로 변경하고 실패 알림을 요청한다.")
     void sendFailureExceeded() {
         NotificationSender sender = sender();
         Notification notification = processingNotification(0);
+        IllegalStateException exception = new IllegalStateException("failed");
         given(notificationRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(notification));
         given(memberPushTokenRepository.findByMemberIdAndEnabledTrueAndDeletedAtIsNull(1L))
             .willReturn(List.of(pushToken()));
-        doThrow(new IllegalStateException("failed")).when(pushNotificationClient).send(any(), any());
+        doThrow(exception).when(pushNotificationClient).send(any(), any());
 
         sender.send(10L);
 
         assertThat(notification.getDeliveryStatus()).isEqualTo(NotificationDeliveryStatus.FAILED);
         assertThat(notification.getLastError()).isEqualTo("failed");
+        then(notificationFailureAlertService).should().notifyPermanentFailure(notification, exception);
     }
 
     private NotificationSender sender() {
-        return new NotificationSender(notificationRepository, memberPushTokenRepository, pushNotificationClient);
+        return new NotificationSender(
+            notificationRepository,
+            memberPushTokenRepository,
+            pushNotificationClient,
+            notificationFailureAlertService
+        );
     }
 
     private Notification processingNotification(int maxRetry) {
