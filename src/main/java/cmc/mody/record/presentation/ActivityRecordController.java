@@ -4,16 +4,21 @@ import cmc.mody.auth.presentation.support.CurrentMember;
 import cmc.mody.common.api.ApiResponse;
 import cmc.mody.record.application.ActivityRecordService;
 import cmc.mody.record.application.ActivityRecordService.CommentCreateCommand;
+import cmc.mody.record.application.ActivityRecordService.ImageCropRegionCommand;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateCommand;
 import cmc.mody.record.domain.RecordType;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -179,6 +184,7 @@ public class ActivityRecordController {
         Integer exerciseDurationMinutes,
         String exerciseName,
         String imageUrl,
+        ImageCropRegionResponse imageCropRegion,
         int recordingStreakDays
     ) {
         public static RecordSummaryResponse from(ActivityRecordService.RecordSummaryResult result) {
@@ -193,6 +199,7 @@ public class ActivityRecordController {
                 result.exerciseDurationMinutes(),
                 result.exerciseName(),
                 result.imageUrl(),
+                ImageCropRegionResponse.from(result.imageCropRegion()),
                 result.recordingStreakDays()
             );
         }
@@ -228,7 +235,8 @@ public class ActivityRecordController {
         String menu,
         Integer exerciseDurationMinutes,
         String exerciseName,
-        String imageUrl
+        String imageUrl,
+        ImageCropRegionResponse imageCropRegion
     ) {
         public static RecordDetailItemResponse from(ActivityRecordService.RecordDetailResult result) {
             return new RecordDetailItemResponse(
@@ -241,7 +249,8 @@ public class ActivityRecordController {
                 result.menu(),
                 result.exerciseDurationMinutes(),
                 result.exerciseName(),
-                result.imageUrl()
+                result.imageUrl(),
+                ImageCropRegionResponse.from(result.imageCropRegion())
             );
         }
     }
@@ -294,7 +303,9 @@ public class ActivityRecordController {
         @Max(value = 59, message = "운동 분은 59분 이하로 입력해주세요.")
         Integer exerciseDurationMinutes,
         @Size(max = 30, message = "운동명은 30자 이하로 입력해주세요.")
-        String exerciseName
+        String exerciseName,
+        @Valid
+        ImageCropRegionRequest imageCropRegion
     ) {
         @AssertTrue(message = MEAL_RECORD_PAYLOAD_MESSAGE)
         public boolean isMealRecordPayloadValid() {
@@ -328,7 +339,8 @@ public class ActivityRecordController {
                 mealTime,
                 menu,
                 totalExerciseDurationMinutes(),
-                exerciseName
+                exerciseName,
+                imageCropRegion == null ? null : imageCropRegion.toCommand()
             );
         }
 
@@ -343,6 +355,51 @@ public class ActivityRecordController {
             int hours = exerciseDurationHours == null ? 0 : exerciseDurationHours;
             int minutes = exerciseDurationMinutes == null ? 0 : exerciseDurationMinutes;
             return hours * 60 + minutes;
+        }
+    }
+
+    public record ImageCropRegionRequest(
+        @NotNull(message = "이미지 관심 영역 x 좌표는 필수입니다.")
+        @DecimalMin(value = "0.0", message = "이미지 관심 영역 x 좌표는 0 이상이어야 합니다.")
+        @DecimalMax(value = "1.0", message = "이미지 관심 영역 x 좌표는 1 이하여야 합니다.")
+        @Digits(integer = 1, fraction = 17, message = "이미지 관심 영역 x 좌표는 정규화 소수로 입력해주세요.")
+        BigDecimal x,
+        @NotNull(message = "이미지 관심 영역 y 좌표는 필수입니다.")
+        @DecimalMin(value = "0.0", message = "이미지 관심 영역 y 좌표는 0 이상이어야 합니다.")
+        @DecimalMax(value = "1.0", message = "이미지 관심 영역 y 좌표는 1 이하여야 합니다.")
+        @Digits(integer = 1, fraction = 17, message = "이미지 관심 영역 y 좌표는 정규화 소수로 입력해주세요.")
+        BigDecimal y,
+        @NotNull(message = "이미지 관심 영역 width는 필수입니다.")
+        @DecimalMin(value = "0.0", inclusive = false, message = "이미지 관심 영역 width는 0보다 커야 합니다.")
+        @DecimalMax(value = "1.0", message = "이미지 관심 영역 width는 1 이하여야 합니다.")
+        @Digits(integer = 1, fraction = 17, message = "이미지 관심 영역 width는 정규화 소수로 입력해주세요.")
+        BigDecimal width,
+        @NotNull(message = "이미지 관심 영역 height는 필수입니다.")
+        @DecimalMin(value = "0.0", inclusive = false, message = "이미지 관심 영역 height는 0보다 커야 합니다.")
+        @DecimalMax(value = "1.0", message = "이미지 관심 영역 height는 1 이하여야 합니다.")
+        @Digits(integer = 1, fraction = 17, message = "이미지 관심 영역 height는 정규화 소수로 입력해주세요.")
+        BigDecimal height
+    ) {
+        @AssertTrue(message = "이미지 관심 영역은 원본 이미지의 정규화 좌표 범위를 벗어날 수 없습니다.")
+        public boolean isRegionInsideImage() {
+            if (x == null || y == null || width == null || height == null) {
+                return true;
+            }
+            return x.add(width).compareTo(BigDecimal.ONE) <= 0
+                && y.add(height).compareTo(BigDecimal.ONE) <= 0;
+        }
+
+        public ImageCropRegionCommand toCommand() {
+            return new ImageCropRegionCommand(x, y, width, height);
+        }
+    }
+
+    public record ImageCropRegionResponse(BigDecimal x, BigDecimal y, BigDecimal width, BigDecimal height) {
+        public static ImageCropRegionResponse from(ActivityRecordService.ImageCropRegionResult result) {
+            if (result == null) {
+                return null;
+            }
+            return new ImageCropRegionResponse(result.x(), result.y(), result.width(), result.height());
         }
     }
 

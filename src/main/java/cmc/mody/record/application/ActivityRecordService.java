@@ -21,6 +21,7 @@ import cmc.mody.record.infrastructure.repository.ActivityRecordGroupRepository;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
 import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -179,6 +180,10 @@ public class ActivityRecordService {
                 command.mealTime(),
                 command.menu(),
                 command.imageKey(),
+                command.imageCropRegion() == null ? null : command.imageCropRegion().x(),
+                command.imageCropRegion() == null ? null : command.imageCropRegion().y(),
+                command.imageCropRegion() == null ? null : command.imageCropRegion().width(),
+                command.imageCropRegion() == null ? null : command.imageCropRegion().height(),
                 uploadedAt
             );
             case EXERCISE -> ActivityRecord.exercise(
@@ -188,6 +193,10 @@ public class ActivityRecordService {
                 command.exerciseDurationMinutes(),
                 command.exerciseName(),
                 command.imageKey(),
+                command.imageCropRegion() == null ? null : command.imageCropRegion().x(),
+                command.imageCropRegion() == null ? null : command.imageCropRegion().y(),
+                command.imageCropRegion() == null ? null : command.imageCropRegion().width(),
+                command.imageCropRegion() == null ? null : command.imageCropRegion().height(),
                 uploadedAt
             );
         };
@@ -306,7 +315,8 @@ public class ActivityRecordService {
             record.getMenu(),
             record.getExerciseDurationMinutes(),
             record.getExerciseName(),
-            toImageUrl(record.getImageKey())
+            toImageUrl(record.getImageKey()),
+            ImageCropRegionResult.from(record)
         );
     }
 
@@ -419,6 +429,7 @@ public class ActivityRecordService {
             record.getExerciseDurationMinutes(),
             record.getExerciseName(),
             toImageUrl(record.getImageKey()),
+            ImageCropRegionResult.from(record),
             recordingStreakDays
         );
     }
@@ -472,7 +483,8 @@ public class ActivityRecordService {
         LocalTime mealTime,
         String menu,
         Integer exerciseDurationMinutes,
-        String exerciseName
+        String exerciseName,
+        ImageCropRegionCommand imageCropRegion
     ) {
     }
 
@@ -509,6 +521,7 @@ public class ActivityRecordService {
         Integer exerciseDurationMinutes,
         String exerciseName,
         String imageUrl,
+        ImageCropRegionResult imageCropRegion,
         int recordingStreakDays
     ) {
     }
@@ -532,8 +545,39 @@ public class ActivityRecordService {
         String menu,
         Integer exerciseDurationMinutes,
         String exerciseName,
-        String imageUrl
+        String imageUrl,
+        ImageCropRegionResult imageCropRegion
     ) {
+    }
+
+    public record ImageCropRegionCommand(
+        BigDecimal x,
+        BigDecimal y,
+        BigDecimal width,
+        BigDecimal height
+    ) {
+    }
+
+    public record ImageCropRegionResult(
+        BigDecimal x,
+        BigDecimal y,
+        BigDecimal width,
+        BigDecimal height
+    ) {
+        public static ImageCropRegionResult from(ActivityRecord record) {
+            if (record.getCropX() == null
+                || record.getCropY() == null
+                || record.getCropWidth() == null
+                || record.getCropHeight() == null) {
+                return null;
+            }
+            return new ImageCropRegionResult(
+                record.getCropX(),
+                record.getCropY(),
+                record.getCropWidth(),
+                record.getCropHeight()
+            );
+        }
     }
 
     public record CommentCursorResult(List<CommentResult> comments, Long nextCursor, boolean hasNext) {

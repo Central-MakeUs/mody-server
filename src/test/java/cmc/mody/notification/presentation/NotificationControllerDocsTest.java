@@ -87,7 +87,7 @@ class NotificationControllerDocsTest {
     @Test
     void getNotifications() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
-        given(notificationService.getNotifications(1L, null, 20)).willReturn(new NotificationListResult(List.of(
+        given(notificationService.getNotifications(1L, null, 20, true)).willReturn(new NotificationListResult(List.of(
             new NotificationResult(
                 10L,
                 NotificationType.COMMENT_CREATED,
@@ -100,7 +100,8 @@ class NotificationControllerDocsTest {
 
         mockMvc.perform(get("/api/v1/notifications")
                 .header("Authorization", "Bearer access-token")
-                .param("size", "20"))
+                .param("size", "20")
+                .param("allRead", "true"))
             .andExpect(status().isOk())
             .andDo(document("notification-list",
                 resource(ResourceSnippetParameters.builder()
@@ -109,7 +110,10 @@ class NotificationControllerDocsTest {
                     .description(NOTIFICATION_DESCRIPTION)
                     .queryParameters(
                         parameterWithName("cursor").optional().description("다음 페이지 커서. 최초 조회 시 생략"),
-                        parameterWithName("size").description("조회 개수")
+                        parameterWithName("size").description("조회 개수"),
+                        parameterWithName("allRead")
+                            .optional()
+                            .description("true이면 목록 조회 성공 시 현재까지 온 전체 알림을 읽음 처리")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.notifications[].notificationId").type(JsonFieldType.NUMBER).description("알림 id"),
@@ -122,6 +126,34 @@ class NotificationControllerDocsTest {
                             .description("읽음 여부. 읽음 처리 API 호출 후 true"),
                         fieldWithPath("result.nextCursor").type(JsonFieldType.NUMBER).description("다음 페이지 조회용 커서"),
                         fieldWithPath("result.hasNext").type(JsonFieldType.BOOLEAN).description("다음 페이지 존재 여부")
+                    ))
+                    .build())
+            ));
+    }
+
+    @Test
+    void hasUnreadNotification() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(notificationService.hasUnreadNotification(1L))
+            .willReturn(new NotificationService.UnreadExistsResult(true));
+
+        mockMvc.perform(get("/api/v1/notifications/unread-exists")
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isOk())
+            .andDo(document("notification-unread-exists",
+                resource(ResourceSnippetParameters.builder()
+                    .tag("Notification")
+                    .summary("읽지 않은 알림 존재 여부 조회")
+                    .description("""
+                        메인 화면의 알림 배지 노출 여부를 판단한다.
+                        hasUnread=true이면 종 아이콘에 badge 또는 red dot을 표시한다.
+
+                        %s
+                        """.formatted(NOTIFICATION_DESCRIPTION))
+                    .responseFields(commonResponseFields(
+                        fieldWithPath("result.hasUnread")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("읽지 않은 알림이 하나 이상 있으면 true")
                     ))
                     .build())
             ));
@@ -168,7 +200,7 @@ class NotificationControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         willThrow(new GeneralException(ErrorStatus.MEMBER_NOT_FOUND))
             .given(notificationService)
-            .getNotifications(1L, null, 20);
+            .getNotifications(1L, null, 20, false);
 
         mockMvc.perform(get("/api/v1/notifications")
                 .header("Authorization", "Bearer access-token")

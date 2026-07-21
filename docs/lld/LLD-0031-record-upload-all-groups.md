@@ -46,7 +46,13 @@ POST /api/v1/records
   "menu": "샐러드",
   "exerciseDurationHours": null,
   "exerciseDurationMinutes": null,
-  "exerciseName": null
+  "exerciseName": null,
+  "imageCropRegion": {
+    "x": 0.22985781990521326,
+    "y": 0.3815165876777251,
+    "width": 0.5402843601895736,
+    "height": 0.23696682464454974
+  }
 }
 ```
 
@@ -60,9 +66,14 @@ POST /api/v1/records
   "menu": null,
   "exerciseDurationHours": 0,
   "exerciseDurationMinutes": 40,
-  "exerciseName": "러닝"
+  "exerciseName": "러닝",
+  "imageCropRegion": null
 }
 ```
+
+`imageCropRegion`은 원본 이미지 기준 관심 영역 정규화 좌표다.
+생략 가능하며, 전달 시 `x`, `y`, `width`, `height` 네 값을 모두 보내야 한다.
+각 값은 `0~1` 범위이고 `x + width <= 1`, `y + height <= 1`이어야 한다.
 
 상세/댓글은 기록이 여러 그룹에 노출될 수 있으므로 그룹 컨텍스트를 명시한다.
 
@@ -79,6 +90,7 @@ POST /api/v1/groups/{groupId}/records/{recordId}/comments
 - 기록 원본을 1개만 저장한다.
 - `group_id`는 신규 생성 로직에서 사용하지 않는다.
 - `member_id`, `record_type`, 기록 필드, `image_key`, `uploaded_at`을 원본 속성으로 사용한다.
+- `crop_x`, `crop_y`, `crop_width`, `crop_height`는 원본 이미지 기준 관심 영역 정규화 좌표를 저장한다.
 
 ### activity_record_group
 
@@ -106,14 +118,16 @@ POST /api/v1/groups/{groupId}/records/{recordId}/comments
 3. 작성자가 `JOINED` 상태로 참여 중인 그룹 목록을 조회한다.
 4. 참여 중인 그룹이 없으면 기록을 생성하지 않는다.
 5. `recordType`에 따라 식사/운동 필드 조합과 이미지 키를 검증한다.
-6. `activity_record` 원본을 1개 저장한다.
-7. 작성자가 참여 중인 모든 그룹에 대해 `activity_record_group` 매핑을 생성한다.
-8. 생성 응답은 원본 `recordId`와 노출된 `groupIds`를 반환한다.
+6. 이미지 관심 영역 좌표가 있으면 정규화 좌표 범위와 원본 이미지 내부 영역 여부를 검증한다.
+7. `activity_record` 원본을 1개 저장한다.
+8. 작성자가 참여 중인 모든 그룹에 대해 `activity_record_group` 매핑을 생성한다.
+9. 생성 응답은 원본 `recordId`와 노출된 `groupIds`를 반환한다.
 
 ## 6. 조회/댓글 영향
 
 - 그룹 피드 조회는 `activity_record_group.group_id = :groupId` 기준으로 조회하고 원본 기록을 조인한다.
 - 상세 캐러셀은 같은 `groupId`, 작성자, 날짜 기준으로 `activity_record_group`을 조회한다.
+- 기록 목록/상세 응답은 원본 이미지 URL과 `imageCropRegion`을 함께 내려준다.
 - 댓글 목록/작성은 `groupId + recordId` 접근 권한을 검증한다.
 - 미확인 기록 수는 `activity_record_group` 기준으로 계산한다.
 - 연속 기록 일수는 그룹별 피드에서 보이는 기록 기준이므로 `activity_record_group` 기준으로 계산한다.

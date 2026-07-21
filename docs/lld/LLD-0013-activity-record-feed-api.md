@@ -102,6 +102,7 @@ GET /api/v1/groups/{groupId}/records?date=2026-07-01&cursor=100&size=20
 ## 9. 미결정 사항 (Open Questions)
 
 - 이미지 조회 URL은 현재 `upload.base-url + imageKey`로 응답한다.
+- 이미지 관심 영역 좌표가 저장된 기록은 `imageCropRegion(x, y, width, height)`를 함께 응답한다.
   read signed URL이 필요하면 후속 이슈에서 분리한다.
 - 날짜 기준은 서버 로컬 날짜로 처리한다.
   별도 사용자 타임존 정책이 생기면 API 스펙을 조정한다.

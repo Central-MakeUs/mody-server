@@ -7,6 +7,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import lombok.AccessLevel;
@@ -49,6 +50,18 @@ public class ActivityRecord extends BaseEntity {
     @Column(name = "image_key", nullable = false, length = 500)
     private String imageKey;
 
+    @Column(name = "crop_x", precision = 19, scale = 17)
+    private BigDecimal cropX;
+
+    @Column(name = "crop_y", precision = 19, scale = 17)
+    private BigDecimal cropY;
+
+    @Column(name = "crop_width", precision = 19, scale = 17)
+    private BigDecimal cropWidth;
+
+    @Column(name = "crop_height", precision = 19, scale = 17)
+    private BigDecimal cropHeight;
+
     @Column(name = "uploaded_at", nullable = false)
     private LocalDateTime uploadedAt;
 
@@ -62,6 +75,10 @@ public class ActivityRecord extends BaseEntity {
         Integer exerciseDurationMinutes,
         String exerciseName,
         String imageKey,
+        BigDecimal cropX,
+        BigDecimal cropY,
+        BigDecimal cropWidth,
+        BigDecimal cropHeight,
         LocalDateTime uploadedAt
     ) {
         super(id);
@@ -73,7 +90,41 @@ public class ActivityRecord extends BaseEntity {
         this.exerciseDurationMinutes = exerciseDurationMinutes;
         this.exerciseName = exerciseName;
         this.imageKey = imageKey;
+        this.cropX = cropX;
+        this.cropY = cropY;
+        this.cropWidth = cropWidth;
+        this.cropHeight = cropHeight;
         this.uploadedAt = uploadedAt;
+    }
+
+    public ActivityRecord(
+        Long id,
+        Long memberId,
+        Long groupId,
+        RecordType recordType,
+        LocalTime mealTime,
+        String menu,
+        Integer exerciseDurationMinutes,
+        String exerciseName,
+        String imageKey,
+        LocalDateTime uploadedAt
+    ) {
+        this(
+            id,
+            memberId,
+            groupId,
+            recordType,
+            mealTime,
+            menu,
+            exerciseDurationMinutes,
+            exerciseName,
+            imageKey,
+            null,
+            null,
+            null,
+            null,
+            uploadedAt
+        );
     }
 
     public static ActivityRecord meal(
@@ -83,6 +134,10 @@ public class ActivityRecord extends BaseEntity {
         LocalTime mealTime,
         String menu,
         String imageKey,
+        BigDecimal cropX,
+        BigDecimal cropY,
+        BigDecimal cropWidth,
+        BigDecimal cropHeight,
         LocalDateTime uploadedAt
     ) {
         return new ActivityRecord(
@@ -95,6 +150,53 @@ public class ActivityRecord extends BaseEntity {
             null,
             null,
             imageKey,
+            cropX,
+            cropY,
+            cropWidth,
+            cropHeight,
+            uploadedAt
+        );
+    }
+
+    public static ActivityRecord meal(
+        Long id,
+        Long memberId,
+        Long groupId,
+        LocalTime mealTime,
+        String menu,
+        String imageKey,
+        LocalDateTime uploadedAt
+    ) {
+        return meal(id, memberId, groupId, mealTime, menu, imageKey, null, null, null, null, uploadedAt);
+    }
+
+    public static ActivityRecord exercise(
+        Long id,
+        Long memberId,
+        Long groupId,
+        Integer exerciseDurationMinutes,
+        String exerciseName,
+        String imageKey,
+        BigDecimal cropX,
+        BigDecimal cropY,
+        BigDecimal cropWidth,
+        BigDecimal cropHeight,
+        LocalDateTime uploadedAt
+    ) {
+        return new ActivityRecord(
+            id,
+            memberId,
+            groupId,
+            RecordType.EXERCISE,
+            null,
+            null,
+            exerciseDurationMinutes,
+            exerciseName,
+            imageKey,
+            cropX,
+            cropY,
+            cropWidth,
+            cropHeight,
             uploadedAt
         );
     }
@@ -108,16 +210,17 @@ public class ActivityRecord extends BaseEntity {
         String imageKey,
         LocalDateTime uploadedAt
     ) {
-        return new ActivityRecord(
+        return exercise(
             id,
             memberId,
             groupId,
-            RecordType.EXERCISE,
-            null,
-            null,
             exerciseDurationMinutes,
             exerciseName,
             imageKey,
+            null,
+            null,
+            null,
+            null,
             uploadedAt
         );
     }

@@ -135,11 +135,14 @@ GET /api/v1/records/{recordId}?cursor=100&size=20
 ### 알림 목록 조회
 
 ```http
-GET /api/v1/notifications?cursor=100&size=20
+GET /api/v1/notifications?cursor=100&size=20&allRead=false
+GET /api/v1/notifications/unread-exists
 ```
 
 응답은 `notifications`, `nextCursor`, `hasNext`를 포함한다.
 정렬은 최신순이며 `nextCursor`는 마지막 알림 id다.
+`allRead=true`이면 목록 조회 성공 시 현재까지 온 전체 알림을 읽음 처리한다.
+`unread-exists`는 메인 화면 알림 배지 노출을 위해 읽지 않은 알림 존재 여부만 반환한다.
 
 ## 4. 데이터 모델
 
@@ -163,7 +166,8 @@ GET /api/v1/notifications?cursor=100&size=20
 4. 기록 상세 진입 시 그룹 기록이면 `record_view_history`를 생성하거나 `last_viewed_at`을 갱신한다.
 5. 그룹원 조회는 `record_view_history.last_viewed_at` 이후의 활성 기록 수를 `unreadRecordCount`로 응답한다.
 6. 알림 목록은 `size + 1`개를 조회해 `hasNext`와 `nextCursor`를 계산한다.
-7. 기록 상세 캐러셀 조회는 `size + 1`개를 조회해 `hasNext`와 `nextCursor`를 계산한다. 최초 조회(`cursor == null`) 시에는 타겟 `recordId`가 첫 페이지의 맨 처음(`currentIndex = 0`)에 위치하도록 `record.id >= recordId`로 필터링하며, `totalCount`는 해당 날짜 전체 글 수를 별도 쿼리한다.
+7. 알림 목록 조회에서 `allRead=true`이면 조회 전 현재 시각까지 생성된 미읽음 알림을 읽음 처리한다.
+8. 기록 상세 캐러셀 조회는 `size + 1`개를 조회해 `hasNext`와 `nextCursor`를 계산한다. 최초 조회(`cursor == null`) 시에는 타겟 `recordId`가 첫 페이지의 맨 처음(`currentIndex = 0`)에 위치하도록 `record.id >= recordId`로 필터링하며, `totalCount`는 해당 날짜 전체 글 수를 별도 쿼리한다.
 
 ### 5.1 연속 기록 일수 계산
 

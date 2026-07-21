@@ -30,12 +30,14 @@ import cmc.mody.record.application.ActivityRecordService.CommentCreateCommand;
 import cmc.mody.record.application.ActivityRecordService.CommentCreateResult;
 import cmc.mody.record.application.ActivityRecordService.CommentCursorResult;
 import cmc.mody.record.application.ActivityRecordService.CommentResult;
+import cmc.mody.record.application.ActivityRecordService.ImageCropRegionResult;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateCommand;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateResult;
 import cmc.mody.record.application.ActivityRecordService.RecordDetailPageResult;
 import cmc.mody.record.application.ActivityRecordService.RecordDetailResult;
 import cmc.mody.record.domain.RecordType;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
+import java.math.BigDecimal;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -163,6 +165,7 @@ class ActivityRecordControllerDocsTest {
                     null,
                     null,
                     "https://storage.example.com/records/1/2026/07/meal.jpg",
+                    imageCropRegionResult(),
                     4
                 )),
                 null,
@@ -214,6 +217,22 @@ class ActivityRecordControllerDocsTest {
                         fieldWithPath("result.records[].imageUrl")
                             .type(JsonFieldType.STRING)
                             .description("기록 이미지 URL"),
+                        fieldWithPath("result.records[].imageCropRegion")
+                            .type(JsonFieldType.OBJECT)
+                            .description("원본 이미지 기준 관심 영역 정규화 좌표. 좌표가 없으면 null")
+                            .optional(),
+                        fieldWithPath("result.records[].imageCropRegion.x")
+                            .type(JsonFieldType.NUMBER)
+                            .description("관심 영역 x 좌표, 0~1"),
+                        fieldWithPath("result.records[].imageCropRegion.y")
+                            .type(JsonFieldType.NUMBER)
+                            .description("관심 영역 y 좌표, 0~1"),
+                        fieldWithPath("result.records[].imageCropRegion.width")
+                            .type(JsonFieldType.NUMBER)
+                            .description("관심 영역 width, 0~1"),
+                        fieldWithPath("result.records[].imageCropRegion.height")
+                            .type(JsonFieldType.NUMBER)
+                            .description("관심 영역 height, 0~1"),
                         fieldWithPath("result.records[].recordingStreakDays")
                             .type(JsonFieldType.NUMBER)
                             .description("작성자의 기준 날짜 연속 기록 일수. 같은 날짜에 여러 기록이 있어도 1일로 계산"),
@@ -306,7 +325,8 @@ class ActivityRecordControllerDocsTest {
                         "샐러드",
                         null,
                         null,
-                        "https://storage.example.com/records/1/2026/07/meal.jpg"
+                        "https://storage.example.com/records/1/2026/07/meal.jpg",
+                        imageCropRegionResult()
                     ),
                     new RecordDetailResult(
                         2L,
@@ -318,7 +338,8 @@ class ActivityRecordControllerDocsTest {
                         null,
                         40,
                         "러닝",
-                        "https://storage.example.com/records/1/2026/07/exercise.jpg"
+                        "https://storage.example.com/records/1/2026/07/exercise.jpg",
+                        null
                     )
                 ),
                 2L,
@@ -372,6 +393,26 @@ class ActivityRecordControllerDocsTest {
                         fieldWithPath("result.records[].imageUrl")
                              .type(JsonFieldType.STRING)
                              .description("기록 이미지 URL"),
+                        fieldWithPath("result.records[].imageCropRegion")
+                             .type(JsonFieldType.VARIES)
+                             .optional()
+                             .description("원본 이미지 기준 관심 영역 정규화 좌표. 좌표가 없으면 null"),
+                        fieldWithPath("result.records[].imageCropRegion.x")
+                             .type(JsonFieldType.NUMBER)
+                             .optional()
+                             .description("관심 영역 x 좌표, 0~1"),
+                        fieldWithPath("result.records[].imageCropRegion.y")
+                             .type(JsonFieldType.NUMBER)
+                             .optional()
+                             .description("관심 영역 y 좌표, 0~1"),
+                        fieldWithPath("result.records[].imageCropRegion.width")
+                             .type(JsonFieldType.NUMBER)
+                             .optional()
+                             .description("관심 영역 width, 0~1"),
+                        fieldWithPath("result.records[].imageCropRegion.height")
+                             .type(JsonFieldType.NUMBER)
+                             .optional()
+                             .description("관심 영역 height, 0~1"),
                         fieldWithPath("result.nextCursor").type(JsonFieldType.NUMBER).optional().description("다음 페이지용 커서 id. 더 이상 없으면 null"),
                         fieldWithPath("result.hasNext").type(JsonFieldType.BOOLEAN).description("다음 페이지 존재 여부")
                     ))
@@ -719,7 +760,27 @@ class ActivityRecordControllerDocsTest {
                         fieldWithPath("exerciseName")
                             .type(JsonFieldType.STRING)
                             .optional()
-                            .description("운동명. EXERCISE일 때 필수")
+                            .description("운동명. EXERCISE일 때 필수"),
+                        fieldWithPath("imageCropRegion")
+                            .type(JsonFieldType.OBJECT)
+                            .optional()
+                            .description("원본 이미지 기준 관심 영역 정규화 좌표. 생략 가능"),
+                        fieldWithPath("imageCropRegion.x")
+                            .type(JsonFieldType.NUMBER)
+                            .optional()
+                            .description("관심 영역 x 좌표, 0~1"),
+                        fieldWithPath("imageCropRegion.y")
+                            .type(JsonFieldType.NUMBER)
+                            .optional()
+                            .description("관심 영역 y 좌표, 0~1"),
+                        fieldWithPath("imageCropRegion.width")
+                            .type(JsonFieldType.NUMBER)
+                            .optional()
+                            .description("관심 영역 width, 0~1, x + width는 1 이하여야 함"),
+                        fieldWithPath("imageCropRegion.height")
+                            .type(JsonFieldType.NUMBER)
+                            .optional()
+                            .description("관심 영역 height, 0~1, y + height는 1 이하여야 함")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.recordId").type(JsonFieldType.NUMBER).description("생성된 기록 id"),
@@ -1055,9 +1116,24 @@ class ActivityRecordControllerDocsTest {
                   "menu": "샐러드",
                   "exerciseDurationHours": null,
                   "exerciseDurationMinutes": null,
-                  "exerciseName": null
+                  "exerciseName": null,
+                  "imageCropRegion": {
+                    "x": 0.22985781990521326,
+                    "y": 0.3815165876777251,
+                    "width": 0.5402843601895736,
+                    "height": 0.23696682464454974
+                  }
                 }
                 """);
+    }
+
+    private ImageCropRegionResult imageCropRegionResult() {
+        return new ImageCropRegionResult(
+            new BigDecimal("0.22985781990521326"),
+            new BigDecimal("0.3815165876777251"),
+            new BigDecimal("0.5402843601895736"),
+            new BigDecimal("0.23696682464454974")
+        );
     }
 
     private RestDocumentationResultHandler documentError(String identifier, String summary) {

@@ -23,9 +23,12 @@ public class NotificationService {
     private final MemberRepository memberRepository;
     private final NotificationRepository notificationRepository;
 
-    @Transactional(readOnly = true)
-    public NotificationListResult getNotifications(Long memberId, Long cursor, int size) {
+    @Transactional
+    public NotificationListResult getNotifications(Long memberId, Long cursor, int size, boolean allRead) {
         getMember(memberId);
+        if (allRead) {
+            notificationRepository.markAllUnreadAsRead(memberId, LocalDateTime.now());
+        }
         int pageSize = normalizeSize(size);
         List<Notification> notifications = notificationRepository
             .findByReceiverMemberIdByCursor(memberId, cursor, PageRequest.of(0, pageSize + 1));
@@ -37,6 +40,12 @@ public class NotificationService {
             .toList();
         Long nextCursor = hasNext ? pageNotifications.get(pageNotifications.size() - 1).getId() : null;
         return new NotificationListResult(results, nextCursor, hasNext);
+    }
+
+    @Transactional(readOnly = true)
+    public UnreadExistsResult hasUnreadNotification(Long memberId) {
+        getMember(memberId);
+        return new UnreadExistsResult(notificationRepository.existsUnreadByReceiverMemberId(memberId));
     }
 
     @Transactional
@@ -62,6 +71,9 @@ public class NotificationService {
     }
 
     public record NotificationListResult(List<NotificationResult> notifications, Long nextCursor, boolean hasNext) {
+    }
+
+    public record UnreadExistsResult(boolean hasUnread) {
     }
 
     public record NotificationResult(
