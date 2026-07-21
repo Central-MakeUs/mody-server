@@ -127,6 +127,10 @@ erDiagram
         int exercise_duration_minutes "nullable"
         varchar exercise_name "nullable, len 30"
         varchar image_key "not null, len 500"
+        decimal crop_x "nullable, normalized 0-1"
+        decimal crop_y "nullable, normalized 0-1"
+        decimal crop_width "nullable, normalized 0-1"
+        decimal crop_height "nullable, normalized 0-1"
         datetime uploaded_at "not null"
     }
 

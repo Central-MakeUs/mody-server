@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -27,6 +28,32 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
         @Param("cursor") Long cursor,
         Pageable pageable
     );
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update Notification notification
+           set notification.notificationStatus = cmc.mody.notification.domain.NotificationStatus.READ,
+               notification.readAt = :readAt
+         where notification.receiverMemberId = :receiverMemberId
+           and notification.deletedAt is null
+           and notification.createdAt <= :readAt
+           and notification.readAt is null
+           and notification.notificationStatus <> cmc.mody.notification.domain.NotificationStatus.READ
+        """)
+    int markAllUnreadAsRead(
+        @Param("receiverMemberId") Long receiverMemberId,
+        @Param("readAt") LocalDateTime readAt
+    );
+
+    @Query("""
+        select count(notification) > 0
+        from Notification notification
+        where notification.receiverMemberId = :receiverMemberId
+          and notification.deletedAt is null
+          and notification.readAt is null
+          and notification.notificationStatus <> cmc.mody.notification.domain.NotificationStatus.READ
+        """)
+    boolean existsUnreadByReceiverMemberId(@Param("receiverMemberId") Long receiverMemberId);
 
     Optional<Notification> findByIdAndDeletedAtIsNull(Long notificationId);
 

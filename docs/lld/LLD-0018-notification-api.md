@@ -22,6 +22,8 @@
 
 - 내 알림 목록 조회.
 - 내 알림 읽음 처리.
+- 내 알림 전체 읽음 처리.
+- 읽지 않은 알림 존재 여부 조회.
 - 알림 타입, 상태, 생성일 기준 응답.
 - 다른 회원 알림 접근 차단.
 - Swagger 성공/주요 예외 응답 명세.
@@ -31,7 +33,6 @@
 - 알림 생성.
 - 실제 푸시 발송.
 - 발송 실패 재시도.
-- 알림 전체 읽음 처리.
 - 알림 삭제.
 
 ## 3. 인터페이스 / API
@@ -39,7 +40,8 @@
 모든 API는 `Authorization: Bearer {accessToken}`을 사용한다.
 
 ```http
-GET /api/v1/notifications?cursor=100&size=20
+GET /api/v1/notifications?cursor=100&size=20&allRead=false
+GET /api/v1/notifications/unread-exists
 PATCH /api/v1/notifications/{notificationId}/read
 ```
 
@@ -81,8 +83,15 @@ PATCH /api/v1/notifications/{notificationId}/read
 2. 활성 회원인지 검증한다.
 3. `receiver_member_id`가 현재 회원이고 `deletedAt is null`인 알림을 조회한다.
 4. `id desc` 커서 기반으로 `size + 1`개를 조회한다.
-5. `notification_status == READ`이면 `read=true`로 응답한다.
-6. 다음 페이지가 있으면 마지막 알림 id를 `nextCursor`로 응답한다.
+5. `allRead=true`이면 목록 조회 전 현재 시각까지 생성된 미읽음 알림을 전체 읽음 처리한다.
+6. `notification_status == READ`이면 `read=true`로 응답한다.
+7. 다음 페이지가 있으면 마지막 알림 id를 `nextCursor`로 응답한다.
+
+### 읽지 않은 알림 존재 여부 조회
+
+1. 활성 회원인지 검증한다.
+2. 현재 회원의 활성 알림 중 `read_at is null`이고 `notification_status != READ`인 알림이 하나라도 있는지 조회한다.
+3. 메인 화면 알림 배지 표시를 위해 `hasUnread`를 응답한다.
 
 ### 알림 읽음 처리
 
@@ -102,6 +111,8 @@ PATCH /api/v1/notifications/{notificationId}/read
 
 - [x] 인증 회원이 자신의 알림 목록을 조회할 수 있다.
 - [x] 인증 회원이 자신의 알림을 읽음 처리할 수 있다.
+- [x] 인증 회원이 알림 목록 조회 시 전체 읽음 처리를 요청할 수 있다.
+- [x] 인증 회원이 읽지 않은 알림 존재 여부를 조회할 수 있다.
 - [x] 다른 회원 알림은 조회/수정할 수 없다.
 - [x] Swagger에 성공/주요 예외 응답이 반영된다.
 - [x] 관련 테스트가 통과한다.

@@ -366,7 +366,13 @@ class ActivityRecordServiceTest {
             LocalTime.of(12, 30),
             "샐러드",
             null,
-            null
+            null,
+            new ActivityRecordService.ImageCropRegionCommand(
+                new BigDecimal("0.22985781990521326"),
+                new BigDecimal("0.3815165876777251"),
+                new BigDecimal("0.5402843601895736"),
+                new BigDecimal("0.23696682464454974")
+            )
         ));
 
         assertThat(result.recordId()).isEqualTo(100L);
@@ -381,6 +387,10 @@ class ActivityRecordServiceTest {
         assertThat(savedRecord.getExerciseDurationMinutes()).isNull();
         assertThat(savedRecord.getExerciseName()).isNull();
         assertThat(savedRecord.getImageKey()).isEqualTo("records/1/2026/07/4111584723968.jpg");
+        assertThat(savedRecord.getCropX()).isEqualByComparingTo("0.22985781990521326");
+        assertThat(savedRecord.getCropY()).isEqualByComparingTo("0.3815165876777251");
+        assertThat(savedRecord.getCropWidth()).isEqualByComparingTo("0.5402843601895736");
+        assertThat(savedRecord.getCropHeight()).isEqualByComparingTo("0.23696682464454974");
         assertThat(savedRecord.getUploadedAt()).isNotNull();
         then(activityRecordGroupRepository).should(org.mockito.Mockito.times(2))
             .save(activityRecordGroupCaptor.capture());
@@ -410,7 +420,8 @@ class ActivityRecordServiceTest {
             null,
             null,
             40,
-            "러닝"
+            "러닝",
+            null
         ));
 
         assertThat(result.recordId()).isEqualTo(101L);
@@ -541,6 +552,7 @@ class ActivityRecordServiceTest {
             "records/1/2026/07/4111584723968.jpg",
             LocalTime.of(12, 30),
             "샐러드",
+            null,
             null,
             null
         );

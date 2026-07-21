@@ -37,10 +37,24 @@ public class NotificationController {
     public ApiResponse<NotificationListResponse> getNotifications(
         @Parameter(hidden = true) @CurrentMember Long memberId,
         @RequestParam(required = false) Long cursor,
-        @RequestParam(defaultValue = "20") int size
+        @RequestParam(defaultValue = "20") int size,
+        @RequestParam(defaultValue = "false") boolean allRead
     ) {
-        NotificationService.NotificationListResult result = notificationService.getNotifications(memberId, cursor, size);
+        NotificationService.NotificationListResult result = notificationService.getNotifications(
+            memberId,
+            cursor,
+            size,
+            allRead
+        );
         return ApiResponse.ok(NotificationListResponse.from(result));
+    }
+
+    @GetMapping("/unread-exists")
+    public ApiResponse<UnreadExistsResponse> hasUnreadNotification(
+        @Parameter(hidden = true) @CurrentMember Long memberId
+    ) {
+        NotificationService.UnreadExistsResult result = notificationService.hasUnreadNotification(memberId);
+        return ApiResponse.ok(UnreadExistsResponse.from(result));
     }
 
     @PatchMapping("/{notificationId}/read")
@@ -100,6 +114,12 @@ public class NotificationController {
             return new NotificationListResponse(result.notifications().stream()
                 .map(NotificationResponse::from)
                 .toList(), result.nextCursor(), result.hasNext());
+        }
+    }
+
+    public record UnreadExistsResponse(boolean hasUnread) {
+        public static UnreadExistsResponse from(NotificationService.UnreadExistsResult result) {
+            return new UnreadExistsResponse(result.hasUnread());
         }
     }
 
