@@ -61,6 +61,9 @@ public class Notification extends BaseEntity {
     @Column(name = "reference_id")
     private Long referenceId;
 
+    @Column(name = "link", length = 300)
+    private String link;
+
     @Column(name = "scheduled_at")
     private LocalDateTime scheduledAt;
 
@@ -115,6 +118,7 @@ public class Notification extends BaseEntity {
         String imageKey,
         String referenceType,
         Long referenceId,
+        String link,
         LocalDateTime scheduledAt,
         int maxRetry,
         String dedupeKey
@@ -123,9 +127,39 @@ public class Notification extends BaseEntity {
         this.imageKey = imageKey;
         this.referenceType = referenceType;
         this.referenceId = referenceId;
+        this.link = link;
         this.scheduledAt = scheduledAt;
         this.maxRetry = maxRetry;
         this.dedupeKey = dedupeKey;
+    }
+
+    public Notification(
+        Long id,
+        Long receiverMemberId,
+        NotificationType notificationType,
+        String title,
+        String content,
+        String imageKey,
+        String referenceType,
+        Long referenceId,
+        LocalDateTime scheduledAt,
+        int maxRetry,
+        String dedupeKey
+    ) {
+        this(
+            id,
+            receiverMemberId,
+            notificationType,
+            title,
+            content,
+            imageKey,
+            referenceType,
+            referenceId,
+            null,
+            scheduledAt,
+            maxRetry,
+            dedupeKey
+        );
     }
 
     public void markAsRead(LocalDateTime readAt) {

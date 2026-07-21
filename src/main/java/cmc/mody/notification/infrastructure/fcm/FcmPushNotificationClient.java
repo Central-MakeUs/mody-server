@@ -1,5 +1,6 @@
 package cmc.mody.notification.infrastructure.fcm;
 
+import cmc.mody.notification.application.NotificationLinkResolver;
 import cmc.mody.notification.application.PushNotificationClient;
 import cmc.mody.notification.application.PushNotificationResult;
 import cmc.mody.notification.domain.Notification;
@@ -9,10 +10,13 @@ import com.google.firebase.messaging.MessagingErrorCode;
 import com.google.firebase.messaging.MulticastMessage;
 import com.google.firebase.messaging.SendResponse;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Component
@@ -22,9 +26,11 @@ public class FcmPushNotificationClient implements PushNotificationClient {
 
     @SuppressWarnings("unused")
     private final FirebaseInitializer firebaseInitializer;
+    private final NotificationLinkResolver linkResolver;
 
-    public FcmPushNotificationClient(FirebaseInitializer firebaseInitializer) {
+    public FcmPushNotificationClient(FirebaseInitializer firebaseInitializer, NotificationLinkResolver linkResolver) {
         this.firebaseInitializer = firebaseInitializer;
+        this.linkResolver = linkResolver;
     }
 
     @Override
@@ -44,6 +50,7 @@ public class FcmPushNotificationClient implements PushNotificationClient {
                 .setTitle(notification.getTitle())
                 .setBody(notification.getContent())
                 .build())
+            .putAllData(data(notification))
             .build();
 
         try {
@@ -78,5 +85,26 @@ public class FcmPushNotificationClient implements PushNotificationClient {
         }
         MessagingErrorCode errorCode = exception.getMessagingErrorCode();
         return errorCode == MessagingErrorCode.UNREGISTERED || errorCode == MessagingErrorCode.INVALID_ARGUMENT;
+    }
+
+    private Map<String, String> data(Notification notification) {
+        Map<String, String> data = new LinkedHashMap<>();
+        put(data, "notificationId", notification.getId());
+        put(data, "type", notification.getNotificationType());
+        put(data, "referenceType", notification.getReferenceType());
+        put(data, "referenceId", notification.getReferenceId());
+        put(data, "link", linkResolver.resolve(notification));
+        put(data, "imageKey", notification.getImageKey());
+        return data;
+    }
+
+    private void put(Map<String, String> data, String key, Object value) {
+        if (value == null) {
+            return;
+        }
+        String text = String.valueOf(value);
+        if (StringUtils.hasText(text)) {
+            data.put(key, text);
+        }
     }
 }

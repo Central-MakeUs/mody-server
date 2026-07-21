@@ -2,6 +2,7 @@ package cmc.mody.notification.application.event;
 
 import cmc.mody.common.id.IdGenerator;
 import cmc.mody.notification.application.NotificationDispatchProperties;
+import cmc.mody.notification.application.NotificationLinkResolver;
 import cmc.mody.notification.application.NotificationPayload;
 import cmc.mody.notification.application.NotificationRecipientResolver;
 import cmc.mody.notification.application.NotificationTemplate;
@@ -24,6 +25,7 @@ public class NotificationRequestedEventListener {
     private final NotificationDispatchProperties dispatchProperties;
     private final NotificationRecipientResolver recipientResolver;
     private final NotificationTemplateRenderer templateRenderer;
+    private final NotificationLinkResolver linkResolver;
     private final NotificationRepository notificationRepository;
 
     public NotificationRequestedEventListener(
@@ -31,12 +33,14 @@ public class NotificationRequestedEventListener {
         NotificationDispatchProperties dispatchProperties,
         NotificationRecipientResolver recipientResolver,
         NotificationTemplateRenderer templateRenderer,
+        NotificationLinkResolver linkResolver,
         NotificationRepository notificationRepository
     ) {
         this.idGenerator = idGenerator;
         this.dispatchProperties = dispatchProperties;
         this.recipientResolver = recipientResolver;
         this.templateRenderer = templateRenderer;
+        this.linkResolver = linkResolver;
         this.notificationRepository = notificationRepository;
     }
 
@@ -79,6 +83,7 @@ public class NotificationRequestedEventListener {
                 event.imageKey(),
                 event.referenceType(),
                 event.referenceId(),
+                linkResolver.resolve(event),
                 scheduledAt,
                 dispatchProperties.getMaxRetry(),
                 dedupeKey

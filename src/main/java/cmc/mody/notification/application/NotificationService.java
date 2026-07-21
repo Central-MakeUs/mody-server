@@ -22,6 +22,7 @@ public class NotificationService {
 
     private final MemberRepository memberRepository;
     private final NotificationRepository notificationRepository;
+    private final NotificationLinkResolver linkResolver;
 
     @Transactional
     public NotificationListResult getNotifications(Long memberId, Long cursor, int size, boolean allRead) {
@@ -36,7 +37,7 @@ public class NotificationService {
         List<Notification> pageNotifications = hasNext ? notifications.subList(0, pageSize) : notifications;
         List<NotificationResult> results = pageNotifications
             .stream()
-            .map(NotificationResult::from)
+            .map(notification -> NotificationResult.from(notification, linkResolver))
             .toList();
         Long nextCursor = hasNext ? pageNotifications.get(pageNotifications.size() - 1).getId() : null;
         return new NotificationListResult(results, nextCursor, hasNext);
@@ -81,15 +82,17 @@ public class NotificationService {
         NotificationType type,
         String title,
         String description,
+        String link,
         LocalDateTime createdAt,
         boolean read
     ) {
-        public static NotificationResult from(Notification notification) {
+        public static NotificationResult from(Notification notification, NotificationLinkResolver linkResolver) {
             return new NotificationResult(
                 notification.getId(),
                 notification.getNotificationType(),
                 notification.getTitle(),
                 notification.getContent(),
+                linkResolver.resolve(notification),
                 notification.getCreatedAt(),
                 notification.isRead()
             );

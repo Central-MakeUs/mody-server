@@ -93,6 +93,7 @@ class NotificationControllerDocsTest {
                 NotificationType.COMMENT_CREATED,
                 "예은님이 댓글을 남겼어요.",
                 "어떤 이야기를 남겼는지 확인하러 가요!",
+                "/records/10",
                 LocalDateTime.of(2026, 7, 4, 10, 0),
                 false
             )
@@ -120,6 +121,9 @@ class NotificationControllerDocsTest {
                         fieldWithPath("result.notifications[].type").type(JsonFieldType.STRING).description("알림 종류"),
                         fieldWithPath("result.notifications[].title").type(JsonFieldType.STRING).description("제목"),
                         fieldWithPath("result.notifications[].description").type(JsonFieldType.STRING).description("설명"),
+                        fieldWithPath("result.notifications[].link")
+                            .type(JsonFieldType.STRING)
+                            .description("알림 클릭 시 이동할 앱 내부 경로"),
                         fieldWithPath("result.notifications[].createdAt").type(JsonFieldType.STRING).description("생성 일시"),
                         fieldWithPath("result.notifications[].read")
                             .type(JsonFieldType.BOOLEAN)
