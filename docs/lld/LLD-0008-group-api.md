@@ -69,7 +69,8 @@ DELETE /api/v1/groups/{groupId}/members/me
   - `member_id`: 회원 id 논리 참조.
   - `group_id`: 그룹 id 논리 참조.
   - `group_member_status`: `JOINED`, `LEFT`.
-  - `display_nickname`, `display_profile_image_key`: 그룹 내 노출용 회원 정보 스냅샷.
+  - `display_nickname`, `display_profile_image_key`: 그룹 내 노출용 회원 정보.
+    가입 시 회원 정보를 복사하고, 프로필 닉네임 수정 시 현재 참여 중인 그룹의 `display_nickname`은 최신 닉네임으로 동기화한다.
   - `joined_at`, `left_at`: 그룹 참여/탈퇴 시각.
 - `record_view_history`
   - `viewer_member_id`: 기록을 확인한 회원 id.

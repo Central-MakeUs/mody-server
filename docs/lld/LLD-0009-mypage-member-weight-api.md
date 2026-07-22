@@ -68,9 +68,10 @@ POST /api/v1/mypage/weights
   - `nickname`, `birth_date`, `profile_image_key`, `created_at`을 조회한다.
   - `birth_date`, `target_weight_kg` 존재 여부로 `personalInfoCompleted`를 계산한다.
   - `group_onboarding_completed`를 `groupOnboardingCompleted`로 반환한다.
-  - 프로필 수정은 `nickname`, `birth_date`만 변경한다.
+  - 프로필 수정은 `nickname`, `birth_date`를 변경한다.
 - `group_member`
   - 현재 `JOINED` 상태 그룹 수로 `mainAccessible`을 계산한다.
+  - 프로필 닉네임 수정 시 현재 `JOINED` 상태의 `display_nickname`도 함께 갱신한다.
 - `social_account`
   - `member_id`로 첫 활성 소셜 계정을 조회해 `login_type`을 응답한다.
 - `weight_record`
@@ -86,9 +87,10 @@ POST /api/v1/mypage/weights
 4. 내 정보 조회는 개인 정보 입력 완료 여부, 그룹 온보딩 완료 이력, 메인 진입 가능 여부를 최신 서버 상태로 계산해 반환한다.
 5. 프로필 조회는 회원과 첫 활성 소셜 계정의 로그인 타입을 반환한다.
 6. 프로필 수정은 닉네임과 생년월일을 검증한 뒤 회원 엔티티에 반영한다.
-7. 체중 요약 조회는 최초 체중 기록을 `startWeightKg`, 가장 최근 체중 기록을 `currentWeightKg`, 회원 목표 체중을 `targetWeightKg`로 반환한다.
+7. 프로필 닉네임이 변경되면 현재 참여 중인 그룹의 표시 닉네임도 같은 값으로 갱신한다.
+8. 체중 요약 조회는 최초 체중 기록을 `startWeightKg`, 가장 최근 체중 기록을 `currentWeightKg`, 회원 목표 체중을 `targetWeightKg`로 반환한다.
    체중 기록이 없으면 `startWeightKg`, `currentWeightKg`는 `null`이다.
-8. 체중 추가는 직전 체중과의 차이를 계산해 `change_from_previous_kg`에 저장한다.
+9. 체중 추가는 직전 체중과의 차이를 계산해 `change_from_previous_kg`에 저장한다.
 
 ## 6. 예외 / 에러 처리
 

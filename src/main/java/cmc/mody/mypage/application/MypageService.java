@@ -107,6 +107,9 @@ public class MypageService {
     public ProfileUpdateResult updateProfile(Long memberId, ProfileUpdateCommand command) {
         Member member = getMember(memberId);
         member.updateProfile(command.nickname(), command.birthDate());
+        groupMemberRepository
+            .findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(memberId, GroupMemberStatus.JOINED)
+            .forEach(groupMember -> groupMember.updateDisplayNickname(member.getNickname()));
         return new ProfileUpdateResult(member.getNickname(), member.getBirthDate());
     }
 
