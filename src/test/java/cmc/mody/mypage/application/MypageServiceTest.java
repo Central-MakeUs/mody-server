@@ -200,16 +200,36 @@ class MypageServiceTest {
     }
 
     @Test
-    @DisplayName("프로필 수정 시 닉네임과 생년월일을 변경한다.")
+    @DisplayName("프로필 수정 시 닉네임, 생년월일, 참여 그룹 표시 닉네임을 변경한다.")
     void updateProfile() {
         MypageService service = service();
         Member member = member();
+        GroupMember firstGroupMember = new GroupMember(
+            20L,
+            1L,
+            10L,
+            "이전닉네임",
+            null,
+            LocalDateTime.of(2026, 7, 1, 0, 0)
+        );
+        GroupMember secondGroupMember = new GroupMember(
+            21L,
+            1L,
+            11L,
+            "다른이전닉네임",
+            null,
+            LocalDateTime.of(2026, 7, 2, 0, 0)
+        );
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+        given(groupMemberRepository.findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
+            .willReturn(List.of(firstGroupMember, secondGroupMember));
 
         service.updateProfile(1L, new ProfileUpdateCommand("수정", LocalDate.of(1999, 12, 31)));
 
         assertThat(member.getNickname()).isEqualTo("수정");
         assertThat(member.getBirthDate()).isEqualTo(LocalDate.of(1999, 12, 31));
+        assertThat(firstGroupMember.getDisplayNickname()).isEqualTo("수정");
+        assertThat(secondGroupMember.getDisplayNickname()).isEqualTo("수정");
     }
 
     @Test

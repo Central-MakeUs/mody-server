@@ -70,4 +70,8 @@ public class GroupMember extends BaseEntity {
         this.leftAt = leftAt;
         delete();
     }
+
+    public void updateDisplayNickname(String displayNickname) {
+        this.displayNickname = displayNickname;
+    }
 }
