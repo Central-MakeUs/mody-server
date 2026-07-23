@@ -18,6 +18,7 @@ public enum ErrorStatus implements BaseCode {
     INVALID_OAUTH_TOKEN(400, "AUTH408", "유효하지 않은 OAuth 토큰입니다."),
     OAUTH_PROFILE_REQUEST_FAILED(400, "AUTH409", "OAuth 프로필 조회에 실패했습니다."),
     INVALID_OAUTH_PROFILE(400, "AUTH410", "OAuth 프로필 정보가 올바르지 않습니다."),
+    DEMO_LOGIN_DISABLED(403, "AUTH411", "데모 로그인이 비활성화되어 있습니다."),
     MEMBER_SIGNUP_VALIDATION_FAILED(400, "MEMBER301", "회원 가입 입력값이 올바르지 않습니다."),
     MEMBER_NOT_FOUND(404, "MEMBER302", "회원을 찾을 수 없습니다."),
     MEMBER_PROFILE_ALREADY_COMPLETED(409, "MEMBER303", "이미 개인 정보 입력이 완료된 회원입니다."),

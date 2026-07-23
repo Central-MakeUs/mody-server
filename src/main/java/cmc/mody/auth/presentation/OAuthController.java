@@ -4,6 +4,8 @@ import cmc.mody.auth.application.oauth.OAuthService;
 import cmc.mody.auth.presentation.dto.SocialLoginResponse;
 import cmc.mody.auth.presentation.dto.TokenDto;
 import cmc.mody.common.api.ApiResponse;
+import cmc.mody.common.api.exception.GeneralException;
+import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.member.domain.LoginType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -47,9 +49,13 @@ public class OAuthController {
     @GetMapping("/client/{loginType}")
     public ApiResponse<SocialLoginResponse> clientLogin(
         @PathVariable String loginType,
-        @RequestParam("accessToken") String providerToken
+        @RequestParam(value = "accessToken", required = false) String providerToken
     ) {
-        TokenDto token = oAuthService.loginByProviderToken(LoginType.from(loginType), providerToken);
+        LoginType type = LoginType.from(loginType);
+        if (!type.isDemo() && (providerToken == null || providerToken.isBlank())) {
+            throw new GeneralException(ErrorStatus.BAD_REQUEST);
+        }
+        TokenDto token = oAuthService.loginByProviderToken(type, providerToken);
         return ApiResponse.ok(SocialLoginResponse.from(token));
     }
 

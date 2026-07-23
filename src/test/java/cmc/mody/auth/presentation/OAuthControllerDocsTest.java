@@ -31,15 +31,19 @@ class OAuthControllerDocsTest {
     private static final String CLIENT_LOGIN_DESCRIPTION = """
         클라이언트가 provider token으로 로그인하고 서비스 JWT를 발급받는다.
         Kakao/Google은 provider access token, Apple은 identity token을 `accessToken` 파라미터로 전달한다.
+        앱 심사용 데모 로그인은 `ANDROIDTEST`, `IOSTEST` provider를 사용한다.
+        데모 provider는 외부 OAuth token을 검증하지 않으므로 `accessToken` 없이 호출할 수 있으며,
+        서버의 `DEMO_LOGIN_ENABLED=true` 설정에서만 동작한다.
         회원탈퇴 후 동일 소셜 계정으로 다시 로그인하면 신규 회원으로 생성되며,
         personalInfoCompleted=false, groupOnboardingCompleted=false, mainAccessible=false를 반환한다.
 
         발생 가능한 예외:
-        - `COMMON4000`: accessToken query parameter가 누락됨
+        - `COMMON4000`: 일반 provider 요청에서 accessToken query parameter가 누락됨
         - `AUTH407`: 지원하지 않는 소셜 로그인 타입
         - `AUTH408`: provider token이 비어있거나 유효하지 않음. Apple은 서명, issuer, Bundle ID audience, 만료 검증 실패 포함
         - `AUTH409`: OAuth 프로필 조회 실패
         - `AUTH410`: OAuth 프로필 정보가 올바르지 않음
+        - `AUTH411`: 데모 로그인이 서버에서 비활성화됨
         """;
     private static final String MAIN_ACCESSIBLE_DESCRIPTION =
         "메인 화면 진입 가능 여부. 개인 정보 입력 완료 및 참여 그룹 1개 이상이면 true";
@@ -175,11 +179,46 @@ class OAuthControllerDocsTest {
                     .summary("클라이언트 소셜 로그인")
                     .description(CLIENT_LOGIN_DESCRIPTION)
                     .pathParameters(
-                        parameterWithName("loginType").description("로그인 타입: kakao, apple, google")
+                        parameterWithName("loginType")
+                            .description("로그인 타입: kakao, apple, google, ANDROIDTEST, IOSTEST")
                     )
                     .queryParameters(
                         parameterWithName("accessToken")
-                            .description("provider token. Kakao/Google은 access token, Apple은 identity token")
+                            .optional()
+                            .description("provider token. Kakao/Google은 access token, Apple은 identity token. 데모 provider는 생략 가능")
+                    )
+                    .responseFields(commonResponseFields(
+                        fieldWithPath("result.id").type(JsonFieldType.NUMBER).description("회원 id"),
+                        fieldWithPath("result.accessToken").type(JsonFieldType.STRING).description("access token"),
+                        fieldWithPath("result.refreshToken").type(JsonFieldType.STRING).description("refresh token"),
+                        fieldWithPath("result.personalInfoCompleted")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("개인 정보 입력 완료 여부"),
+                        fieldWithPath("result.mainAccessible")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description(MAIN_ACCESSIBLE_DESCRIPTION),
+                        fieldWithPath("result.groupOnboardingCompleted")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description(GROUP_ONBOARDING_COMPLETED_DESCRIPTION)
+                    ))
+                    .build())
+            ));
+    }
+
+    @Test
+    void clientDemoLogin() throws Exception {
+        given(oAuthService.loginByProviderToken(LoginType.ANDROIDTEST, null))
+            .willReturn(TokenDto.of(10L, "access-token", "refresh-token", false, false, false));
+
+        mockMvc.perform(get("/api/v1/oauth/client/{loginType}", "ANDROIDTEST"))
+            .andExpect(status().isOk())
+            .andDo(document("oauth-client-demo-login",
+                resource(ResourceSnippetParameters.builder()
+                    .tag("OAuth")
+                    .summary("클라이언트 심사용 데모 로그인")
+                    .description(CLIENT_LOGIN_DESCRIPTION)
+                    .pathParameters(
+                        parameterWithName("loginType").description("데모 로그인 타입: ANDROIDTEST, IOSTEST")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.id").type(JsonFieldType.NUMBER).description("회원 id"),
@@ -276,6 +315,23 @@ class OAuthControllerDocsTest {
                 resource(ResourceSnippetParameters.builder()
                     .tag("OAuth")
                     .summary("클라이언트 소셜 로그인")
+                    .description(CLIENT_LOGIN_DESCRIPTION)
+                    .responseFields(commonResponseFields())
+                    .build())
+            ));
+    }
+
+    @Test
+    void clientDemoLoginDisabled() throws Exception {
+        given(oAuthService.loginByProviderToken(LoginType.IOSTEST, null))
+            .willThrow(new GeneralException(ErrorStatus.DEMO_LOGIN_DISABLED));
+
+        mockMvc.perform(get("/api/v1/oauth/client/{loginType}", "IOSTEST"))
+            .andExpect(status().isForbidden())
+            .andDo(document("oauth-client-demo-login-disabled",
+                resource(ResourceSnippetParameters.builder()
+                    .tag("OAuth")
+                    .summary("클라이언트 심사용 데모 로그인")
                     .description(CLIENT_LOGIN_DESCRIPTION)
                     .responseFields(commonResponseFields())
                     .build())

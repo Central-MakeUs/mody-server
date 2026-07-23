@@ -7,7 +7,9 @@ import java.util.Locale;
 public enum LoginType {
     KAKAO,
     APPLE,
-    GOOGLE;
+    GOOGLE,
+    ANDROIDTEST,
+    IOSTEST;
 
     public static LoginType from(String value) {
         if (value == null || value.isBlank()) {
@@ -18,5 +20,9 @@ public enum LoginType {
         } catch (IllegalArgumentException e) {
             throw new GeneralException(ErrorStatus.UNSUPPORTED_LOGIN_TYPE);
         }
+    }
+
+    public boolean isDemo() {
+        return this == ANDROIDTEST || this == IOSTEST;
     }
 }

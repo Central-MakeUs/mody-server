@@ -29,6 +29,7 @@
 ### In scope
 
 - 소셜 로그인 provider enum: `KAKAO`, `APPLE`, `GOOGLE`.
+- 심사용 데모 provider enum: `ANDROIDTEST`, `IOSTEST`는 LLD-0032 기준으로 처리한다.
 - provider별 OAuth 전략: authorization code로 외부 프로필을 조회한다.
 - provider HTTP client는 Spring Cloud OpenFeign 기반으로 구현한다.
 - 전략 선택 팩토리: 등록된 전략을 `LoginType` 기준으로 조회한다.
@@ -64,6 +65,7 @@ Apple authorization redirect는 `response_mode=form_post`를 사용하므로 POS
 `client/{loginType}`은 클라이언트가 provider SDK로 받은 token을 서버 JWT로 교환한다.
 Kakao/Google은 access token, Apple은 identity token을 `accessToken` query parameter로 전달한다.
 Apple identity token은 Apple 공개키(JWKS)와 환경별 Bundle ID audience로 검증한다.
+심사용 데모 provider(`ANDROIDTEST`, `IOSTEST`)는 외부 provider token을 검증하지 않고 LLD-0032 흐름을 따른다.
 
 응답 예시:
 
@@ -107,7 +109,7 @@ interface OAuthMemberService {
   - 소셜 로그인 직후 온보딩 전 상태를 허용하기 위해 생년월일은 nullable이다.
 - `social_account`
   - `member_id`: 논리 참조 id.
-  - `login_type`: `KAKAO`, `APPLE`, `GOOGLE`.
+  - `login_type`: `KAKAO`, `APPLE`, `GOOGLE`, `ANDROIDTEST`, `IOSTEST`.
   - `provider_user_id`: provider에서 내려주는 고유 사용자 id.
 - `refresh_token`
   - `member_id`: 논리 참조 id.
