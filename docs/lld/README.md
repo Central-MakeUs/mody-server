@@ -37,3 +37,4 @@
 | [LLD-0029](LLD-0029-server-error-slack-alert.md) | 500 에러 Slack 알림 | Accepted | #92 |
 | [LLD-0030](LLD-0030-database-migration-versioning.md) | DB 마이그레이션 형상관리 | Accepted | #96 |
 | [LLD-0031](LLD-0031-record-upload-all-groups.md) | 기록 업로드 전체 그룹 노출 | Accepted | #103 |
+| [LLD-0032](LLD-0032-demo-login-provider.md) | 심사용 데모 로그인 Provider | Accepted | #125 |

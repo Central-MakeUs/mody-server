@@ -71,6 +71,13 @@ fcm:
   enabled: ${FCM_ENABLED:false}
   credentials-path: ${FCM_CREDENTIALS_PATH:}
 
+demo-login:
+  enabled: ${DEMO_LOGIN_ENABLED:false}
+  android-provider-user-id: ${DEMO_ANDROID_PROVIDER_USER_ID:mody-android-reviewer}
+  ios-provider-user-id: ${DEMO_IOS_PROVIDER_USER_ID:mody-ios-reviewer}
+  android-nickname: ${DEMO_ANDROID_NICKNAME:AndroidReviewer}
+  ios-nickname: ${DEMO_IOS_NICKNAME:iOSReviewer}
+
 oauth:
   kakao:
     authorization-uri: ${KAKAO_AUTHORIZATION_URI:https://kauth.kakao.com/oauth/authorize}

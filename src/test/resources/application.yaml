@@ -65,6 +65,13 @@ fcm:
   enabled: false
   credentials-path: ""
 
+demo-login:
+  enabled: false
+  android-provider-user-id: mody-android-reviewer
+  ios-provider-user-id: mody-ios-reviewer
+  android-nickname: AndroidReviewer
+  ios-nickname: iOSReviewer
+
 oauth:
   apple:
     auth-base-uri: https://appleid.apple.com
