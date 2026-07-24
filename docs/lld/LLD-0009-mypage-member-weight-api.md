@@ -50,9 +50,13 @@ POST /api/v1/mypage/weights
 ```json
 {
   "nickname": "민석",
-  "birthDate": "2000-01-01"
+  "birthDate": "2000-01-01",
+  "imageKey": "profiles/1/2026/07/123.jpg"
 }
 ```
+
+`imageKey`는 선택값이다. 생략하거나 `null`이면 기존 프로필 이미지를 유지한다.
+값을 전달할 때는 `POST /api/v1/uploads/presigned-url?domain=profile`로 발급받은 `profiles/{memberId}/...` 키만 허용한다.
 
 체중 추가 요청:
 
@@ -68,10 +72,11 @@ POST /api/v1/mypage/weights
   - `nickname`, `birth_date`, `profile_image_key`, `created_at`을 조회한다.
   - `birth_date`, `target_weight_kg` 존재 여부로 `personalInfoCompleted`를 계산한다.
   - `group_onboarding_completed`를 `groupOnboardingCompleted`로 반환한다.
-  - 프로필 수정은 `nickname`, `birth_date`를 변경한다.
+  - 프로필 수정은 `nickname`, `birth_date`, `profile_image_key`를 변경한다.
 - `group_member`
   - 현재 `JOINED` 상태 그룹 수로 `mainAccessible`을 계산한다.
   - 프로필 닉네임 수정 시 현재 `JOINED` 상태의 `display_nickname`도 함께 갱신한다.
+  - 프로필 이미지 수정 시 현재 `JOINED` 상태의 `display_profile_image_key`도 함께 갱신한다.
 - `social_account`
   - `member_id`로 첫 활성 소셜 계정을 조회해 `login_type`을 응답한다.
 - `weight_record`
@@ -87,10 +92,12 @@ POST /api/v1/mypage/weights
 4. 내 정보 조회는 개인 정보 입력 완료 여부, 그룹 온보딩 완료 이력, 메인 진입 가능 여부를 최신 서버 상태로 계산해 반환한다.
 5. 프로필 조회는 회원과 첫 활성 소셜 계정의 로그인 타입을 반환한다.
 6. 프로필 수정은 닉네임과 생년월일을 검증한 뒤 회원 엔티티에 반영한다.
-7. 프로필 닉네임이 변경되면 현재 참여 중인 그룹의 표시 닉네임도 같은 값으로 갱신한다.
-8. 체중 요약 조회는 최초 체중 기록을 `startWeightKg`, 가장 최근 체중 기록을 `currentWeightKg`, 회원 목표 체중을 `targetWeightKg`로 반환한다.
+7. `imageKey`가 있으면 `profiles/{memberId}/...` 형식인지 검증한 뒤 회원 프로필 이미지에 반영한다.
+8. 프로필 닉네임이 변경되면 현재 참여 중인 그룹의 표시 닉네임도 같은 값으로 갱신한다.
+9. 프로필 이미지가 변경되면 현재 참여 중인 그룹의 표시 프로필 이미지도 같은 값으로 갱신한다.
+10. 체중 요약 조회는 최초 체중 기록을 `startWeightKg`, 가장 최근 체중 기록을 `currentWeightKg`, 회원 목표 체중을 `targetWeightKg`로 반환한다.
    체중 기록이 없으면 `startWeightKg`, `currentWeightKg`는 `null`이다.
-9. 체중 추가는 직전 체중과의 차이를 계산해 `change_from_previous_kg`에 저장한다.
+11. 체중 추가는 직전 체중과의 차이를 계산해 `change_from_previous_kg`에 저장한다.
 
 ## 6. 예외 / 에러 처리
 
@@ -98,6 +105,7 @@ POST /api/v1/mypage/weights
 - 요청 검증 실패: `MYPAGE301`.
 - 회원 없음: `MEMBER302`.
 - 소셜 계정 없음: `MYPAGE302`.
+- profile 도메인이 아닌 프로필 이미지 키: `MYPAGE303`.
 
 ## 7. 인수조건 (Acceptance Criteria)
 
@@ -105,6 +113,8 @@ POST /api/v1/mypage/weights
 - [x] 내 정보 조회 응답에 `personalInfoCompleted`, `groupOnboardingCompleted`, `mainAccessible`이 포함된다.
 - [x] 인증 회원이 프로필을 조회할 수 있다.
 - [x] 인증 회원이 닉네임과 생년월일을 수정할 수 있다.
+- [x] 인증 회원이 프로필 이미지 키를 수정할 수 있다.
+- [x] 프로필 수정 시 현재 참여 그룹의 표시 닉네임과 표시 프로필 이미지가 함께 갱신된다.
 - [x] 인증 회원이 시작, 현재, 목표 체중 요약을 조회할 수 있다.
 - [x] 인증 회원이 체중을 추가하면 이전 기록 대비 증감이 계산된다.
 - [x] Swagger에 성공/주요 예외 응답이 반영된다.

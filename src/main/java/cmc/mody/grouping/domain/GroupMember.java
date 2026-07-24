@@ -74,4 +74,8 @@ public class GroupMember extends BaseEntity {
     public void updateDisplayNickname(String displayNickname) {
         this.displayNickname = displayNickname;
     }
+
+    public void updateDisplayProfileImageKey(String displayProfileImageKey) {
+        this.displayProfileImageKey = displayProfileImageKey;
+    }
 }

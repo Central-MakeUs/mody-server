@@ -86,6 +86,7 @@ class MypageControllerDocsTest {
         - MEMBER302: 토큰의 회원 id에 해당하는 회원 없음
         - MYPAGE301: 마이페이지 입력값 검증 실패
         - MYPAGE302: 소셜 계정 정보 없음
+        - MYPAGE303: 프로필 이미지 키가 profile 도메인으로 발급된 값이 아님
         """.formatted(AUTHENTICATED_API, SCHEDULE_OWNERSHIP_RULES);
 
     @Autowired
@@ -251,7 +252,7 @@ class MypageControllerDocsTest {
     void updateProfile() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(mypageService.updateProfile(eq(1L), any(ProfileUpdateCommand.class)))
-            .willReturn(new ProfileUpdateResult("민석", LocalDate.of(2000, 1, 1)));
+            .willReturn(new ProfileUpdateResult("민석", LocalDate.of(2000, 1, 1), "profiles/1/2026/07/profile.jpg"));
 
         mockMvc.perform(patch("/api/v1/mypage/profile")
                 .header("Authorization", "Bearer access-token")
@@ -259,7 +260,8 @@ class MypageControllerDocsTest {
                 .content("""
                     {
                       "nickname": "민석",
-                      "birthDate": "2000-01-01"
+                      "birthDate": "2000-01-01",
+                      "imageKey": "profiles/1/2026/07/profile.jpg"
                     }
                     """))
             .andExpect(status().isOk())
@@ -272,11 +274,18 @@ class MypageControllerDocsTest {
                         fieldWithPath("nickname")
                             .type(JsonFieldType.STRING)
                             .description("닉네임. 그룹 내 중복 허용"),
-                        fieldWithPath("birthDate").type(JsonFieldType.STRING).description("생년월일(yyyy-MM-dd)")
+                        fieldWithPath("birthDate").type(JsonFieldType.STRING).description("생년월일(yyyy-MM-dd)"),
+                        fieldWithPath("imageKey")
+                            .type(JsonFieldType.STRING)
+                            .optional()
+                            .description("프로필 이미지 키. `/api/v1/uploads/presigned-url?domain=profile`에서 발급받은 `profiles/{memberId}/...` 값. 생략 또는 null이면 기존 이미지 유지")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.nickname").type(JsonFieldType.STRING).description("닉네임"),
-                        fieldWithPath("result.birthDate").type(JsonFieldType.STRING).description("생년월일")
+                        fieldWithPath("result.birthDate").type(JsonFieldType.STRING).description("생년월일"),
+                        fieldWithPath("result.profileImageUrl")
+                            .type(JsonFieldType.STRING)
+                            .description("갱신된 프로필 이미지 키. 이미지가 없으면 null")
                     ))
                     .build())
             ));
@@ -297,6 +306,34 @@ class MypageControllerDocsTest {
                     """))
             .andExpect(status().isBadRequest())
             .andDo(documentError("mypage-profile-update-validation-error", "프로필 수정"));
+    }
+
+    @Test
+    void updateProfileInvalidImageKey() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.MYPAGE_PROFILE_IMAGE_INVALID))
+            .given(mypageService)
+            .updateProfile(eq(1L), any(ProfileUpdateCommand.class));
+
+        mockMvc.perform(patch("/api/v1/mypage/profile")
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "nickname": "민석",
+                      "birthDate": "2000-01-01",
+                      "imageKey": "records/1/2026/07/profile.jpg"
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andDo(document("mypage-profile-update-invalid-image-key",
+                resource(ResourceSnippetParameters.builder()
+                    .tag("Mypage")
+                    .summary("프로필 수정")
+                    .description(MYPAGE_DESCRIPTION)
+                    .responseFields(commonResponseFields())
+                    .build())
+            ));
     }
 
     @ParameterizedTest(name = "{0} Authorization 헤더 없음")

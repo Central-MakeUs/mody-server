@@ -200,7 +200,7 @@ class MypageServiceTest {
     }
 
     @Test
-    @DisplayName("프로필 수정 시 닉네임, 생년월일, 참여 그룹 표시 닉네임을 변경한다.")
+    @DisplayName("프로필 수정 시 닉네임, 생년월일, 프로필 이미지와 참여 그룹 표시 정보를 변경한다.")
     void updateProfile() {
         MypageService service = service();
         Member member = member();
@@ -224,12 +224,53 @@ class MypageServiceTest {
         given(groupMemberRepository.findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
             .willReturn(List.of(firstGroupMember, secondGroupMember));
 
-        service.updateProfile(1L, new ProfileUpdateCommand("수정", LocalDate.of(1999, 12, 31)));
+        service.updateProfile(
+            1L,
+            new ProfileUpdateCommand("수정", LocalDate.of(1999, 12, 31), "profiles/1/2026/07/profile.jpg")
+        );
 
         assertThat(member.getNickname()).isEqualTo("수정");
         assertThat(member.getBirthDate()).isEqualTo(LocalDate.of(1999, 12, 31));
+        assertThat(member.getProfileImageKey()).isEqualTo("profiles/1/2026/07/profile.jpg");
         assertThat(firstGroupMember.getDisplayNickname()).isEqualTo("수정");
         assertThat(secondGroupMember.getDisplayNickname()).isEqualTo("수정");
+        assertThat(firstGroupMember.getDisplayProfileImageKey()).isEqualTo("profiles/1/2026/07/profile.jpg");
+        assertThat(secondGroupMember.getDisplayProfileImageKey()).isEqualTo("profiles/1/2026/07/profile.jpg");
+    }
+
+    @Test
+    @DisplayName("프로필 수정 시 이미지 키가 없으면 기존 프로필 이미지를 유지한다.")
+    void updateProfileWithoutImageKey() {
+        MypageService service = service();
+        Member member = Member.oauthMember(1L, "기존", "profiles/1/old.jpg");
+        GroupMember groupMember = new GroupMember(
+            20L,
+            1L,
+            10L,
+            "기존",
+            "profiles/1/old.jpg",
+            LocalDateTime.of(2026, 7, 1, 0, 0)
+        );
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+        given(groupMemberRepository.findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
+            .willReturn(List.of(groupMember));
+
+        service.updateProfile(1L, new ProfileUpdateCommand("수정", LocalDate.of(1999, 12, 31), null));
+
+        assertThat(member.getProfileImageKey()).isEqualTo("profiles/1/old.jpg");
+        assertThat(groupMember.getDisplayProfileImageKey()).isEqualTo("profiles/1/old.jpg");
+    }
+
+    @Test
+    @DisplayName("프로필 이미지 키가 profile 도메인이 아니면 프로필을 수정할 수 없다.")
+    void updateProfileWithInvalidImageKey() {
+        MypageService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+
+        assertThatThrownBy(() ->
+            service.updateProfile(1L, new ProfileUpdateCommand("수정", LocalDate.of(1999, 12, 31), "records/1/a.jpg")))
+            .isInstanceOfSatisfying(GeneralException.class, exception ->
+                assertThat(exception.getStatus()).isEqualTo(ErrorStatus.MYPAGE_PROFILE_IMAGE_INVALID));
     }
 
     @Test
