@@ -106,11 +106,18 @@ public class MypageService {
     @Transactional
     public ProfileUpdateResult updateProfile(Long memberId, ProfileUpdateCommand command) {
         Member member = getMember(memberId);
+        validateProfileImageKey(memberId, command.imageKey());
         member.updateProfile(command.nickname(), command.birthDate());
-        groupMemberRepository
-            .findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(memberId, GroupMemberStatus.JOINED)
-            .forEach(groupMember -> groupMember.updateDisplayNickname(member.getNickname()));
-        return new ProfileUpdateResult(member.getNickname(), member.getBirthDate());
+        member.updateProfileImage(command.imageKey());
+        List<GroupMember> joinedGroupMembers = groupMemberRepository
+            .findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(memberId, GroupMemberStatus.JOINED);
+        joinedGroupMembers.forEach(groupMember -> {
+            groupMember.updateDisplayNickname(member.getNickname());
+            if (command.imageKey() != null && !command.imageKey().isBlank()) {
+                groupMember.updateDisplayProfileImageKey(member.getProfileImageKey());
+            }
+        });
+        return new ProfileUpdateResult(member.getNickname(), member.getBirthDate(), member.getProfileImageKey());
     }
 
     @Transactional(readOnly = true)
@@ -380,6 +387,16 @@ public class MypageService {
         ) > 0;
     }
 
+    private void validateProfileImageKey(Long memberId, String imageKey) {
+        if (imageKey == null || imageKey.isBlank()) {
+            return;
+        }
+        String expectedPrefix = "profiles/" + memberId + "/";
+        if (!imageKey.startsWith(expectedPrefix)) {
+            throw new GeneralException(ErrorStatus.MYPAGE_PROFILE_IMAGE_INVALID);
+        }
+    }
+
     public record MyInfoResult(
         Long memberId,
         String nickname,
@@ -394,10 +411,10 @@ public class MypageService {
     public record ProfileResult(String loginType, String name, LocalDate birthDate) {
     }
 
-    public record ProfileUpdateCommand(String nickname, LocalDate birthDate) {
+    public record ProfileUpdateCommand(String nickname, LocalDate birthDate, String imageKey) {
     }
 
-    public record ProfileUpdateResult(String nickname, LocalDate birthDate) {
+    public record ProfileUpdateResult(String nickname, LocalDate birthDate, String profileImageUrl) {
     }
 
     public record WeightHistoryResult(

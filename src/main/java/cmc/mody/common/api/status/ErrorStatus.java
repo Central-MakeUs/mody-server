@@ -37,6 +37,7 @@ public enum ErrorStatus implements BaseCode {
     GROUP_CAPACITY_EXCEEDED(409, "GROUP307", "그룹 최대 인원을 초과했습니다."),
     MYPAGE_VALIDATION_FAILED(400, "MYPAGE301", "마이페이지 입력값이 올바르지 않습니다."),
     MYPAGE_SOCIAL_ACCOUNT_NOT_FOUND(404, "MYPAGE302", "소셜 계정 정보를 찾을 수 없습니다."),
+    MYPAGE_PROFILE_IMAGE_INVALID(400, "MYPAGE303", "프로필 이미지는 profile 도메인으로 발급된 이미지 키여야 합니다."),
     RECORD_VALIDATION_FAILED(400, "RECORD301", "기록 입력값이 올바르지 않습니다."),
     RECORD_NOT_FOUND(404, "RECORD302", "기록을 찾을 수 없습니다."),
     RECORD_GROUP_ID_INVALID(400, "RECORD303", "그룹 id는 양수로 입력해야 합니다."),

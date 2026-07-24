@@ -222,16 +222,17 @@ public class MypageController {
         String nickname,
         @NotNull(message = "생년월일은 필수입니다.")
         @Past(message = "생년월일은 과거 날짜여야 합니다.")
-        LocalDate birthDate
+        LocalDate birthDate,
+        String imageKey
     ) {
         public ProfileUpdateCommand toCommand() {
-            return new ProfileUpdateCommand(nickname, birthDate);
+            return new ProfileUpdateCommand(nickname, birthDate, imageKey);
         }
     }
 
-    public record ProfileUpdateResponse(String nickname, LocalDate birthDate) {
+    public record ProfileUpdateResponse(String nickname, LocalDate birthDate, String profileImageUrl) {
         public static ProfileUpdateResponse from(MypageService.ProfileUpdateResult result) {
-            return new ProfileUpdateResponse(result.nickname(), result.birthDate());
+            return new ProfileUpdateResponse(result.nickname(), result.birthDate(), result.profileImageUrl());
         }
     }
 
