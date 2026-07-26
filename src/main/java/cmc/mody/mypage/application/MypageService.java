@@ -3,6 +3,7 @@ package cmc.mody.mypage.application;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.common.upload.UploadProperties;
 import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.grouping.domain.ModyGroup;
@@ -73,6 +74,7 @@ public class MypageService {
     private final GroupChallengeRepository groupChallengeRepository;
     private final ChallengeProofRepository challengeProofRepository;
     private final StepRecordRepository stepRecordRepository;
+    private final UploadProperties uploadProperties;
 
     @Transactional(readOnly = true)
     public MyInfoResult getMyInfo(Long memberId) {
@@ -82,7 +84,7 @@ public class MypageService {
         return new MyInfoResult(
             member.getId(),
             member.getNickname(),
-            member.getProfileImageKey(),
+            toImageUrl(member.getProfileImageKey()),
             calculateDaysTogether(member),
             personalInfoCompleted,
             member.isGroupOnboardingCompleted(),
@@ -117,7 +119,7 @@ public class MypageService {
                 groupMember.updateDisplayProfileImageKey(member.getProfileImageKey());
             }
         });
-        return new ProfileUpdateResult(member.getNickname(), member.getBirthDate(), member.getProfileImageKey());
+        return new ProfileUpdateResult(member.getNickname(), member.getBirthDate(), toImageUrl(member.getProfileImageKey()));
     }
 
     @Transactional(readOnly = true)
@@ -395,6 +397,20 @@ public class MypageService {
         if (!imageKey.startsWith(expectedPrefix)) {
             throw new GeneralException(ErrorStatus.MYPAGE_PROFILE_IMAGE_INVALID);
         }
+    }
+
+    private String toImageUrl(String imageKey) {
+        if (imageKey == null || imageKey.isBlank()) {
+            return null;
+        }
+        if (imageKey.startsWith("http://") || imageKey.startsWith("https://")) {
+            return imageKey;
+        }
+        String baseUrl = uploadProperties.getBaseUrl();
+        if (baseUrl.endsWith("/")) {
+            return baseUrl + imageKey;
+        }
+        return baseUrl + "/" + imageKey;
     }
 
     public record MyInfoResult(

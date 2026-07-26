@@ -192,7 +192,15 @@ class MypageControllerDocsTest {
     void getMyInfo() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(mypageService.getMyInfo(1L))
-            .willReturn(new MyInfoResult(1L, "민석", "profiles/member-1.jpg", 12, true, true, true));
+            .willReturn(new MyInfoResult(
+                1L,
+                "민석",
+                "https://storage.example.com/profiles/member-1.jpg",
+                12,
+                true,
+                true,
+                true
+            ));
 
         mockMvc.perform(get("/api/v1/mypage/me")
                 .header("Authorization", "Bearer access-token"))
@@ -252,7 +260,11 @@ class MypageControllerDocsTest {
     void updateProfile() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(mypageService.updateProfile(eq(1L), any(ProfileUpdateCommand.class)))
-            .willReturn(new ProfileUpdateResult("민석", LocalDate.of(2000, 1, 1), "profiles/1/2026/07/profile.jpg"));
+            .willReturn(new ProfileUpdateResult(
+                "민석",
+                LocalDate.of(2000, 1, 1),
+                "https://storage.example.com/profiles/1/2026/07/profile.jpg"
+            ));
 
         mockMvc.perform(patch("/api/v1/mypage/profile")
                 .header("Authorization", "Bearer access-token")
@@ -285,7 +297,7 @@ class MypageControllerDocsTest {
                         fieldWithPath("result.birthDate").type(JsonFieldType.STRING).description("생년월일"),
                         fieldWithPath("result.profileImageUrl")
                             .type(JsonFieldType.STRING)
-                            .description("갱신된 프로필 이미지 키. 이미지가 없으면 null")
+                            .description("갱신된 프로필 이미지 URL. 이미지가 없으면 null")
                     ))
                     .build())
             ));
