@@ -20,6 +20,7 @@ import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.domain.Status;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.common.upload.UploadProperties;
 import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.grouping.domain.ModyGroup;
@@ -137,7 +138,8 @@ class MypageServiceTest {
     @DisplayName("내 정보 조회 시 자동 로그인 진입 상태를 함께 반환한다.")
     void getMyInfo() {
         MypageService service = service();
-        Member member = member();
+        Member member = Member.oauthMember(1L, "민석", "profiles/1/2026/07/profile.jpg");
+        member.completeProfile("민석", LocalDate.of(2000, 1, 1), BigDecimal.valueOf(68.0));
         member.completeGroupOnboarding();
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
         given(groupMemberRepository.countByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(
@@ -150,6 +152,20 @@ class MypageServiceTest {
         assertThat(result.personalInfoCompleted()).isTrue();
         assertThat(result.groupOnboardingCompleted()).isTrue();
         assertThat(result.mainAccessible()).isTrue();
+        assertThat(result.profileImageUrl()).isEqualTo("https://storage.example.com/profiles/1/2026/07/profile.jpg");
+    }
+
+    @Test
+    @DisplayName("내 정보 조회 시 외부 프로필 이미지 URL은 그대로 반환한다.")
+    void getMyInfoWithExternalProfileImageUrl() {
+        MypageService service = service();
+        Member member = Member.oauthMember(1L, "민석", "https://example.com/profile.jpg");
+        member.completeProfile("민석", LocalDate.of(2000, 1, 1), BigDecimal.valueOf(68.0));
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+
+        MypageService.MyInfoResult result = service.getMyInfo(1L);
+
+        assertThat(result.profileImageUrl()).isEqualTo("https://example.com/profile.jpg");
     }
 
     @Test
@@ -224,7 +240,7 @@ class MypageServiceTest {
         given(groupMemberRepository.findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
             .willReturn(List.of(firstGroupMember, secondGroupMember));
 
-        service.updateProfile(
+        MypageService.ProfileUpdateResult result = service.updateProfile(
             1L,
             new ProfileUpdateCommand("수정", LocalDate.of(1999, 12, 31), "profiles/1/2026/07/profile.jpg")
         );
@@ -236,6 +252,7 @@ class MypageServiceTest {
         assertThat(secondGroupMember.getDisplayNickname()).isEqualTo("수정");
         assertThat(firstGroupMember.getDisplayProfileImageKey()).isEqualTo("profiles/1/2026/07/profile.jpg");
         assertThat(secondGroupMember.getDisplayProfileImageKey()).isEqualTo("profiles/1/2026/07/profile.jpg");
+        assertThat(result.profileImageUrl()).isEqualTo("https://storage.example.com/profiles/1/2026/07/profile.jpg");
     }
 
     @Test
@@ -255,10 +272,12 @@ class MypageServiceTest {
         given(groupMemberRepository.findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
             .willReturn(List.of(groupMember));
 
-        service.updateProfile(1L, new ProfileUpdateCommand("수정", LocalDate.of(1999, 12, 31), null));
+        MypageService.ProfileUpdateResult result =
+            service.updateProfile(1L, new ProfileUpdateCommand("수정", LocalDate.of(1999, 12, 31), null));
 
         assertThat(member.getProfileImageKey()).isEqualTo("profiles/1/old.jpg");
         assertThat(groupMember.getDisplayProfileImageKey()).isEqualTo("profiles/1/old.jpg");
+        assertThat(result.profileImageUrl()).isEqualTo("https://storage.example.com/profiles/1/old.jpg");
     }
 
     @Test
@@ -587,8 +606,13 @@ class MypageServiceTest {
             recordViewHistoryRepository,
             groupChallengeRepository,
             challengeProofRepository,
-            stepRecordRepository
+            stepRecordRepository,
+            uploadProperties()
         );
+    }
+
+    private UploadProperties uploadProperties() {
+        return new UploadProperties();
     }
 
     private Member member() {
