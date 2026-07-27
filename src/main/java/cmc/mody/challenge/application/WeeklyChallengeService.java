@@ -12,7 +12,7 @@ import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
 import cmc.mody.common.upload.ImageObjectStorage;
-import cmc.mody.common.upload.UploadProperties;
+import cmc.mody.common.upload.ImageUrlResolver;
 import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.grouping.domain.ModyGroup;
@@ -44,7 +44,7 @@ public class WeeklyChallengeService {
     private final GroupChallengeRepository groupChallengeRepository;
     private final ChallengeProofRepository challengeProofRepository;
     private final NotificationRequestService notificationRequestService;
-    private final UploadProperties uploadProperties;
+    private final ImageUrlResolver imageUrlResolver;
     private final ImageObjectStorage imageObjectStorage;
     private final WeeklyChallengeShareImageGenerator shareImageGenerator;
 
@@ -134,7 +134,7 @@ public class WeeklyChallengeService {
         return new WeeklyChallengeProofCreateResult(
             proof.getId(),
             groupChallenge.getId(),
-            toImageUrl(proof.getImageKey()),
+            imageUrlResolver.resolve(proof.getImageKey()),
             ImageCropRegionResult.from(proof)
         );
     }
@@ -256,11 +256,11 @@ public class WeeklyChallengeService {
         }
         return new WeeklyChallengeProofResult(
             proof.getId(),
-            toImageUrl(proof.getImageKey()),
+            imageUrlResolver.resolve(proof.getImageKey()),
             ImageCropRegionResult.from(proof),
             groupMember.getMemberId(),
             groupMember.getDisplayNickname(),
-            toImageUrl(groupMember.getDisplayProfileImageKey())
+            imageUrlResolver.resolve(groupMember.getDisplayProfileImageKey())
         );
     }
 
@@ -311,17 +311,6 @@ public class WeeklyChallengeService {
             throw new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND);
         }
         return group;
-    }
-
-    private String toImageUrl(String imageKey) {
-        if (imageKey == null || imageKey.isBlank()) {
-            return null;
-        }
-        String baseUrl = uploadProperties.getBaseUrl();
-        if (baseUrl.endsWith("/")) {
-            return baseUrl + imageKey;
-        }
-        return baseUrl + "/" + imageKey;
     }
 
     private String shareImageKey(Long groupId, Long groupChallengeId) {

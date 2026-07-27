@@ -646,7 +646,7 @@ class MypageControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(mypageService.getGroupMembers(1L, 100L))
             .willReturn(new GroupMemberListResult(List.of(
-                new GroupMemberResult(2L, "도윤", "profiles/member-2.jpg")
+                new GroupMemberResult(2L, "도윤", "https://storage.example.com/profiles/member-2.jpg")
             )));
 
         mockMvc.perform(get("/api/v1/mypage/groups/{groupId}/members", 100L)

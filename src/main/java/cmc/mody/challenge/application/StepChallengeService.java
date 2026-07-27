@@ -12,6 +12,7 @@ import cmc.mody.challenge.infrastructure.repository.StepRecordRepository;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.common.upload.ImageUrlResolver;
 import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.grouping.domain.ModyGroup;
@@ -45,6 +46,7 @@ public class StepChallengeService {
     private final StepChallengeDetailRepository stepChallengeDetailRepository;
     private final GroupChallengeRepository groupChallengeRepository;
     private final StepRecordRepository stepRecordRepository;
+    private final ImageUrlResolver imageUrlResolver;
 
     @Transactional(readOnly = true)
     public StepChallengeStatusResult getCurrentStepChallenge(Long memberId, Long groupId) {
@@ -209,7 +211,7 @@ public class StepChallengeService {
             rank,
             groupMember.getMemberId(),
             groupMember.getDisplayNickname(),
-            groupMember.getDisplayProfileImageKey(),
+            imageUrlResolver.resolve(groupMember.getDisplayProfileImageKey()),
             stepCounts.getOrDefault(groupMember.getMemberId(), 0)
         );
     }

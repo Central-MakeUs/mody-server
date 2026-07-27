@@ -12,6 +12,7 @@ import cmc.mody.challenge.domain.GroupChallengeStatus;
 import cmc.mody.challenge.infrastructure.repository.GroupChallengeRepository;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
+import cmc.mody.common.upload.ImageUrlResolver;
 import cmc.mody.common.upload.UploadProperties;
 import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
@@ -163,7 +164,7 @@ class ChallengeHomeServiceTest {
             activityRecordRepository,
             groupChallengeRepository,
             notificationRequestService,
-            uploadProperties
+            new ImageUrlResolver(uploadProperties)
         );
     }
 

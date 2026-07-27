@@ -4,7 +4,7 @@ import cmc.mody.challenge.domain.GroupChallengeStatus;
 import cmc.mody.challenge.infrastructure.repository.GroupChallengeRepository;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
-import cmc.mody.common.upload.UploadProperties;
+import cmc.mody.common.upload.ImageUrlResolver;
 import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.grouping.domain.ModyGroup;
@@ -36,7 +36,7 @@ public class ChallengeHomeService {
     private final ActivityRecordRepository activityRecordRepository;
     private final GroupChallengeRepository groupChallengeRepository;
     private final NotificationRequestService notificationRequestService;
-    private final UploadProperties uploadProperties;
+    private final ImageUrlResolver imageUrlResolver;
 
     @Transactional(readOnly = true)
     public ChallengeSummaryResult getChallengeSummary(Long memberId, Long groupId) {
@@ -91,7 +91,7 @@ public class ChallengeHomeService {
             .map(groupMember -> new NudgeTargetResult(
                 groupMember.getMemberId(),
                 groupMember.getDisplayNickname(),
-                toImageUrl(groupMember.getDisplayProfileImageKey()),
+                imageUrlResolver.resolve(groupMember.getDisplayProfileImageKey()),
                 recordedMemberIds.contains(groupMember.getMemberId())
             ))
             .toList();
@@ -171,17 +171,6 @@ public class ChallengeHomeService {
             .filter(minutes -> minutes != null)
             .mapToInt(Integer::intValue)
             .sum();
-    }
-
-    private String toImageUrl(String imageKey) {
-        if (imageKey == null || imageKey.isBlank()) {
-            return null;
-        }
-        String baseUrl = uploadProperties.getBaseUrl();
-        if (baseUrl.endsWith("/")) {
-            return baseUrl + imageKey;
-        }
-        return baseUrl + "/" + imageKey;
     }
 
     public record ChallengeSummaryResult(

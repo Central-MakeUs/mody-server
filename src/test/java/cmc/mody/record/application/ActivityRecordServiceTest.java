@@ -9,6 +9,7 @@ import static org.mockito.BDDMockito.then;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.common.upload.ImageUrlResolver;
 import cmc.mody.common.upload.UploadProperties;
 import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
@@ -541,7 +542,7 @@ class ActivityRecordServiceTest {
             activityRecordGroupRepository,
             recordCommentRepository,
             recordViewHistoryRepository,
-            new UploadProperties(),
+            new ImageUrlResolver(new UploadProperties()),
             notificationRequestService
         );
     }
