@@ -74,6 +74,10 @@ configure<OpenApi3Extension> {
             description = "Dev server"
         } as Closure<Server>,
         closureOf<Server> {
+            url = "https://prod-mody.shop"
+            description = "Production server"
+        } as Closure<Server>,
+        closureOf<Server> {
             url = "http://localhost:8080"
             description = "Local server"
         } as Closure<Server>
