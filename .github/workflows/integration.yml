@@ -1,9 +1,10 @@
 name: CI with Gradle
 
-# main으로 가는 PR은 린트 + 테스트를 통과해야 한다.
+# develop/main으로 가는 PR은 빌드와 테스트를 통과해야 한다.
 on:
   pull_request:
     branches:
+      - develop
       - main
 
 jobs:

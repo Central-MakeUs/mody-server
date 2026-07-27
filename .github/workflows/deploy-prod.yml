@@ -1,4 +1,4 @@
-name: CD with Gradle
+name: CD Prod with Gradle
 
 on:
   workflow_dispatch:
@@ -10,8 +10,9 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
+  deploy-prod:
     runs-on: ubuntu-latest
+    environment: prod
     steps:
       - uses: actions/checkout@v4
 
@@ -29,16 +30,16 @@ jobs:
       - name: Docker build & push to Docker Hub
         run: |
           docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-          docker build -f Dockerfile -t ${{ secrets.DOCKER_REPO }} .
-          docker push ${{ secrets.DOCKER_REPO }}
+          docker build -f Dockerfile -t ${{ secrets.PROD_DOCKER_REPO }} .
+          docker push ${{ secrets.PROD_DOCKER_REPO }}
 
-      - name: Deploy to server
+      - name: Deploy to prod server
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.HOST }}
+          host: ${{ secrets.PROD_HOST }}
           username: kminseok5167
-          key: ${{ secrets.KEY }}
+          key: ${{ secrets.PROD_KEY }}
           script: |
-            docker pull ${{ secrets.DOCKER_REPO }}
+            docker pull ${{ secrets.PROD_DOCKER_REPO }}
             docker compose up -d
             docker image prune -f
