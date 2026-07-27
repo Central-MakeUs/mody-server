@@ -23,6 +23,7 @@ import cmc.mody.challenge.infrastructure.repository.GroupChallengeRepository;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.common.upload.ImageUrlResolver;
 import cmc.mody.common.upload.ImageObjectStorage;
 import cmc.mody.common.upload.UploadProperties;
 import cmc.mody.grouping.domain.GroupMember;
@@ -389,7 +390,7 @@ class WeeklyChallengeServiceTest {
             groupChallengeRepository,
             challengeProofRepository,
             notificationRequestService,
-            uploadProperties,
+            new ImageUrlResolver(uploadProperties),
             imageObjectStorage,
             shareImageGenerator
         );

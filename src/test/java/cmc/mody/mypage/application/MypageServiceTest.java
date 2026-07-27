@@ -20,6 +20,7 @@ import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.domain.Status;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.common.upload.ImageUrlResolver;
 import cmc.mody.common.upload.UploadProperties;
 import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
@@ -534,6 +535,8 @@ class MypageServiceTest {
 
         assertThat(result.members()).hasSize(1);
         assertThat(result.members().get(0).nickname()).isEqualTo("도윤");
+        assertThat(result.members().get(0).profileImageUrl())
+            .isEqualTo("https://storage.example.com/profiles/member-2.jpg");
     }
 
     @Test
@@ -607,12 +610,12 @@ class MypageServiceTest {
             groupChallengeRepository,
             challengeProofRepository,
             stepRecordRepository,
-            uploadProperties()
+            imageUrlResolver()
         );
     }
 
-    private UploadProperties uploadProperties() {
-        return new UploadProperties();
+    private ImageUrlResolver imageUrlResolver() {
+        return new ImageUrlResolver(new UploadProperties());
     }
 
     private Member member() {

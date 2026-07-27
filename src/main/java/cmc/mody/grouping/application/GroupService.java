@@ -3,6 +3,7 @@ package cmc.mody.grouping.application;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.common.upload.ImageUrlResolver;
 import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.grouping.domain.ModyGroup;
@@ -44,6 +45,7 @@ public class GroupService {
     private final ActivityRecordGroupRepository activityRecordGroupRepository;
     private final RecordCommentRepository recordCommentRepository;
     private final RecordViewHistoryRepository recordViewHistoryRepository;
+    private final ImageUrlResolver imageUrlResolver;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional(readOnly = true)
@@ -118,7 +120,7 @@ public class GroupService {
             .map(groupMember -> new GroupMemberResult(
                 groupMember.getMemberId(),
                 groupMember.getDisplayNickname(),
-                groupMember.getDisplayProfileImageKey(),
+                imageUrlResolver.resolve(groupMember.getDisplayProfileImageKey()),
                 countUnreadRecords(memberId, groupId, groupMember.getMemberId())
             ))
             .toList();

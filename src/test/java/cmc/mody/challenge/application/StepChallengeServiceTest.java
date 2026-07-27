@@ -23,6 +23,8 @@ import cmc.mody.challenge.infrastructure.repository.StepRecordRepository;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.common.upload.ImageUrlResolver;
+import cmc.mody.common.upload.UploadProperties;
 import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.grouping.domain.ModyGroup;
@@ -185,11 +187,29 @@ class StepChallengeServiceTest {
         StepRankingListResult result = service.getStepRankings(1L, 10L);
 
         assertThat(result.rankings())
-            .extracting("rank", "memberId", "nickname", "stepCount")
+            .extracting("rank", "memberId", "nickname", "profileImageUrl", "stepCount")
             .containsExactly(
-                org.assertj.core.groups.Tuple.tuple(1, 3L, "도윤", 20_000),
-                org.assertj.core.groups.Tuple.tuple(2, 1L, "민석", 10_000),
-                org.assertj.core.groups.Tuple.tuple(3, 2L, "예은", 0)
+                org.assertj.core.groups.Tuple.tuple(
+                    1,
+                    3L,
+                    "도윤",
+                    "https://storage.example.com/profiles/member-3.jpg",
+                    20_000
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    2,
+                    1L,
+                    "민석",
+                    "https://storage.example.com/profiles/member-1.jpg",
+                    10_000
+                ),
+                org.assertj.core.groups.Tuple.tuple(
+                    3,
+                    2L,
+                    "예은",
+                    "https://storage.example.com/profiles/member-2.jpg",
+                    0
+                )
             );
     }
 
@@ -276,7 +296,8 @@ class StepChallengeServiceTest {
             challengeRepository,
             stepChallengeDetailRepository,
             groupChallengeRepository,
-            stepRecordRepository
+            stepRecordRepository,
+            new ImageUrlResolver(new UploadProperties())
         );
     }
 

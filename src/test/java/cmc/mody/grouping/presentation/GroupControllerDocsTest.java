@@ -222,8 +222,8 @@ class GroupControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(groupService.getGroupMembers(1L, 10L))
             .willReturn(new GroupMemberListResult(List.of(
-                new GroupMemberResult(1L, "민석", "profiles/member-1.jpg", 0),
-                new GroupMemberResult(2L, "친구", "profiles/member-2.jpg", 3)
+                new GroupMemberResult(1L, "민석", "https://storage.example.com/profiles/member-1.jpg", 0),
+                new GroupMemberResult(2L, "친구", "https://storage.example.com/profiles/member-2.jpg", 3)
             )));
 
         mockMvc.perform(get("/api/v1/groups/{groupId}/members", 10L)

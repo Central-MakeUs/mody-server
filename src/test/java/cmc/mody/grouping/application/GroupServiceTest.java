@@ -10,6 +10,8 @@ import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.domain.Status;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.common.upload.ImageUrlResolver;
+import cmc.mody.common.upload.UploadProperties;
 import cmc.mody.grouping.application.GroupService.GroupCreateCommand;
 import cmc.mody.grouping.application.GroupService.GroupCreateResult;
 import cmc.mody.grouping.application.GroupService.GroupJoinCommand;
@@ -256,7 +258,11 @@ class GroupServiceTest {
         GroupService.GroupMemberListResult result = service.getGroupMembers(1L, 10L);
 
         assertThat(result.members()).hasSize(2);
+        assertThat(result.members().get(0).profileImageUrl())
+            .isEqualTo("https://storage.example.com/profiles/member-1.jpg");
         assertThat(result.members().get(0).unreadRecordCount()).isZero();
+        assertThat(result.members().get(1).profileImageUrl())
+            .isEqualTo("https://storage.example.com/profiles/member-2.jpg");
         assertThat(result.members().get(1).unreadRecordCount()).isEqualTo(3);
     }
 
@@ -270,7 +276,8 @@ class GroupServiceTest {
             activityRecordRepository,
             activityRecordGroupRepository,
             recordCommentRepository,
-            recordViewHistoryRepository
+            recordViewHistoryRepository,
+            new ImageUrlResolver(new UploadProperties())
         );
     }
 

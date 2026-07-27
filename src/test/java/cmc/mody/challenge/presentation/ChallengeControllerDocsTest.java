@@ -332,7 +332,7 @@ class ChallengeControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(stepChallengeService.getStepRankings(1L, 1L))
             .willReturn(new StepRankingListResult(List.of(
-                new StepRankingResult(1, 1L, "민석", "profiles/member-1.jpg", 18_000)
+                new StepRankingResult(1, 1L, "민석", "https://storage.example.com/profiles/member-1.jpg", 18_000)
             )));
 
         mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/step/rankings", 1L)

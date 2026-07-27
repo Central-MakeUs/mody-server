@@ -3,7 +3,7 @@ package cmc.mody.record.application;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
-import cmc.mody.common.upload.UploadProperties;
+import cmc.mody.common.upload.ImageUrlResolver;
 import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.grouping.domain.ModyGroup;
@@ -50,7 +50,7 @@ public class ActivityRecordService {
     private final ActivityRecordGroupRepository activityRecordGroupRepository;
     private final RecordCommentRepository recordCommentRepository;
     private final RecordViewHistoryRepository recordViewHistoryRepository;
-    private final UploadProperties uploadProperties;
+    private final ImageUrlResolver imageUrlResolver;
     private final NotificationRequestService notificationRequestService;
 
     @Transactional(readOnly = true)
@@ -310,12 +310,12 @@ public class ActivityRecordService {
             record.getRecordType(),
             record.getMemberId(),
             nickname,
-            toImageUrl(profileImageKey),
+            imageUrlResolver.resolve(profileImageKey),
             resolveRecordedTime(record),
             record.getMenu(),
             record.getExerciseDurationMinutes(),
             record.getExerciseName(),
-            toImageUrl(record.getImageKey()),
+            imageUrlResolver.resolve(record.getImageKey()),
             ImageCropRegionResult.from(record)
         );
     }
@@ -330,7 +330,7 @@ public class ActivityRecordService {
                 comment.getId(),
                 comment.getMemberId(),
                 currentMember.getNickname(),
-                toImageUrl(currentMember.getProfileImageKey()),
+                imageUrlResolver.resolve(currentMember.getProfileImageKey()),
                 comment.getContent(),
                 true
             );
@@ -344,7 +344,7 @@ public class ActivityRecordService {
             comment.getId(),
             comment.getMemberId(),
             groupMember.getDisplayNickname(),
-            toImageUrl(groupMember.getDisplayProfileImageKey()),
+            imageUrlResolver.resolve(groupMember.getDisplayProfileImageKey()),
             comment.getContent(),
             comment.getMemberId().equals(currentMember.getId())
         );
@@ -423,12 +423,12 @@ public class ActivityRecordService {
             record.getRecordType(),
             record.getMemberId(),
             groupMember == null ? null : groupMember.getDisplayNickname(),
-            groupMember == null ? null : toImageUrl(groupMember.getDisplayProfileImageKey()),
+            groupMember == null ? null : imageUrlResolver.resolve(groupMember.getDisplayProfileImageKey()),
             resolveRecordedTime(record),
             record.getMenu(),
             record.getExerciseDurationMinutes(),
             record.getExerciseName(),
-            toImageUrl(record.getImageKey()),
+            imageUrlResolver.resolve(record.getImageKey()),
             ImageCropRegionResult.from(record),
             recordingStreakDays
         );
@@ -439,17 +439,6 @@ public class ActivityRecordService {
             return record.getMealTime();
         }
         return record.getUploadedAt().toLocalTime().withSecond(0).withNano(0);
-    }
-
-    private String toImageUrl(String imageKey) {
-        if (imageKey == null || imageKey.isBlank()) {
-            return null;
-        }
-        String baseUrl = uploadProperties.getBaseUrl();
-        if (baseUrl.endsWith("/")) {
-            return baseUrl + imageKey;
-        }
-        return baseUrl + "/" + imageKey;
     }
 
     private Member getMember(Long memberId) {
