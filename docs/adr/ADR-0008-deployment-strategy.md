@@ -6,6 +6,7 @@
 | --- | --- |
 | 상태 | Accepted |
 | 날짜 | 2026-06-29 |
+| 갱신 | 2026-07-27 |
 | 관련 | GitHub Actions, Docker, GCP Compute Engine |
 
 ## 맥락 (Context)
@@ -16,14 +17,18 @@
 
 ## 결정 (Decision)
 
-`main` 브랜치 머지 또는 직접 푸쉬를 기준으로 dev 환경 배포를 수행한다.
+`develop` 브랜치는 dev 환경, `main` 브랜치는 prod 환경 배포 기준으로 사용한다.
+일반 기능 작업은 `feature/{issue-number}`에서 시작해 `develop`으로 병합하고,
+dev 검증이 끝난 변경만 `develop`에서 `main`으로 병합해 prod에 반영한다.
 GitHub Actions에서 테스트와 빌드를 통과한 뒤 Docker 이미지를 생성하고,
-GCP Compute Engine VM에 SSH로 접속해 Docker Compose 기반으로 애플리케이션을 갱신한다.
+각 환경의 GCP Compute Engine VM에 SSH로 접속해 Docker Compose 기반으로 애플리케이션을 갱신한다.
 
 배포 원칙은 다음과 같다.
 
 - 애플리케이션 설정은 환경변수로 주입한다.
 - dev와 prod는 Docker Compose 환경변수와 GitHub Secrets로 분리한다.
+- `develop` push는 dev 배포 workflow만 실행한다.
+- `main` push는 prod 배포 workflow만 실행한다.
 - 빌드 산출물은 Docker 이미지로 고정하고 서버에서는 이미지를 pull 후 재기동한다.
 - 배포 후 `/actuator/health` 또는 헬스 체크 API로 정상 기동을 확인한다.
 - 서버에 직접 있는 compose 파일은 운영 환경별 인프라 설정으로 보고 저장소 코드와 분리한다.
@@ -38,7 +43,7 @@ GCP Compute Engine VM에 SSH로 접속해 Docker Compose 기반으로 애플리�
 
 ### 긍정
 
-- main 기준 배포 흐름이 명확해진다.
+- dev와 prod 배포 브랜치가 분리되어 검증 전 변경이 prod에 바로 배포되는 일을 줄인다.
 - 로컬 빌드 결과와 서버 실행 단위를 Docker 이미지로 맞출 수 있다.
 - dev와 prod 설정을 환경변수와 Secret으로 분리할 수 있다.
 - 현재 규모에서 운영 부담을 낮게 유지한다.
@@ -46,10 +51,11 @@ GCP Compute Engine VM에 SSH로 접속해 Docker Compose 기반으로 애플리�
 ### 부정 / 트레이드오프
 
 - 단일 VM 장애에 취약하다.
+- `develop`과 `main` 간 병합 흐름을 지켜야 하므로 브랜치 운영 규칙이 추가된다.
 - 무중단 배포와 롤백 자동화는 별도 설계가 필요하다.
 - 서버의 Docker Compose 파일 변경 이력은 저장소만으로 완전히 추적되지 않는다.
 
 ## 후속 / 미결정
 
 - blue/green 또는 rolling 배포 필요 시 compose 구성을 확장한다.
-- prod 환경 생성 시 Secret 분리, 도메인, TLS, 백업 정책을 별도 ADR로 기록한다.
+- prod 환경의 도메인, TLS, 백업 정책을 별도 ADR로 기록한다.
