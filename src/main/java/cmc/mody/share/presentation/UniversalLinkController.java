@@ -23,13 +23,16 @@ public class UniversalLinkController {
     private static final String ASSET_LINKS_RESOURCE_PATH = "universal-link/assetlinks.json";
     private static final MediaType TEXT_HTML_UTF8 = new MediaType("text", "html", StandardCharsets.UTF_8);
 
+    private final String aasaResourcePath;
     private final String appStoreUrl;
     private final String googlePlayUrl;
 
     public UniversalLinkController(
+        @Value("${invite.aasa-resource-path:" + AASA_RESOURCE_PATH + "}") String aasaResourcePath,
         @Value("${invite.app-store-url:https://www.apple.com/kr/app-store/}") String appStoreUrl,
         @Value("${invite.google-play-url:https://play.google.com/store}") String googlePlayUrl
     ) {
+        this.aasaResourcePath = aasaResourcePath;
         this.appStoreUrl = appStoreUrl;
         this.googlePlayUrl = googlePlayUrl;
     }
@@ -39,7 +42,7 @@ public class UniversalLinkController {
         return ResponseEntity.ok()
             .contentType(MediaType.APPLICATION_JSON)
             .cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePublic())
-            .body(new ClassPathResource(AASA_RESOURCE_PATH));
+            .body(new ClassPathResource(aasaResourcePath));
     }
 
     @GetMapping(value = "/.well-known/assetlinks.json", produces = MediaType.APPLICATION_JSON_VALUE)
