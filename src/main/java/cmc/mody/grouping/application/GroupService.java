@@ -213,9 +213,10 @@ public class GroupService {
             )
             .map(RecordViewHistory::getLastViewedAt)
             .orElse(LocalDateTime.MIN);
-        long unreadCount = activityRecordRepository.countActiveGroupRecordsAfter(
+        long unreadCount = activityRecordRepository.countVisibleActiveGroupRecordsAfter(
             groupId,
             writerMemberId,
+            viewerMemberId,
             lastViewedAt,
             GroupMemberStatus.JOINED
         );
