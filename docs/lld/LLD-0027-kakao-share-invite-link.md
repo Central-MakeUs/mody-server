@@ -12,7 +12,7 @@
 
 ## 1. 목적 / 배경
 
-카카오톡 공유하기로 `https://dev-mody.store/invite?code={inviteCode}` 링크를 전달한다.
+카카오톡 공유하기로 환경별 도메인의 `/invite?code={inviteCode}` 링크를 전달한다.
 iOS Universal Link와 Android App Links 처리를 위한 검증 파일을 제공하고,
 앱 미설치 사용자가 링크를 열었을 때 OS별 스토어 이동 랜딩 페이지를 보여준다.
 
@@ -41,6 +41,7 @@ iOS Universal Link와 Android App Links 처리를 위한 검증 파일을 제공
 
 컨트롤러가 classpath의 검증 파일 리소스를 읽어 반환한다.
 정적 리소스에 맡기지 않고 컨트롤러로 제공하는 이유는 well-known 경로의 `Content-Type`과 redirect 없는 200 응답을 명시적으로 보장하기 위해서다.
+dev/prod는 같은 HTTP 경로를 사용하되, 활성 프로필에 따라 AASA 리소스를 분리한다.
 
 제공 경로:
 
@@ -54,6 +55,11 @@ GET /.well-known/assetlinks.json
 - status: `200 OK`
 - content type: `application/json`
 - redirect: 없음
+
+환경별 AASA 앱 ID:
+
+- dev/local: `BLRYMXGV5K.com.jagsim.mody-dev`
+- prod: `BLRYMXGV5K.com.jagsim.mody`
 
 ### Invite 랜딩 페이지
 
@@ -77,6 +83,7 @@ GET /invite?code={inviteCode}
 
 ```yaml
 invite:
+  aasa-resource-path: ${MODY_INVITE_AASA_RESOURCE_PATH:universal-link/apple-app-site-association}
   app-store-url: ${MODY_INVITE_APP_STORE_URL:https://www.apple.com/kr/app-store/}
   google-play-url: ${MODY_INVITE_GOOGLE_PLAY_URL:https://play.google.com/store}
 ```
@@ -86,7 +93,7 @@ invite:
 ## 5. 테스트 시나리오
 
 - AASA 경로가 200 OK, `application/json`, redirect 없음으로 응답한다.
-- AASA에 dev 앱 id와 `/invite`, `/invite/*` 경로가 포함된다.
+- AASA에 환경별 앱 id와 `/invite`, `/invite/*` 경로가 포함된다.
 - assetlinks 경로가 200 OK, `application/json`, redirect 없음으로 응답한다.
 - assetlinks에 dev/prod Android package name과 SHA-256 fingerprint가 포함된다.
 - iOS User-Agent로 `/invite?code=ABCD2345` 요청 시 App Store 이동 버튼과 URL을 포함한다.

@@ -55,7 +55,8 @@ class NotificationRecipientResolverTest {
     void resolveCommentReceiver() {
         NotificationRecipientResolver resolver = resolver();
         given(activityRecordRepository.findById(10L)).willReturn(Optional.of(record(10L, 1L)));
-        given(notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(Optional.empty());
+        given(notificationSettingRepository.findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(1L))
+            .willReturn(Optional.empty());
 
         List<Long> receivers = resolver.resolve(NotificationRequestedEvent.immediate(
             NotificationType.COMMENT_CREATED,

@@ -20,6 +20,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.env.MockEnvironment;
 
 @ExtendWith(MockitoExtension.class)
 class ServerErrorAlertServiceTest {
@@ -56,6 +57,7 @@ class ServerErrorAlertServiceTest {
         then(serverErrorAlertSender).should().send(org.mockito.ArgumentMatchers.eq("https://hooks.slack.test/error"),
             textCaptor.capture());
         String text = textCaptor.getValue();
+        assertThat(text).contains("*Environment*: `dev`");
         assertThat(text).contains("1 / 민석");
         assertThat(text).contains("POST /api/v1/records?groupId=10&code=REDACTED");
         assertThat(text).contains("203.0.113.10");
@@ -89,7 +91,15 @@ class ServerErrorAlertServiceTest {
     }
 
     private ServerErrorAlertService service(ServerErrorAlertProperties properties) {
-        return new ServerErrorAlertService(properties, serverErrorAlertSender, tokenProvider, memberRepository);
+        MockEnvironment environment = new MockEnvironment();
+        environment.setActiveProfiles("dev");
+        return new ServerErrorAlertService(
+            properties,
+            serverErrorAlertSender,
+            tokenProvider,
+            memberRepository,
+            environment
+        );
     }
 
     private ServerErrorAlertProperties enabledProperties() {
