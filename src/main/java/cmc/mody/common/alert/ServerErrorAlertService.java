@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -24,6 +25,7 @@ public class ServerErrorAlertService {
     private final ServerErrorAlertSender serverErrorAlertSender;
     private final TokenProvider tokenProvider;
     private final MemberRepository memberRepository;
+    private final Environment environment;
 
     public void notify(Throwable exception, HttpServletRequest request, int statusCode, String errorCode) {
         if (!properties.isEnabled() || !StringUtils.hasText(properties.getWebhookUrl())) {
@@ -46,6 +48,7 @@ public class ServerErrorAlertService {
     ) {
         MemberContext memberContext = resolveMember(request);
         return new ServerErrorAlert(
+            activeProfiles(),
             statusCode,
             valueOrUnknown(errorCode),
             request.getMethod(),
@@ -83,6 +86,7 @@ public class ServerErrorAlertService {
     private String format(ServerErrorAlert alert) {
         String text = """
             :rotating_light: *500 Server Error*
+            *Environment*: `%s`
             *Status*: `%d %s`
             *Member*: `%s / %s`
             *Request*: `%s %s%s`
@@ -93,6 +97,7 @@ public class ServerErrorAlertService {
             *Stack*
             ```%s```
             """.formatted(
+            alert.environment(),
             alert.statusCode(),
             alert.errorCode(),
             alert.memberId() == null ? UNKNOWN : alert.memberId(),
@@ -107,6 +112,15 @@ public class ServerErrorAlertService {
             alert.stackTrace()
         );
         return truncate(text);
+    }
+
+    private String activeProfiles() {
+        String[] activeProfiles = environment.getActiveProfiles();
+        if (activeProfiles.length > 0) {
+            return String.join(",", activeProfiles);
+        }
+        String[] defaultProfiles = environment.getDefaultProfiles();
+        return defaultProfiles.length > 0 ? String.join(",", defaultProfiles) : UNKNOWN;
     }
 
     private String sanitizeQueryString(String queryString) {

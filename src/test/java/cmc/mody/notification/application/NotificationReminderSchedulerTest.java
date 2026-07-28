@@ -64,9 +64,9 @@ class NotificationReminderSchedulerTest {
                 new ExerciseSchedule(10L, 1L, DayOfWeek.MONDAY, time),
                 new ExerciseSchedule(11L, 2L, DayOfWeek.MONDAY, time)
             ));
-        given(notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(1L))
+        given(notificationSettingRepository.findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(1L))
             .willReturn(java.util.Optional.of(notificationSetting(1L, null, null, null, true)));
-        given(notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(2L))
+        given(notificationSettingRepository.findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(2L))
             .willReturn(java.util.Optional.of(notificationSetting(2L, null, null, null, false)));
 
         scheduler.sendDueReminders(LocalDateTime.of(2026, 7, 6, 20, 0));

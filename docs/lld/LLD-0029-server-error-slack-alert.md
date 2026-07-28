@@ -22,6 +22,7 @@
 - 전역 예외 처리에서 500 계열 오류 알림 요청.
 - Slack webhook 기반 알림 전송.
 - 요청자 `memberId`, `nickname` 추출.
+- 실행 환경(active profile) 포함.
 - 요청 method, URI, query, IP, User-Agent, exception 요약 포함.
 - Slack 설정 미존재/비활성화 시 no-op.
 - `local`, `dev` 프로필 전용 500 에러 테스트 API.
@@ -61,6 +62,7 @@ DB 테이블은 추가하지 않는다.
 내부 DTO:
 
 - `ServerErrorAlert`
+  - environment
   - HTTP status, error code
   - method, URI, query, client IP, User-Agent
   - memberId, nickname
@@ -71,10 +73,11 @@ DB 테이블은 추가하지 않는다.
 1. `GlobalExceptionHandler`가 예상치 못한 예외 또는 500 계열 `GeneralException`을 처리한다.
 2. 기존 API 실패 응답은 유지한다.
 3. `ServerErrorAlertService`에 비동기 Slack 알림을 요청한다.
-4. `ServerErrorAlertService`는 Authorization header에서 access token을 추출한다.
-5. token 검증이 가능하면 `memberId`를 얻고, 회원 조회가 가능하면 `nickname`을 포함한다.
-6. token이 없거나 검증에 실패하면 회원 정보는 `unknown`으로 남긴다.
-7. Slack webhook client가 메시지를 전송한다.
+4. `ServerErrorAlertService`는 Spring active profile을 알림 환경으로 포함한다.
+5. `ServerErrorAlertService`는 Authorization header에서 access token을 추출한다.
+6. token 검증이 가능하면 `memberId`를 얻고, 회원 조회가 가능하면 `nickname`을 포함한다.
+7. token이 없거나 검증에 실패하면 회원 정보는 `unknown`으로 남긴다.
+8. Slack webhook client가 메시지를 전송한다.
 
 ## 6. 예외 / 에러 처리
 
@@ -86,6 +89,7 @@ DB 테이블은 추가하지 않는다.
 ## 7. 인수조건 (Acceptance Criteria)
 
 - [x] 예상치 못한 500 오류 발생 시 Slack 알림 요청이 수행된다.
+- [x] Slack 메시지에 실행 환경이 포함된다.
 - [x] Slack 메시지에 가능한 경우 `memberId`, `nickname`이 포함된다.
 - [x] 요청 body와 Authorization 값은 Slack 메시지에 포함되지 않는다.
 - [x] Slack 설정이 없으면 전송하지 않고 서버는 정상 기동한다.

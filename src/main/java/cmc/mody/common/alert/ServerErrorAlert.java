@@ -1,6 +1,7 @@
 package cmc.mody.common.alert;
 
 public record ServerErrorAlert(
+    String environment,
     int statusCode,
     String errorCode,
     String method,

@@ -22,7 +22,7 @@ public class NotificationPreferenceService {
 
     public NotificationPreferenceResult getPreferences(Long memberId) {
         NotificationSetting notificationSetting = notificationSettingRepository
-            .findByMemberIdAndDeletedAtIsNull(memberId)
+            .findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(memberId)
             .orElse(null);
         List<ExerciseScheduleResult> exerciseSchedules = findExerciseSchedules(memberId);
 
@@ -117,7 +117,7 @@ public class NotificationPreferenceService {
 
     private NotificationSetting getOrCreateNotificationSetting(Long memberId) {
         return notificationSettingRepository
-            .findByMemberIdAndDeletedAtIsNull(memberId)
+            .findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(memberId)
             .orElseGet(() -> new NotificationSetting(idGenerator.nextId(), memberId));
     }
 

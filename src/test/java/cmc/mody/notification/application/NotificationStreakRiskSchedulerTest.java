@@ -46,8 +46,10 @@ class NotificationStreakRiskSchedulerTest {
             org.mockito.ArgumentMatchers.eq(GroupMemberStatus.JOINED),
             any(Pageable.class)
         )).willReturn(List.of(unrecordedMember, recordedMember));
-        given(notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(Optional.empty());
-        given(notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(2L)).willReturn(Optional.empty());
+        given(notificationSettingRepository.findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(1L))
+            .willReturn(Optional.empty());
+        given(notificationSettingRepository.findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(2L))
+            .willReturn(Optional.empty());
         given(activityRecordRepository.existsActiveRecordByMemberIdAndGroupIdBetween(
             1L,
             10L,

@@ -49,7 +49,8 @@ public class NotificationStreakRiskScheduler {
     }
 
     private boolean isStreakNotificationEnabled(GroupMember groupMember) {
-        return notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(groupMember.getMemberId())
+        return notificationSettingRepository
+            .findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(groupMember.getMemberId())
             .map(NotificationSetting::isStreakNotificationEnabled)
             .orElse(true);
     }

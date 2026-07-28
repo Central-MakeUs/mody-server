@@ -77,7 +77,8 @@ public class NotificationRecipientResolver {
     }
 
     private boolean isCommentNotificationEnabled(Long memberId) {
-        return notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(memberId)
+        return notificationSettingRepository
+            .findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(memberId)
             .map(NotificationSetting::isCommentNotificationEnabled)
             .orElse(true);
     }
