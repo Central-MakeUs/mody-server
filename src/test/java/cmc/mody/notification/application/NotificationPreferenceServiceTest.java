@@ -45,7 +45,8 @@ class NotificationPreferenceServiceTest {
     @DisplayName("알림 설정이 없으면 기본 설정과 운동 일정을 반환한다.")
     void getDefaultPreferences() {
         NotificationPreferenceService service = service();
-        given(notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(Optional.empty());
+        given(notificationSettingRepository.findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(1L))
+            .willReturn(Optional.empty());
         given(exerciseScheduleRepository.findByMemberIdAndDeletedAtIsNull(1L))
             .willReturn(List.of(new ExerciseSchedule(10L, 1L, DayOfWeek.MONDAY, LocalTime.of(7, 30))));
 
@@ -63,7 +64,7 @@ class NotificationPreferenceServiceTest {
     void updateReminderFlags() {
         NotificationPreferenceService service = service();
         NotificationSetting notificationSetting = new NotificationSetting(10L, 1L);
-        given(notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(1L))
+        given(notificationSettingRepository.findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(1L))
             .willReturn(Optional.of(notificationSetting));
         given(notificationSettingRepository.save(any(NotificationSetting.class)))
             .willAnswer(invocation -> invocation.getArgument(0));
@@ -87,7 +88,7 @@ class NotificationPreferenceServiceTest {
     void updateMealTimes() {
         NotificationPreferenceService service = service();
         NotificationSetting notificationSetting = new NotificationSetting(10L, 1L);
-        given(notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(1L))
+        given(notificationSettingRepository.findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(1L))
             .willReturn(Optional.of(notificationSetting));
         given(notificationSettingRepository.save(any(NotificationSetting.class)))
             .willAnswer(invocation -> invocation.getArgument(0));
@@ -126,6 +127,32 @@ class NotificationPreferenceServiceTest {
             .extracting(ExerciseSchedule::getDayOfWeek)
             .containsExactly(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY);
         assertThat(result.schedules()).hasSize(3);
+    }
+
+    @Test
+    @DisplayName("기존 알림 설정이 있으면 최신 활성 설정 하나를 사용한다.")
+    void getPreferencesUsesLatestActiveNotificationSetting() {
+        NotificationPreferenceService service = service();
+        NotificationSetting notificationSetting = new NotificationSetting(
+            11L,
+            1L,
+            false,
+            null,
+            LocalTime.of(12, 0),
+            null,
+            true,
+            LocalTime.of(20, 0)
+        );
+        given(notificationSettingRepository.findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(1L))
+            .willReturn(Optional.of(notificationSetting));
+        given(exerciseScheduleRepository.findByMemberIdAndDeletedAtIsNull(1L)).willReturn(List.of());
+
+        NotificationPreferenceService.NotificationPreferenceResult result = service.getPreferences(1L);
+
+        assertThat(result.recordReminderEnabled()).isTrue();
+        assertThat(result.mealSchedules())
+            .extracting(NotificationPreferenceService.MealScheduleResult::time)
+            .containsExactly(null, LocalTime.of(12, 0), null);
     }
 
     private NotificationPreferenceService service() {

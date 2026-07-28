@@ -73,7 +73,8 @@ public class NotificationReminderScheduler {
     }
 
     private boolean isExerciseReminderEnabled(Long memberId) {
-        return notificationSettingRepository.findByMemberIdAndDeletedAtIsNull(memberId)
+        return notificationSettingRepository
+            .findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(memberId)
             .map(NotificationSetting::isExerciseReminderEnabled)
             .orElse(true);
     }

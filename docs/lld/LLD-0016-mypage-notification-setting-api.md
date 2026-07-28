@@ -75,6 +75,7 @@ PUT /api/v1/mypage/schedules
 ## 4. 데이터 모델
 
 - `notification_setting`
+  - 회원별 활성 row는 1개만 유지한다.
   - `meal_reminder_enabled`, `exercise_reminder_enabled`
     - API에서는 `recordReminderEnabled` 하나로 노출하고 두 DB 필드에 같은 값을 저장한다.
   - `comment_notification_enabled`, `challenge_notification_enabled`
@@ -89,6 +90,7 @@ PUT /api/v1/mypage/schedules
 1. `@CurrentMember`가 access token에서 회원 id를 추출한다.
 2. 마이페이지 서비스는 활성 회원인지 검증한다.
 3. `NotificationPreferenceService`가 알림 설정과 운동 일정을 조회/저장한다.
+   - 기존 데이터에 활성 알림 설정 row가 중복되어 있어도 최신 id 1개를 사용한다.
 4. 알림 on/off 수정은 시간표를 변경하지 않고 기록 알림 수신 여부를 하나의 값으로 저장한다.
 5. 시간표 수정은 아침/점심/저녁 3개와 운동 일정 목록을 하나의 요청으로 받는다.
 6. 식사 설정은 `notification_setting`의 식사 시간과 먹지 않음 여부를 갱신한다.
@@ -124,6 +126,8 @@ PUT /api/v1/mypage/schedules
 - 기존 마이페이지 설정 stub API가 DB 기반 구현으로 교체된다.
 - `NotificationPreferenceService`가 추가되어 온보딩 설정 저장 로직도 이 컴포넌트를 사용한다.
 - 운동 일정 수정은 기존 활성 row를 soft delete하고 새 row를 추가한다.
+- `notification_setting` 기존 중복 활성 row는 최신 id만 남기고 soft delete한다.
+- `notification_setting.active_member_id` 생성 컬럼과 유니크 인덱스로 회원별 활성 설정 중복 생성을 차단한다.
 
 ## 10. 미결정 사항 (Open Questions)
 
