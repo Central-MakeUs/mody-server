@@ -45,40 +45,6 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
           and record.deletedAt is null
           and recordGroup.uploadedAt >= :startAt
           and recordGroup.uploadedAt < :endAt
-          and not exists (
-              select 1
-              from RecordReport report
-              where report.reporterMemberId = :viewerMemberId
-                and report.recordId = record.id
-                and report.deletedAt is null
-          )
-          and exists (
-              select 1
-              from GroupMember groupMember
-              where groupMember.groupId = recordGroup.groupId
-                and groupMember.memberId = recordGroup.memberId
-                and groupMember.groupMemberStatus = :joinedStatus
-                and groupMember.deletedAt is null
-          )
-        order by recordGroup.uploadedAt asc, record.id asc
-        """)
-    List<ActivityRecord> findVisibleGroupRecordsBetween(
-        @Param("groupId") Long groupId,
-        @Param("viewerMemberId") Long viewerMemberId,
-        @Param("startAt") LocalDateTime startAt,
-        @Param("endAt") LocalDateTime endAt,
-        @Param("joinedStatus") GroupMemberStatus joinedStatus
-    );
-
-    @Query("""
-        select record
-        from ActivityRecord record, ActivityRecordGroup recordGroup
-        where recordGroup.recordId = record.id
-          and recordGroup.groupId = :groupId
-          and recordGroup.deletedAt is null
-          and record.deletedAt is null
-          and recordGroup.uploadedAt >= :startAt
-          and recordGroup.uploadedAt < :endAt
           and (:cursor is null or record.id < :cursor)
           and exists (
               select 1
@@ -92,43 +58,6 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
         """)
     List<ActivityRecord> findActiveGroupRecordsByCursor(
         @Param("groupId") Long groupId,
-        @Param("startAt") LocalDateTime startAt,
-        @Param("endAt") LocalDateTime endAt,
-        @Param("cursor") Long cursor,
-        @Param("joinedStatus") GroupMemberStatus joinedStatus,
-        Pageable pageable
-    );
-
-    @Query("""
-        select record
-        from ActivityRecord record, ActivityRecordGroup recordGroup
-        where recordGroup.recordId = record.id
-          and recordGroup.groupId = :groupId
-          and recordGroup.deletedAt is null
-          and record.deletedAt is null
-          and recordGroup.uploadedAt >= :startAt
-          and recordGroup.uploadedAt < :endAt
-          and (:cursor is null or record.id < :cursor)
-          and not exists (
-              select 1
-              from RecordReport report
-              where report.reporterMemberId = :viewerMemberId
-                and report.recordId = record.id
-                and report.deletedAt is null
-          )
-          and exists (
-              select 1
-              from GroupMember groupMember
-              where groupMember.groupId = recordGroup.groupId
-                and groupMember.memberId = recordGroup.memberId
-                and groupMember.groupMemberStatus = :joinedStatus
-                and groupMember.deletedAt is null
-          )
-        order by record.id desc
-        """)
-    List<ActivityRecord> findVisibleGroupRecordsByCursor(
-        @Param("groupId") Long groupId,
-        @Param("viewerMemberId") Long viewerMemberId,
         @Param("startAt") LocalDateTime startAt,
         @Param("endAt") LocalDateTime endAt,
         @Param("cursor") Long cursor,
@@ -163,40 +92,6 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
     );
 
     @Query("""
-        select record
-        from ActivityRecord record, ActivityRecordGroup recordGroup
-        where recordGroup.recordId = record.id
-          and recordGroup.groupId = :groupId
-          and recordGroup.memberId = :memberId
-          and recordGroup.deletedAt is null
-          and record.deletedAt is null
-          and recordGroup.uploadedAt < :endAt
-          and not exists (
-              select 1
-              from RecordReport report
-              where report.reporterMemberId = :viewerMemberId
-                and report.recordId = record.id
-                and report.deletedAt is null
-          )
-          and exists (
-              select 1
-              from GroupMember groupMember
-              where groupMember.groupId = recordGroup.groupId
-                and groupMember.memberId = recordGroup.memberId
-                and groupMember.groupMemberStatus = :joinedStatus
-                and groupMember.deletedAt is null
-          )
-        order by recordGroup.uploadedAt desc, record.id desc
-        """)
-    List<ActivityRecord> findVisibleGroupRecordsByMemberBefore(
-        @Param("groupId") Long groupId,
-        @Param("memberId") Long memberId,
-        @Param("viewerMemberId") Long viewerMemberId,
-        @Param("endAt") LocalDateTime endAt,
-        @Param("joinedStatus") GroupMemberStatus joinedStatus
-    );
-
-    @Query("""
         select count(record)
         from ActivityRecord record, ActivityRecordGroup recordGroup
         where recordGroup.recordId = record.id
@@ -217,39 +112,6 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
     long countActiveGroupRecordsAfter(
         @Param("groupId") Long groupId,
         @Param("memberId") Long memberId,
-        @Param("after") LocalDateTime after,
-        @Param("joinedStatus") GroupMemberStatus joinedStatus
-    );
-
-    @Query("""
-        select count(record)
-        from ActivityRecord record, ActivityRecordGroup recordGroup
-        where recordGroup.recordId = record.id
-          and recordGroup.groupId = :groupId
-          and recordGroup.memberId = :memberId
-          and recordGroup.deletedAt is null
-          and record.deletedAt is null
-          and recordGroup.uploadedAt > :after
-          and not exists (
-              select 1
-              from RecordReport report
-              where report.reporterMemberId = :viewerMemberId
-                and report.recordId = record.id
-                and report.deletedAt is null
-          )
-          and exists (
-              select 1
-              from GroupMember groupMember
-              where groupMember.groupId = recordGroup.groupId
-                and groupMember.memberId = recordGroup.memberId
-                and groupMember.groupMemberStatus = :joinedStatus
-                and groupMember.deletedAt is null
-          )
-        """)
-    long countVisibleActiveGroupRecordsAfter(
-        @Param("groupId") Long groupId,
-        @Param("memberId") Long memberId,
-        @Param("viewerMemberId") Long viewerMemberId,
         @Param("after") LocalDateTime after,
         @Param("joinedStatus") GroupMemberStatus joinedStatus
     );
@@ -286,45 +148,6 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
     );
 
     @Query("""
-        select record
-        from ActivityRecord record, ActivityRecordGroup recordGroup
-        where recordGroup.recordId = record.id
-          and recordGroup.groupId = :groupId
-          and recordGroup.memberId = :memberId
-          and recordGroup.deletedAt is null
-          and record.deletedAt is null
-          and recordGroup.uploadedAt >= :startAt
-          and recordGroup.uploadedAt < :endAt
-          and (:cursor is null or record.id > :cursor)
-          and not exists (
-              select 1
-              from RecordReport report
-              where report.reporterMemberId = :viewerMemberId
-                and report.recordId = record.id
-                and report.deletedAt is null
-          )
-          and exists (
-              select 1
-              from GroupMember groupMember
-              where groupMember.groupId = recordGroup.groupId
-                and groupMember.memberId = recordGroup.memberId
-                and groupMember.groupMemberStatus = :joinedStatus
-                and groupMember.deletedAt is null
-          )
-        order by record.id asc
-        """)
-    List<ActivityRecord> findVisibleRecordsForDetailCarousel(
-        @Param("groupId") Long groupId,
-        @Param("memberId") Long memberId,
-        @Param("viewerMemberId") Long viewerMemberId,
-        @Param("startAt") LocalDateTime startAt,
-        @Param("endAt") LocalDateTime endAt,
-        @Param("cursor") Long cursor,
-        @Param("joinedStatus") GroupMemberStatus joinedStatus,
-        org.springframework.data.domain.Pageable pageable
-    );
-
-    @Query("""
         select count(record)
         from ActivityRecord record, ActivityRecordGroup recordGroup
         where recordGroup.recordId = record.id
@@ -346,41 +169,6 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
     long countActiveRecordsForDetailCarousel(
         @Param("groupId") Long groupId,
         @Param("memberId") Long memberId,
-        @Param("startAt") LocalDateTime startAt,
-        @Param("endAt") LocalDateTime endAt,
-        @Param("joinedStatus") GroupMemberStatus joinedStatus
-    );
-
-    @Query("""
-        select count(record)
-        from ActivityRecord record, ActivityRecordGroup recordGroup
-        where recordGroup.recordId = record.id
-          and recordGroup.groupId = :groupId
-          and recordGroup.memberId = :memberId
-          and recordGroup.deletedAt is null
-          and record.deletedAt is null
-          and recordGroup.uploadedAt >= :startAt
-          and recordGroup.uploadedAt < :endAt
-          and not exists (
-              select 1
-              from RecordReport report
-              where report.reporterMemberId = :viewerMemberId
-                and report.recordId = record.id
-                and report.deletedAt is null
-          )
-          and exists (
-              select 1
-              from GroupMember groupMember
-              where groupMember.groupId = recordGroup.groupId
-                and groupMember.memberId = recordGroup.memberId
-                and groupMember.groupMemberStatus = :joinedStatus
-                and groupMember.deletedAt is null
-          )
-        """)
-    long countVisibleRecordsForDetailCarousel(
-        @Param("groupId") Long groupId,
-        @Param("memberId") Long memberId,
-        @Param("viewerMemberId") Long viewerMemberId,
         @Param("startAt") LocalDateTime startAt,
         @Param("endAt") LocalDateTime endAt,
         @Param("joinedStatus") GroupMemberStatus joinedStatus

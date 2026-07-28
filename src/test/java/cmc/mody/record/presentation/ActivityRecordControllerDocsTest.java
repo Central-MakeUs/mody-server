@@ -184,7 +184,6 @@ class ActivityRecordControllerDocsTest {
                     .description("""
                         날짜별 식사/운동 기록을 커서 기반으로 조회한다.
                         그룹에 참여 중인 회원의 활성 기록만 응답하며, recordingStreakDays는 각 작성자의 기준 날짜 연속 기록 일수다.
-                        내가 신고한 기록은 응답에서 제외된다.
                         """)
                     .queryParameters(
                         parameterWithName("date").description("조회 날짜, yyyy-MM-dd"),
