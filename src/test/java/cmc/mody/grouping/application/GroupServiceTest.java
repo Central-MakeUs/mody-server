@@ -248,9 +248,10 @@ class GroupServiceTest {
             10L,
             2L
         )).willReturn(Optional.of(new RecordViewHistory(30L, 1L, 10L, 2L, lastViewedAt)));
-        given(activityRecordRepository.countActiveGroupRecordsAfter(
+        given(activityRecordRepository.countVisibleActiveGroupRecordsAfter(
             10L,
             2L,
+            1L,
             lastViewedAt,
             GroupMemberStatus.JOINED
         )).willReturn(3L);

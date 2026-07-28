@@ -30,6 +30,7 @@ import cmc.mody.record.infrastructure.repository.ActivityRecordGroupRepository;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
 import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
+import cmc.mody.report.infrastructure.repository.RecordReportRepository;
 import org.springframework.data.domain.PageRequest;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -74,6 +75,9 @@ class ActivityRecordServiceTest {
     @Mock
     private RecordViewHistoryRepository recordViewHistoryRepository;
 
+    @Mock
+    private RecordReportRepository recordReportRepository;
+
     @Captor
     private ArgumentCaptor<ActivityRecord> activityRecordCaptor;
 
@@ -97,8 +101,9 @@ class ActivityRecordServiceTest {
             10L,
             GroupMemberStatus.JOINED
         )).willReturn(true);
-        given(activityRecordRepository.findActiveGroupRecordsBetween(
+        given(activityRecordRepository.findVisibleGroupRecordsBetween(
             10L,
+            1L,
             LocalDateTime.of(2026, 7, 12, 0, 0),
             LocalDateTime.of(2026, 7, 19, 0, 0),
             GroupMemberStatus.JOINED
@@ -144,8 +149,9 @@ class ActivityRecordServiceTest {
             10L,
             GroupMemberStatus.JOINED
         )).willReturn(true);
-        given(activityRecordRepository.findActiveGroupRecordsByCursor(
+        given(activityRecordRepository.findVisibleGroupRecordsByCursor(
             org.mockito.ArgumentMatchers.eq(10L),
+            org.mockito.ArgumentMatchers.eq(1L),
             org.mockito.ArgumentMatchers.eq(LocalDateTime.of(2026, 7, 1, 0, 0)),
             org.mockito.ArgumentMatchers.eq(LocalDateTime.of(2026, 7, 2, 0, 0)),
             org.mockito.ArgumentMatchers.isNull(),
@@ -167,8 +173,9 @@ class ActivityRecordServiceTest {
             "profiles/member-1.jpg",
             LocalDateTime.of(2026, 6, 1, 0, 0)
         )));
-        given(activityRecordRepository.findActiveGroupRecordsByMemberBefore(
+        given(activityRecordRepository.findVisibleGroupRecordsByMemberBefore(
             10L,
+            1L,
             1L,
             LocalDateTime.of(2026, 7, 2, 0, 0),
             GroupMemberStatus.JOINED
@@ -205,6 +212,8 @@ class ActivityRecordServiceTest {
             .willReturn(Optional.of(mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30))));
         given(activityRecordGroupRepository.findByRecordIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
             .willReturn(Optional.of(recordGroup(100L, 10L, 1L, LocalDateTime.of(2026, 7, 1, 12, 30))));
+        given(recordReportRepository.existsByReporterMemberIdAndRecordIdAndDeletedAtIsNull(1L, 100L))
+            .willReturn(false);
         given(activityRecordGroupRepository.findByRecordIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
             .willReturn(Optional.of(recordGroup(100L, 10L, 1L, LocalDateTime.of(2026, 7, 1, 12, 30))));
         given(activityRecordGroupRepository.findByRecordIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
@@ -222,8 +231,9 @@ class ActivityRecordServiceTest {
             new GroupMember(20L, 1L, 10L, "민석", "profiles/member-1.jpg", LocalDateTime.of(2026, 6, 1, 0, 0)),
             new GroupMember(21L, 2L, 10L, "친구", "profiles/member-2.jpg", LocalDateTime.of(2026, 6, 2, 0, 0))
         ));
-        given(activityRecordRepository.findActiveRecordsForDetailCarousel(
+        given(activityRecordRepository.findVisibleRecordsForDetailCarousel(
             10L,
+            1L,
             1L,
             LocalDateTime.of(2026, 7, 1, 0, 0),
             LocalDateTime.of(2026, 7, 2, 0, 0),
@@ -236,8 +246,9 @@ class ActivityRecordServiceTest {
                 mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30)),
                 exerciseRecord(101L, LocalDateTime.of(2026, 7, 1, 20, 0))
             ));
-        given(activityRecordRepository.countActiveRecordsForDetailCarousel(
+        given(activityRecordRepository.countVisibleRecordsForDetailCarousel(
             10L,
+            1L,
             1L,
             LocalDateTime.of(2026, 7, 1, 0, 0),
             LocalDateTime.of(2026, 7, 2, 0, 0),
@@ -278,6 +289,8 @@ class ActivityRecordServiceTest {
             .willReturn(Optional.of(mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30))));
         given(activityRecordGroupRepository.findByRecordIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
             .willReturn(Optional.of(recordGroup(100L, 10L, 1L, LocalDateTime.of(2026, 7, 1, 12, 30))));
+        given(recordReportRepository.existsByReporterMemberIdAndRecordIdAndDeletedAtIsNull(1L, 100L))
+            .willReturn(false);
         given(modyGroupRepository.findById(10L)).willReturn(Optional.of(group()));
         given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
             1L,
@@ -327,6 +340,8 @@ class ActivityRecordServiceTest {
             .willReturn(Optional.of(mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30))));
         given(activityRecordGroupRepository.findByRecordIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
             .willReturn(Optional.of(recordGroup(100L, 10L, 1L, LocalDateTime.of(2026, 7, 1, 12, 30))));
+        given(recordReportRepository.existsByReporterMemberIdAndRecordIdAndDeletedAtIsNull(1L, 100L))
+            .willReturn(false);
         given(modyGroupRepository.findById(10L)).willReturn(Optional.of(group()));
         given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
             1L,
@@ -339,6 +354,52 @@ class ActivityRecordServiceTest {
         )).willReturn(List.of());
 
         assertThatThrownBy(() -> service.getRecordDetail(1L, 10L, 100L, null, 20))
+            .isInstanceOfSatisfying(GeneralException.class, exception ->
+                assertThat(exception.getStatus()).isEqualTo(ErrorStatus.RECORD_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("내가 신고한 기록은 상세를 조회할 수 없다.")
+    void getRecordDetailReportedRecord() {
+        ActivityRecordService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(modyGroupRepository.findById(10L)).willReturn(Optional.of(group()));
+        given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            1L,
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(true);
+        given(activityRecordRepository.findById(100L))
+            .willReturn(Optional.of(mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30))));
+        given(activityRecordGroupRepository.findByRecordIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
+            .willReturn(Optional.of(recordGroup(100L, 10L, 1L, LocalDateTime.of(2026, 7, 1, 12, 30))));
+        given(recordReportRepository.existsByReporterMemberIdAndRecordIdAndDeletedAtIsNull(1L, 100L))
+            .willReturn(true);
+
+        assertThatThrownBy(() -> service.getRecordDetail(1L, 10L, 100L, null, 20))
+            .isInstanceOfSatisfying(GeneralException.class, exception ->
+                assertThat(exception.getStatus()).isEqualTo(ErrorStatus.RECORD_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("내가 신고한 기록은 댓글 목록을 조회할 수 없다.")
+    void getRecordCommentsReportedRecord() {
+        ActivityRecordService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(modyGroupRepository.findById(10L)).willReturn(Optional.of(group()));
+        given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            1L,
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(true);
+        given(activityRecordRepository.findById(100L))
+            .willReturn(Optional.of(mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30))));
+        given(activityRecordGroupRepository.findByRecordIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
+            .willReturn(Optional.of(recordGroup(100L, 10L, 1L, LocalDateTime.of(2026, 7, 1, 12, 30))));
+        given(recordReportRepository.existsByReporterMemberIdAndRecordIdAndDeletedAtIsNull(1L, 100L))
+            .willReturn(true);
+
+        assertThatThrownBy(() -> service.getRecordComments(1L, 10L, 100L, null, 20))
             .isInstanceOfSatisfying(GeneralException.class, exception ->
                 assertThat(exception.getStatus()).isEqualTo(ErrorStatus.RECORD_NOT_FOUND));
     }
@@ -445,6 +506,8 @@ class ActivityRecordServiceTest {
             .willReturn(Optional.of(mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30))));
         given(activityRecordGroupRepository.findByRecordIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
             .willReturn(Optional.of(recordGroup(100L, 10L, 1L, LocalDateTime.of(2026, 7, 1, 12, 30))));
+        given(recordReportRepository.existsByReporterMemberIdAndRecordIdAndDeletedAtIsNull(1L, 100L))
+            .willReturn(false);
         given(modyGroupRepository.findById(10L)).willReturn(Optional.of(group()));
         given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
             1L,
@@ -542,6 +605,7 @@ class ActivityRecordServiceTest {
             activityRecordGroupRepository,
             recordCommentRepository,
             recordViewHistoryRepository,
+            recordReportRepository,
             new ImageUrlResolver(new UploadProperties()),
             notificationRequestService
         );
