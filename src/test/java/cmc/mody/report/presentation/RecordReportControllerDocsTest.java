@@ -40,8 +40,6 @@ class RecordReportControllerDocsTest {
         %s
 
         신고 사유는 받지 않는다.
-        신고 성공 후 해당 기록은 신고자 기준 피드 목록, 기록 상세,
-        댓글 목록에서 제외된다.
 
         발생 가능한 예외 코드:
         - AUTH401: Authorization 헤더가 없거나 비어있음

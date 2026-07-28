@@ -21,7 +21,6 @@ import cmc.mody.record.infrastructure.repository.ActivityRecordGroupRepository;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
 import cmc.mody.record.infrastructure.repository.RecordViewHistoryRepository;
-import cmc.mody.report.infrastructure.repository.RecordReportRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -51,7 +50,6 @@ public class ActivityRecordService {
     private final ActivityRecordGroupRepository activityRecordGroupRepository;
     private final RecordCommentRepository recordCommentRepository;
     private final RecordViewHistoryRepository recordViewHistoryRepository;
-    private final RecordReportRepository recordReportRepository;
     private final ImageUrlResolver imageUrlResolver;
     private final NotificationRequestService notificationRequestService;
 
@@ -61,9 +59,8 @@ public class ActivityRecordService {
         validateGroupMembership(memberId, groupId);
         LocalDate weekStartDate = baseDate.minusDays(baseDate.getDayOfWeek().getValue() % 7L);
         LocalDate weekEndDate = weekStartDate.plusDays(6);
-        List<ActivityRecord> records = activityRecordRepository.findVisibleGroupRecordsBetween(
+        List<ActivityRecord> records = activityRecordRepository.findActiveGroupRecordsBetween(
             groupId,
-            memberId,
             weekStartDate.atStartOfDay(),
             weekEndDate.plusDays(1).atStartOfDay(),
             GroupMemberStatus.JOINED
@@ -86,9 +83,8 @@ public class ActivityRecordService {
         getMember(memberId);
         validateGroupMembership(memberId, groupId);
         int pageSize = normalizeSize(size);
-        List<ActivityRecord> records = activityRecordRepository.findVisibleGroupRecordsByCursor(
+        List<ActivityRecord> records = activityRecordRepository.findActiveGroupRecordsByCursor(
             groupId,
-            memberId,
             date.atStartOfDay(),
             date.plusDays(1).atStartOfDay(),
             cursor,
@@ -103,7 +99,7 @@ public class ActivityRecordService {
             .distinct()
             .collect(Collectors.toMap(
                 Function.identity(),
-                writerId -> calculateRecordingStreakDays(groupId, writerId, memberId, date)
+                writerId -> calculateRecordingStreakDays(groupId, writerId, date)
             ));
         List<RecordSummaryResult> summaries = pageRecords.stream()
             .map(record -> toRecordSummary(
@@ -130,7 +126,6 @@ public class ActivityRecordService {
 
         return toRecordDetailPage(
             record,
-            memberId,
             groupId,
             cursor,
             size,
@@ -253,15 +248,11 @@ public class ActivityRecordService {
             .orElseThrow(() -> new GeneralException(ErrorStatus.RECORD_NOT_FOUND));
         activityRecordGroupRepository.findByRecordIdAndGroupIdAndDeletedAtIsNull(recordId, groupId)
             .orElseThrow(() -> new GeneralException(ErrorStatus.RECORD_NOT_FOUND));
-        if (recordReportRepository.existsByReporterMemberIdAndRecordIdAndDeletedAtIsNull(memberId, recordId)) {
-            throw new GeneralException(ErrorStatus.RECORD_NOT_FOUND);
-        }
         return record;
     }
 
     private RecordDetailPageResult toRecordDetailPage(
         ActivityRecord record,
-        Long viewerMemberId,
         Long groupId,
         Long cursor,
         int size,
@@ -272,10 +263,9 @@ public class ActivityRecordService {
         int pageSize = normalizeSize(size);
         Long queryCursor = (cursor == null) ? record.getId() - 1 : cursor;
 
-        List<ActivityRecord> foundRecords = activityRecordRepository.findVisibleRecordsForDetailCarousel(
+        List<ActivityRecord> foundRecords = activityRecordRepository.findActiveRecordsForDetailCarousel(
             groupId,
             record.getMemberId(),
-            viewerMemberId,
             recordDate.atStartOfDay(),
             recordDate.plusDays(1).atStartOfDay(),
             queryCursor,
@@ -290,10 +280,9 @@ public class ActivityRecordService {
             .map(found -> toRecordDetail(found, nickname, profileImageKey))
             .toList();
 
-        long totalCount = activityRecordRepository.countVisibleRecordsForDetailCarousel(
+        long totalCount = activityRecordRepository.countActiveRecordsForDetailCarousel(
             groupId,
             record.getMemberId(),
-            viewerMemberId,
             recordDate.atStartOfDay(),
             recordDate.plusDays(1).atStartOfDay(),
             GroupMemberStatus.JOINED
@@ -378,16 +367,10 @@ public class ActivityRecordService {
             .collect(Collectors.toMap(GroupMember::getMemberId, Function.identity(), (left, right) -> left));
     }
 
-    private int calculateRecordingStreakDays(
-        Long groupId,
-        Long writerMemberId,
-        Long viewerMemberId,
-        LocalDate baseDate
-    ) {
-        List<LocalDate> recordedDates = activityRecordRepository.findVisibleGroupRecordsByMemberBefore(
+    private int calculateRecordingStreakDays(Long groupId, Long writerMemberId, LocalDate baseDate) {
+        List<LocalDate> recordedDates = activityRecordRepository.findActiveGroupRecordsByMemberBefore(
                 groupId,
                 writerMemberId,
-                viewerMemberId,
                 baseDate.plusDays(1).atStartOfDay(),
                 GroupMemberStatus.JOINED
             )
