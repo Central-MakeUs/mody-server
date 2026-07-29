@@ -11,7 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class NotificationTemplateRendererTest {
-    private final NotificationTemplateRenderer renderer = new NotificationTemplateRenderer();
+    private final NotificationTemplateRenderer renderer = new NotificationTemplateRenderer(new NotificationPushProperties());
 
     @Test
     @DisplayName("확정된 그룹 참여 알림 템플릿을 렌더링한다.")
@@ -42,6 +42,28 @@ class NotificationTemplateRendererTest {
             .isEqualTo("이번 주 챌린지 완료!");
         assertThat(renderer.render(NotificationType.WEEKLY_CHALLENGE_COMPLETED, Map.of("groupName", "2키로만")).content())
             .isEqualTo("2키로만 그룹에서 챌린지 1개를 완료했어요!");
+    }
+
+    @Test
+    @DisplayName("설정된 알림 제목 prefix를 붙여 렌더링한다.")
+    void renderWithTitlePrefix() {
+        NotificationPushProperties properties = new NotificationPushProperties();
+        properties.setTitlePrefix("dev ");
+        NotificationTemplateRenderer prefixedRenderer = new NotificationTemplateRenderer(properties);
+
+        NotificationTemplate template = prefixedRenderer.render(NotificationType.EXERCISE_REMINDER, Map.of());
+
+        assertThat(template.title()).isEqualTo("dev 운동할 시간!");
+        assertThat(template.content()).isEqualTo("오운완 사진 찍어서 기록해주세요.");
+    }
+
+    @Test
+    @DisplayName("이미 prefix가 붙은 제목에는 prefix를 중복 적용하지 않는다.")
+    void applyTitlePrefixOnce() {
+        NotificationPushProperties properties = new NotificationPushProperties();
+        properties.setTitlePrefix("dev ");
+
+        assertThat(properties.applyTitlePrefix("dev 운동할 시간!")).isEqualTo("dev 운동할 시간!");
     }
 
     @Test
