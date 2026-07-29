@@ -48,12 +48,12 @@ class NotificationTemplateRendererTest {
     @DisplayName("설정된 알림 제목 prefix를 붙여 렌더링한다.")
     void renderWithTitlePrefix() {
         NotificationPushProperties properties = new NotificationPushProperties();
-        properties.setTitlePrefix("dev ");
+        properties.setTitlePrefix("[DEV] ");
         NotificationTemplateRenderer prefixedRenderer = new NotificationTemplateRenderer(properties);
 
         NotificationTemplate template = prefixedRenderer.render(NotificationType.EXERCISE_REMINDER, Map.of());
 
-        assertThat(template.title()).isEqualTo("dev 운동할 시간!");
+        assertThat(template.title()).isEqualTo("[DEV] 운동할 시간!");
         assertThat(template.content()).isEqualTo("오운완 사진 찍어서 기록해주세요.");
     }
 
@@ -61,9 +61,9 @@ class NotificationTemplateRendererTest {
     @DisplayName("이미 prefix가 붙은 제목에는 prefix를 중복 적용하지 않는다.")
     void applyTitlePrefixOnce() {
         NotificationPushProperties properties = new NotificationPushProperties();
-        properties.setTitlePrefix("dev ");
+        properties.setTitlePrefix("[DEV] ");
 
-        assertThat(properties.applyTitlePrefix("dev 운동할 시간!")).isEqualTo("dev 운동할 시간!");
+        assertThat(properties.applyTitlePrefix("[DEV] 운동할 시간!")).isEqualTo("[DEV] 운동할 시간!");
     }
 
     @Test

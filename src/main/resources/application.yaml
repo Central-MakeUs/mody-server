@@ -178,7 +178,7 @@ oauth:
 
 notification:
   push:
-    title-prefix: ${NOTIFICATION_PUSH_TITLE_PREFIX:dev }
+    title-prefix: ${NOTIFICATION_PUSH_TITLE_PREFIX:[DEV] }
 
 ---
 
