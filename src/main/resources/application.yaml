@@ -67,6 +67,7 @@ notification:
   push:
     provider: ${NOTIFICATION_PUSH_PROVIDER:no-op}
     title: ${NOTIFICATION_PUSH_TITLE:Mody}
+    title-prefix: ${NOTIFICATION_PUSH_TITLE_PREFIX:}
 
 fcm:
   enabled: ${FCM_ENABLED:false}
@@ -174,6 +175,10 @@ oauth:
     client-id: ${APPLE_CLIENT_ID:com.jagsim.mody-dev}
     identity-token:
       audience: ${APPLE_BUNDLE_ID:com.jagsim.mody-dev}
+
+notification:
+  push:
+    title-prefix: ${NOTIFICATION_PUSH_TITLE_PREFIX:dev }
 
 ---
 

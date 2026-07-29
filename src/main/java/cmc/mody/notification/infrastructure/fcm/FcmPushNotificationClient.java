@@ -1,6 +1,7 @@
 package cmc.mody.notification.infrastructure.fcm;
 
 import cmc.mody.notification.application.NotificationLinkResolver;
+import cmc.mody.notification.application.NotificationPushProperties;
 import cmc.mody.notification.application.PushNotificationClient;
 import cmc.mody.notification.application.PushNotificationResult;
 import cmc.mody.notification.domain.Notification;
@@ -27,10 +28,16 @@ public class FcmPushNotificationClient implements PushNotificationClient {
     @SuppressWarnings("unused")
     private final FirebaseInitializer firebaseInitializer;
     private final NotificationLinkResolver linkResolver;
+    private final NotificationPushProperties pushProperties;
 
-    public FcmPushNotificationClient(FirebaseInitializer firebaseInitializer, NotificationLinkResolver linkResolver) {
+    public FcmPushNotificationClient(
+        FirebaseInitializer firebaseInitializer,
+        NotificationLinkResolver linkResolver,
+        NotificationPushProperties pushProperties
+    ) {
         this.firebaseInitializer = firebaseInitializer;
         this.linkResolver = linkResolver;
+        this.pushProperties = pushProperties;
     }
 
     @Override
@@ -47,7 +54,7 @@ public class FcmPushNotificationClient implements PushNotificationClient {
         MulticastMessage message = MulticastMessage.builder()
             .addAllTokens(tokens)
             .setNotification(com.google.firebase.messaging.Notification.builder()
-                .setTitle(notification.getTitle())
+                .setTitle(pushProperties.applyTitlePrefix(notification.getTitle()))
                 .setBody(notification.getContent())
                 .build())
             .putAllData(data(notification))

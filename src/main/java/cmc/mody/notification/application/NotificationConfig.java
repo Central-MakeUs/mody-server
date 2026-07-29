@@ -11,6 +11,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
     NotificationDispatchProperties.class,
     NotificationReminderProperties.class,
     NotificationRetentionProperties.class,
+    NotificationPushProperties.class,
     NotificationStreakRiskProperties.class
 })
 public class NotificationConfig {

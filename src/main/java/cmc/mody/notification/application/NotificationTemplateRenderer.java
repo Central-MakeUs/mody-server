@@ -8,8 +8,14 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class NotificationTemplateRenderer {
+    private final NotificationPushProperties pushProperties;
+
+    public NotificationTemplateRenderer(NotificationPushProperties pushProperties) {
+        this.pushProperties = pushProperties;
+    }
+
     public NotificationTemplate render(NotificationType type, Map<String, Object> payload) {
-        return switch (type) {
+        NotificationTemplate template = switch (type) {
             case GROUP_MEMBER_JOINED -> new NotificationTemplate(
                 NotificationPayload.requireString(payload, "groupName") + "에 새 버디가 참여했어요!",
                 NotificationPayload.requireString(payload, "nickname") + "님을 환영해주세요."
@@ -50,5 +56,6 @@ public class NotificationTemplateRenderer {
             );
             default -> throw new GeneralException(ErrorStatus.NOTIFICATION_UNSUPPORTED_TYPE);
         };
+        return new NotificationTemplate(pushProperties.applyTitlePrefix(template.title()), template.content());
     }
 }
