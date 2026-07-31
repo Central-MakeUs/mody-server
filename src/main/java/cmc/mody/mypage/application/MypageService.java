@@ -110,12 +110,15 @@ public class MypageService {
         Member member = getMember(memberId);
         validateProfileImageKey(memberId, command.imageKey());
         member.updateProfile(command.nickname(), command.birthDate());
-        member.updateProfileImage(command.imageKey());
+        boolean imageUpdateRequested = command.imageKey() != null;
+        if (imageUpdateRequested) {
+            updateProfileImage(member, command.imageKey());
+        }
         List<GroupMember> joinedGroupMembers = groupMemberRepository
             .findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(memberId, GroupMemberStatus.JOINED);
         joinedGroupMembers.forEach(groupMember -> {
             groupMember.updateDisplayNickname(member.getNickname());
-            if (command.imageKey() != null && !command.imageKey().isBlank()) {
+            if (imageUpdateRequested) {
                 groupMember.updateDisplayProfileImageKey(member.getProfileImageKey());
             }
         });
@@ -401,6 +404,14 @@ public class MypageService {
         if (!imageKey.startsWith(expectedPrefix)) {
             throw new GeneralException(ErrorStatus.MYPAGE_PROFILE_IMAGE_INVALID);
         }
+    }
+
+    private void updateProfileImage(Member member, String imageKey) {
+        if (imageKey.isBlank()) {
+            member.clearProfileImage();
+            return;
+        }
+        member.updateProfileImage(imageKey);
     }
 
     public record MyInfoResult(

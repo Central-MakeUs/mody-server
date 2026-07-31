@@ -81,6 +81,10 @@ public class Member extends BaseEntity {
         }
     }
 
+    public void clearProfileImage() {
+        this.profileImageKey = null;
+    }
+
     public void updateHealthConnection(boolean connected) {
         this.healthConnectionStatus = connected
             ? HealthConnectionStatus.CONNECTED
