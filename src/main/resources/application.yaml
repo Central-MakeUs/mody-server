@@ -36,7 +36,7 @@ upload:
 
 invite:
   aasa-resource-path: ${MODY_INVITE_AASA_RESOURCE_PATH:universal-link/apple-app-site-association}
-  app-store-url: ${MODY_INVITE_APP_STORE_URL:https://www.apple.com/kr/app-store/}
+  app-store-url: ${MODY_INVITE_APP_STORE_URL:https://apps.apple.com/kr/app/id6785124295}
   google-play-url: ${MODY_INVITE_GOOGLE_PLAY_URL:https://play.google.com/store}
 
 error-alert:
@@ -212,3 +212,4 @@ oauth:
 
 invite:
   aasa-resource-path: ${MODY_INVITE_AASA_RESOURCE_PATH:universal-link/apple-app-site-association-prod}
+  app-store-url: ${MODY_INVITE_APP_STORE_URL:https://apps.apple.com/kr/app/id6785124295}

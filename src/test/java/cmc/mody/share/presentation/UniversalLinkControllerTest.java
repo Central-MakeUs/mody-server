@@ -54,7 +54,7 @@ class UniversalLinkControllerTest {
             .andExpect(header().string(HttpHeaders.CONTENT_TYPE, containsString("text/html")))
             .andExpect(content().string(containsString("ABCD2345")))
             .andExpect(content().string(containsString("App Store로 이동")))
-            .andExpect(content().string(containsString("https://www.apple.com/kr/app-store/")));
+            .andExpect(content().string(containsString("https://apps.apple.com/kr/app/id6785124295")));
     }
 
     @Test

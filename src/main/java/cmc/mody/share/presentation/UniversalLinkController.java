@@ -29,7 +29,7 @@ public class UniversalLinkController {
 
     public UniversalLinkController(
         @Value("${invite.aasa-resource-path:" + AASA_RESOURCE_PATH + "}") String aasaResourcePath,
-        @Value("${invite.app-store-url:https://www.apple.com/kr/app-store/}") String appStoreUrl,
+        @Value("${invite.app-store-url:https://apps.apple.com/kr/app/id6785124295}") String appStoreUrl,
         @Value("${invite.google-play-url:https://play.google.com/store}") String googlePlayUrl
     ) {
         this.aasaResourcePath = aasaResourcePath;
