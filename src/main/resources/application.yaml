@@ -207,3 +207,4 @@ oauth:
 
 invite:
   aasa-resource-path: ${MODY_INVITE_AASA_RESOURCE_PATH:universal-link/apple-app-site-association-prod}
+  app-store-url: ${MODY_INVITE_APP_STORE_URL:https://apps.apple.com/kr/app/id6785124295}
