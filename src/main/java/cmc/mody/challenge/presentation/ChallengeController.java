@@ -208,6 +208,7 @@ public class ChallengeController {
     public record ChallengeSummaryResponse(
         int daysTogether,
         int allMemberRecordedDays,
+        boolean hasStartedStreak,
         int monthlyExerciseMinutes,
         int monthlyCompletedChallengeCount
     ) {
@@ -215,6 +216,7 @@ public class ChallengeController {
             return new ChallengeSummaryResponse(
                 result.daysTogether(),
                 result.allMemberRecordedDays(),
+                result.hasStartedStreak(),
                 result.monthlyExerciseMinutes(),
                 result.monthlyCompletedChallengeCount()
             );
