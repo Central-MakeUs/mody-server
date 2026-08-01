@@ -154,7 +154,7 @@ class ChallengeControllerDocsTest {
     void getChallengeSummary() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(challengeHomeService.getChallengeSummary(1L, 1L))
-            .willReturn(new ChallengeSummaryResult(12, 7, 360, 2));
+            .willReturn(new ChallengeSummaryResult(12, 7, true, 360, 2));
 
         mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/summary", 1L)
                 .header("Authorization", "Bearer access-token"))
@@ -168,6 +168,8 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.daysTogether").type(JsonFieldType.NUMBER).description("그룹과 함께한 일수"),
                         fieldWithPath("result.allMemberRecordedDays").type(JsonFieldType.NUMBER)
                             .description("모든 구성원이 기록한 일수"),
+                        fieldWithPath("result.hasStartedStreak").type(JsonFieldType.BOOLEAN)
+                            .description("현재 참여 중인 모든 구성원이 같은 날짜에 기록한 이력이 한 번이라도 있는지 여부"),
                         fieldWithPath("result.monthlyExerciseMinutes").type(JsonFieldType.NUMBER)
                             .description("이번달 운동 시간 분"),
                         fieldWithPath("result.monthlyCompletedChallengeCount").type(JsonFieldType.NUMBER)

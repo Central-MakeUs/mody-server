@@ -54,6 +54,7 @@ public class ChallengeHomeService {
 
         int daysTogether = daysTogether(currentMember.getJoinedAt().toLocalDate(), today);
         int allMemberRecordedDays = allMemberRecordedDays(monthlyRecords, joinedMembers);
+        boolean hasStartedStreak = hasStartedStreak(groupId, joinedMembers, today);
         int monthlyExerciseMinutes = monthlyExerciseMinutes(monthlyRecords);
         int monthlyCompletedChallengeCount = Math.toIntExact(groupChallengeRepository
             .countByGroupIdAndGroupChallengeStatusAndCompletedAtGreaterThanEqualAndCompletedAtLessThanAndDeletedAtIsNull(
@@ -65,6 +66,7 @@ public class ChallengeHomeService {
         return new ChallengeSummaryResult(
             daysTogether,
             allMemberRecordedDays,
+            hasStartedStreak,
             monthlyExerciseMinutes,
             monthlyCompletedChallengeCount
         );
@@ -173,9 +175,24 @@ public class ChallengeHomeService {
             .sum();
     }
 
+    private boolean hasStartedStreak(Long groupId, List<GroupMember> joinedMembers, LocalDate today) {
+        LocalDate historyStart = joinedMembers.stream()
+            .map(groupMember -> groupMember.getJoinedAt().toLocalDate())
+            .min(LocalDate::compareTo)
+            .orElse(today);
+        List<ActivityRecord> groupRecordHistory = activityRecordRepository.findActiveGroupRecordsBetween(
+            groupId,
+            historyStart.atStartOfDay(),
+            today.plusDays(1).atStartOfDay(),
+            GroupMemberStatus.JOINED
+        );
+        return allMemberRecordedDays(groupRecordHistory, joinedMembers) > 0;
+    }
+
     public record ChallengeSummaryResult(
         int daysTogether,
         int allMemberRecordedDays,
+        boolean hasStartedStreak,
         int monthlyExerciseMinutes,
         int monthlyCompletedChallengeCount
     ) {
