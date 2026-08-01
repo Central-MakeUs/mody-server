@@ -114,7 +114,25 @@ val applyOpenApiSecurity by tasks.registering {
             "scheme" to "bearer",
             "bearerFormat" to "JWT"
         )
-        spec["security"] = listOf(mapOf("bearerAuth" to emptyList<String>()))
+        securitySchemes["adminApiKey"] = linkedMapOf(
+            "type" to "apiKey",
+            "in" to "header",
+            "name" to "X-Admin-Api-Key"
+        )
+
+        @Suppress("UNCHECKED_CAST")
+        val paths = spec["paths"] as MutableMap<String, MutableMap<String, MutableMap<String, Any?>>>
+        paths.forEach { (path, operations) ->
+            operations.forEach { (method, operation) ->
+                if (method.lowercase() in setOf("get", "post", "put", "patch", "delete")) {
+                    operation["security"] = if (path.startsWith("/api/v1/admin/")) {
+                        listOf(mapOf("adminApiKey" to emptyList<String>()))
+                    } else {
+                        listOf(mapOf("bearerAuth" to emptyList<String>()))
+                    }
+                }
+            }
+        }
 
         specFile.writeText(JsonOutput.prettyPrint(JsonOutput.toJson(spec)))
     }

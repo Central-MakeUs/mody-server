@@ -13,7 +13,10 @@ import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -53,6 +57,20 @@ public class ChallengeController {
             groupId
         );
         return ApiResponse.ok(StepChallengeStatusResponse.from(result));
+    }
+
+    @PutMapping("/groups/{groupId}/challenges/step/records")
+    public ApiResponse<StepRecordUpsertResponse> upsertDailyStepRecord(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long groupId,
+        @Valid @RequestBody StepRecordUpsertRequest request
+    ) {
+        StepChallengeService.StepRecordUpsertResult result = stepChallengeService.upsertDailyStepRecord(
+            memberId,
+            groupId,
+            request.toCommand()
+        );
+        return ApiResponse.ok(StepRecordUpsertResponse.from(result));
     }
 
     @GetMapping("/groups/{groupId}/challenges/weekly")
@@ -219,6 +237,38 @@ public class ChallengeController {
         }
     }
 
+    public record StepRecordUpsertRequest(
+        @NotNull(message = "기록 날짜는 필수입니다.")
+        @PastOrPresent(message = "기록 날짜는 오늘 이전이어야 합니다.")
+        LocalDate recordedOn,
+        @PositiveOrZero(message = "걸음 수는 0 이상이어야 합니다.")
+        int stepCount
+    ) {
+        public StepChallengeService.StepRecordUpsertCommand toCommand() {
+            return new StepChallengeService.StepRecordUpsertCommand(recordedOn, stepCount);
+        }
+    }
+
+    public record StepRecordUpsertResponse(
+        Long groupChallengeId,
+        LocalDate recordedOn,
+        int stepCount,
+        int currentStepCount,
+        int targetStepCount,
+        boolean completed
+    ) {
+        public static StepRecordUpsertResponse from(StepChallengeService.StepRecordUpsertResult result) {
+            return new StepRecordUpsertResponse(
+                result.groupChallengeId(),
+                result.recordedOn(),
+                result.stepCount(),
+                result.currentStepCount(),
+                result.targetStepCount(),
+                result.completed()
+            );
+        }
+    }
+
     public record WeeklyChallengeListResponse(List<WeeklyChallengeSummaryResponse> challenges) {
         public static WeeklyChallengeListResponse from(WeeklyChallengeService.WeeklyChallengeListResult result) {
             return new WeeklyChallengeListResponse(result.challenges().stream()
@@ -231,17 +281,31 @@ public class ChallengeController {
         Long groupChallengeId,
         String title,
         String deadlineDayOfWeek,
+        LocalDate startsOn,
+        LocalDate endsOn,
+        int remainingDays,
         int participantCount,
-        String randomParticipantNickname
+        String randomParticipantNickname,
+        List<WeeklyChallengeParticipantResponse> participants
     ) {
         public static WeeklyChallengeSummaryResponse from(WeeklyChallengeService.WeeklyChallengeSummaryResult result) {
             return new WeeklyChallengeSummaryResponse(
                 result.groupChallengeId(),
                 result.title(),
                 result.deadlineDayOfWeek(),
+                result.startsOn(),
+                result.endsOn(),
+                result.remainingDays(),
                 result.participantCount(),
-                result.randomParticipantNickname()
+                result.randomParticipantNickname(),
+                result.participants().stream().map(WeeklyChallengeParticipantResponse::from).toList()
             );
+        }
+    }
+
+    public record WeeklyChallengeParticipantResponse(Long memberId, String nickname, String profileImageUrl) {
+        public static WeeklyChallengeParticipantResponse from(WeeklyChallengeService.WeeklyChallengeParticipantResult result) {
+            return new WeeklyChallengeParticipantResponse(result.memberId(), result.nickname(), result.profileImageUrl());
         }
     }
 
