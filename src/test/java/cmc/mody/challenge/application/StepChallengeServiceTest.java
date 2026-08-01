@@ -5,17 +5,22 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 
 import cmc.mody.challenge.application.StepChallengeService.StepChallengeChangeCommand;
 import cmc.mody.challenge.application.StepChallengeService.StepChallengeChangeResult;
 import cmc.mody.challenge.application.StepChallengeService.StepChallengeStatusResult;
 import cmc.mody.challenge.application.StepChallengeService.StepRankingListResult;
+import cmc.mody.challenge.application.StepChallengeService.StepRecordUpsertCommand;
+import cmc.mody.challenge.application.StepChallengeService.StepRecordUpsertResult;
 import cmc.mody.challenge.application.StepChallengeService.WalkedRegionListResult;
 import cmc.mody.challenge.domain.Challenge;
 import cmc.mody.challenge.domain.ChallengeType;
 import cmc.mody.challenge.domain.GroupChallenge;
 import cmc.mody.challenge.domain.GroupChallengeStatus;
 import cmc.mody.challenge.domain.StepChallengeDetail;
+import cmc.mody.challenge.domain.StepRecord;
+import cmc.mody.challenge.domain.StepSource;
 import cmc.mody.challenge.infrastructure.repository.ChallengeRepository;
 import cmc.mody.challenge.infrastructure.repository.GroupChallengeRepository;
 import cmc.mody.challenge.infrastructure.repository.StepChallengeDetailRepository;
@@ -74,6 +79,9 @@ class StepChallengeServiceTest {
     @Captor
     private ArgumentCaptor<GroupChallenge> groupChallengeCaptor;
 
+    @Captor
+    private ArgumentCaptor<StepRecord> stepRecordCaptor;
+
     @Test
     @DisplayName("현재 걸음수 챌린지는 그룹 챌린지와 누적 걸음수를 반환한다.")
     void getCurrentStepChallenge() {
@@ -98,6 +106,88 @@ class StepChallengeServiceTest {
         assertThat(result.title()).isEqualTo("서울-인천");
         assertThat(result.targetStepCount()).isEqualTo(150_000);
         assertThat(result.currentStepCount()).isEqualTo(34_000);
+    }
+
+    @Test
+    @DisplayName("일일 누적 걸음 수를 저장하고 목표에 도달하면 걸음수 챌린지를 완료 처리한다.")
+    void upsertDailyStepRecordAndCompleteChallenge() {
+        StepChallengeService service = service();
+        LocalDate today = LocalDate.now();
+        GroupChallenge groupChallenge = new GroupChallenge(
+            100L,
+            10L,
+            1L,
+            today.minusDays(1),
+            LocalDate.of(9999, 12, 31)
+        );
+        givenValidGroupMembership();
+        givenStepChallenges(List.of(challenge(1L, "서울-인천")));
+        given(groupChallengeRepository.findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
+            10L,
+            List.of(1L),
+            GroupChallengeStatus.IN_PROGRESS
+        )).willReturn(Optional.of(groupChallenge));
+        given(challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(1L, ChallengeType.STEP))
+            .willReturn(Optional.of(challenge(1L, "서울-인천")));
+        given(stepChallengeDetailRepository.findByChallengeIdAndDeletedAtIsNull(1L))
+            .willReturn(Optional.of(stepDetail(1L, "인천", 15_000)));
+        given(stepRecordRepository.findByGroupChallengeIdAndMemberIdAndRecordedOnAndDeletedAtIsNull(100L, 1L, today))
+            .willReturn(Optional.empty());
+        given(idGenerator.nextId()).willReturn(200L);
+        given(stepRecordRepository.save(any(StepRecord.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(stepRecordRepository.sumStepCountByGroupChallengeId(100L)).willReturn(15_000L);
+
+        StepRecordUpsertResult result = service.upsertDailyStepRecord(
+            1L,
+            10L,
+            new StepRecordUpsertCommand(today, 8_200)
+        );
+
+        then(stepRecordRepository).should().save(stepRecordCaptor.capture());
+        assertThat(stepRecordCaptor.getValue().getRecordedOn()).isEqualTo(today);
+        assertThat(stepRecordCaptor.getValue().getStepCount()).isEqualTo(8_200);
+        assertThat(stepRecordCaptor.getValue().getStepSource()).isEqualTo(StepSource.API);
+        assertThat(groupChallenge.getGroupChallengeStatus()).isEqualTo(GroupChallengeStatus.COMPLETED);
+        assertThat(result).isEqualTo(new StepRecordUpsertResult(100L, today, 8_200, 15_000, 15_000, true));
+    }
+
+    @Test
+    @DisplayName("같은 날짜의 누적 걸음 수를 다시 저장하면 기존 날짜 기록만 갱신한다.")
+    void updateExistingDailyStepRecord() {
+        StepChallengeService service = service();
+        LocalDate today = LocalDate.now();
+        GroupChallenge groupChallenge = new GroupChallenge(
+            100L,
+            10L,
+            1L,
+            today.minusDays(1),
+            LocalDate.of(9999, 12, 31)
+        );
+        StepRecord existing = new StepRecord(200L, 100L, 1L, today, 3_000, StepSource.API);
+        givenValidGroupMembership();
+        givenStepChallenges(List.of(challenge(1L, "서울-인천")));
+        given(groupChallengeRepository.findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
+            10L,
+            List.of(1L),
+            GroupChallengeStatus.IN_PROGRESS
+        )).willReturn(Optional.of(groupChallenge));
+        given(challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(1L, ChallengeType.STEP))
+            .willReturn(Optional.of(challenge(1L, "서울-인천")));
+        given(stepChallengeDetailRepository.findByChallengeIdAndDeletedAtIsNull(1L))
+            .willReturn(Optional.of(stepDetail(1L, "인천", 15_000)));
+        given(stepRecordRepository.findByGroupChallengeIdAndMemberIdAndRecordedOnAndDeletedAtIsNull(100L, 1L, today))
+            .willReturn(Optional.of(existing));
+        given(stepRecordRepository.sumStepCountByGroupChallengeId(100L)).willReturn(8_200L);
+
+        StepRecordUpsertResult result = service.upsertDailyStepRecord(
+            1L,
+            10L,
+            new StepRecordUpsertCommand(today, 8_200)
+        );
+
+        assertThat(existing.getStepCount()).isEqualTo(8_200);
+        then(stepRecordRepository).should(never()).save(any(StepRecord.class));
+        assertThat(result).isEqualTo(new StepRecordUpsertResult(100L, today, 8_200, 8_200, 15_000, false));
     }
 
     @Test

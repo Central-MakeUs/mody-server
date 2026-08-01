@@ -290,7 +290,7 @@ class MypageControllerDocsTest {
                         fieldWithPath("imageKey")
                             .type(JsonFieldType.STRING)
                             .optional()
-                            .description("프로필 이미지 키. `/api/v1/uploads/presigned-url?domain=profile`에서 발급받은 `profiles/{memberId}/...` 값. 생략 또는 null이면 기존 이미지 유지")
+                            .description("프로필 이미지 키. `/api/v1/uploads/presigned-url?domain=profile`에서 발급받은 `profiles/{memberId}/...` 값. 생략 또는 null이면 기존 이미지 유지, 빈 문자열이면 기본 이미지로 초기화")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.nickname").type(JsonFieldType.STRING).description("닉네임"),

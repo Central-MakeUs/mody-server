@@ -10,6 +10,7 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.requestF
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import cmc.mody.auth.application.token.TokenProvider;
@@ -26,6 +27,8 @@ import cmc.mody.challenge.application.StepChallengeService.StepChallengeOptionRe
 import cmc.mody.challenge.application.StepChallengeService.StepChallengeStatusResult;
 import cmc.mody.challenge.application.StepChallengeService.StepRankingListResult;
 import cmc.mody.challenge.application.StepChallengeService.StepRankingResult;
+import cmc.mody.challenge.application.StepChallengeService.StepRecordUpsertCommand;
+import cmc.mody.challenge.application.StepChallengeService.StepRecordUpsertResult;
 import cmc.mody.challenge.application.StepChallengeService.WalkedRegionListResult;
 import cmc.mody.challenge.application.StepChallengeService.WalkedRegionResult;
 import cmc.mody.challenge.application.WeeklyChallengeService;
@@ -36,6 +39,7 @@ import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProo
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProofListResult;
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProofResult;
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeShareResult;
+import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeParticipantResult;
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeSummaryResult;
 import cmc.mody.challenge.application.WeeklyChallengeService.ImageCropRegionCommand;
 import cmc.mody.challenge.application.WeeklyChallengeService.ImageCropRegionResult;
@@ -44,6 +48,7 @@ import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.config.WebConfig;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -149,7 +154,7 @@ class ChallengeControllerDocsTest {
     void getChallengeSummary() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(challengeHomeService.getChallengeSummary(1L, 1L))
-            .willReturn(new ChallengeSummaryResult(12, 7, 360, 2));
+            .willReturn(new ChallengeSummaryResult(12, 7, true, 360, 2));
 
         mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/summary", 1L)
                 .header("Authorization", "Bearer access-token"))
@@ -163,6 +168,8 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.daysTogether").type(JsonFieldType.NUMBER).description("그룹과 함께한 일수"),
                         fieldWithPath("result.allMemberRecordedDays").type(JsonFieldType.NUMBER)
                             .description("모든 구성원이 기록한 일수"),
+                        fieldWithPath("result.hasStartedStreak").type(JsonFieldType.BOOLEAN)
+                            .description("현재 참여 중인 모든 구성원이 같은 날짜에 기록한 이력이 한 번이라도 있는지 여부"),
                         fieldWithPath("result.monthlyExerciseMinutes").type(JsonFieldType.NUMBER)
                             .description("이번달 운동 시간 분"),
                         fieldWithPath("result.monthlyCompletedChallengeCount").type(JsonFieldType.NUMBER)
@@ -201,7 +208,21 @@ class ChallengeControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(weeklyChallengeService.getWeeklyChallenges(1L, 1L))
             .willReturn(new WeeklyChallengeListResult(List.of(
-                new WeeklyChallengeSummaryResult(1L, "물 2L 마시기", "SUNDAY", 3, "민석")
+                new WeeklyChallengeSummaryResult(
+                    1L,
+                    "물 2L 마시기",
+                    "SUNDAY",
+                    LocalDate.of(2026, 8, 3),
+                    LocalDate.of(2026, 8, 9),
+                    4,
+                    3,
+                    "민석",
+                    List.of(new WeeklyChallengeParticipantResult(
+                        1L,
+                        "민석",
+                        "https://storage.example.com/profiles/member-1.jpg"
+                    ))
+                )
             )));
 
         mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/weekly", 1L)
@@ -218,10 +239,60 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.challenges[].title").type(JsonFieldType.STRING).description("챌린지명"),
                         fieldWithPath("result.challenges[].deadlineDayOfWeek").type(JsonFieldType.STRING)
                             .description("마감 요일"),
+                        fieldWithPath("result.challenges[].startsOn").type(JsonFieldType.STRING).description("시작일"),
+                        fieldWithPath("result.challenges[].endsOn").type(JsonFieldType.STRING).description("마감일"),
+                        fieldWithPath("result.challenges[].remainingDays").type(JsonFieldType.NUMBER)
+                            .description("마감일까지 남은 일수"),
                         fieldWithPath("result.challenges[].participantCount").type(JsonFieldType.NUMBER)
                             .description("참여 인원"),
                         fieldWithPath("result.challenges[].randomParticipantNickname").type(JsonFieldType.STRING)
-                            .description("랜덤 참여자 닉네임")
+                            .description("첫 참여자 닉네임"),
+                        fieldWithPath("result.challenges[].participants[].memberId").type(JsonFieldType.NUMBER)
+                            .description("카드에 노출할 참여자 회원 id"),
+                        fieldWithPath("result.challenges[].participants[].nickname").type(JsonFieldType.STRING)
+                            .description("카드에 노출할 참여자 닉네임"),
+                        fieldWithPath("result.challenges[].participants[].profileImageUrl").type(JsonFieldType.STRING)
+                            .description("카드에 노출할 참여자 프로필 이미지 URL")
+                    ))
+                    .build())
+            ));
+    }
+
+    @Test
+    void upsertDailyStepRecord() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(stepChallengeService.upsertDailyStepRecord(
+            1L,
+            1L,
+            new StepRecordUpsertCommand(LocalDate.of(2026, 8, 1), 8_200)
+        )).willReturn(new StepRecordUpsertResult(10L, LocalDate.of(2026, 8, 1), 8_200, 38_000, 45_000, false));
+
+        mockMvc.perform(put("/api/v1/groups/{groupId}/challenges/step/records", 1L)
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "recordedOn": "2026-08-01",
+                      "stepCount": 8200
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andDo(document("step-challenge-daily-record",
+                resource(ResourceSnippetParameters.builder()
+                    .tag("Step Challenge")
+                    .summary("일일 누적 걸음 수 저장")
+                    .description(STEP_CHALLENGE_DESCRIPTION)
+                    .requestFields(
+                        fieldWithPath("recordedOn").type(JsonFieldType.STRING).description("KST 기준 기록 날짜"),
+                        fieldWithPath("stepCount").type(JsonFieldType.NUMBER).description("해당 날짜의 최종 누적 걸음 수")
+                    )
+                    .responseFields(commonResponseFields(
+                        fieldWithPath("result.groupChallengeId").type(JsonFieldType.NUMBER).description("그룹 챌린지 id"),
+                        fieldWithPath("result.recordedOn").type(JsonFieldType.STRING).description("저장된 기록 날짜"),
+                        fieldWithPath("result.stepCount").type(JsonFieldType.NUMBER).description("저장된 일일 누적 걸음 수"),
+                        fieldWithPath("result.currentStepCount").type(JsonFieldType.NUMBER).description("그룹 전체 현재 걸음 수"),
+                        fieldWithPath("result.targetStepCount").type(JsonFieldType.NUMBER).description("그룹 목표 걸음 수"),
+                        fieldWithPath("result.completed").type(JsonFieldType.BOOLEAN).description("이번 저장으로 목표를 달성했는지 여부")
                     ))
                     .build())
             ));

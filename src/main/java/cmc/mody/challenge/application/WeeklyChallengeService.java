@@ -24,6 +24,7 @@ import cmc.mody.notification.application.NotificationRequestService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -110,6 +111,12 @@ public class WeeklyChallengeService {
         GroupChallenge groupChallenge = getWeeklyGroupChallenge(groupId, groupChallengeId);
         if (groupChallenge.getGroupChallengeStatus() == GroupChallengeStatus.COMPLETED) {
             throw new GeneralException(ErrorStatus.CHALLENGE_ALREADY_COMPLETED);
+        }
+        LocalDate today = LocalDate.now();
+        if (groupChallenge.getGroupChallengeStatus() != GroupChallengeStatus.IN_PROGRESS
+            || today.isBefore(groupChallenge.getStartsOn())
+            || today.isAfter(groupChallenge.getEndsOn())) {
+            throw new GeneralException(ErrorStatus.CHALLENGE_VALIDATION_FAILED);
         }
         boolean alreadyProved = challengeProofRepository.existsByGroupChallengeIdAndMemberIdAndDeletedAtIsNull(
             groupChallenge.getId(),
@@ -235,8 +242,12 @@ public class WeeklyChallengeService {
             groupChallenge.getId(),
             challenge.getTitle(),
             groupChallenge.getDueDayOfWeek().name(),
+            groupChallenge.getStartsOn(),
+            groupChallenge.getEndsOn(),
+            Math.toIntExact(ChronoUnit.DAYS.between(LocalDate.now(), groupChallenge.getEndsOn())),
             proofs.size(),
-            representativeParticipantNickname(proofs, membersById)
+            representativeParticipantNickname(proofs, membersById),
+            representativeParticipants(proofs, membersById)
         );
     }
 
@@ -248,6 +259,23 @@ public class WeeklyChallengeService {
             .map(GroupMember::getDisplayNickname)
             .findFirst()
             .orElse(null);
+    }
+
+    private List<WeeklyChallengeParticipantResult> representativeParticipants(
+        List<ChallengeProof> proofs,
+        Map<Long, GroupMember> membersById
+    ) {
+        return proofs.stream()
+            .sorted(Comparator.comparing(ChallengeProof::getUploadedAt).thenComparing(ChallengeProof::getId))
+            .map(proof -> membersById.get(proof.getMemberId()))
+            .filter(member -> member != null)
+            .limit(3)
+            .map(member -> new WeeklyChallengeParticipantResult(
+                member.getMemberId(),
+                member.getDisplayNickname(),
+                imageUrlResolver.resolve(member.getDisplayProfileImageKey())
+            ))
+            .toList();
     }
 
     private WeeklyChallengeProofResult toWeeklyChallengeProof(ChallengeProof proof, GroupMember groupMember) {
@@ -324,9 +352,16 @@ public class WeeklyChallengeService {
         Long groupChallengeId,
         String title,
         String deadlineDayOfWeek,
+        LocalDate startsOn,
+        LocalDate endsOn,
+        int remainingDays,
         int participantCount,
-        String randomParticipantNickname
+        String randomParticipantNickname,
+        List<WeeklyChallengeParticipantResult> participants
     ) {
+    }
+
+    public record WeeklyChallengeParticipantResult(Long memberId, String nickname, String profileImageUrl) {
     }
 
     public record WeeklyChallengeDetailResult(Long challengeId, String title, String description) {

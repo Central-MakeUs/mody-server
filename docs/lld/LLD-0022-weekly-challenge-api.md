@@ -23,6 +23,7 @@
 - 주간 챌린지 상세 조회.
 - 그룹원 인증 이미지 조회.
 - 주간 챌린지 인증 imageKey와 이미지 crop region 저장.
+- 운영자 주간 사진 챌린지 생성.
 - 그룹 구성원 권한 검증.
 - 중복 인증 방지.
 - Swagger 성공/예외 응답 문서화.
@@ -42,8 +43,8 @@
   - `image_key`: 원본 이미지 key.
   - `crop_x`, `crop_y`, `crop_width`, `crop_height`: 원본 이미지 기준 관심 영역 정규화 좌표. 없으면 null.
 
-현재 구현은 DB에 이미 생성된 `PHOTO` 타입 `group_challenge`를 조회한다.
-서비스가 주간 챌린지를 자동으로 배정하거나 생성하지 않는다.
+운영자는 관리자 API로 임의의 `PHOTO` 타입 챌린지와 그룹 챌린지 인스턴스를 함께 생성한다.
+관리자 API는 `X-Admin-Api-Key` 헤더가 `ADMIN_API_KEY` 환경변수와 일치해야 호출할 수 있다.
 
 ## 4. API 동작
 
@@ -56,7 +57,7 @@ GET /api/v1/groups/{groupId}/challenges/weekly
 1. 요청 회원이 그룹에 참여 중인지 확인한다.
 2. 오늘 날짜가 `startsOn <= today <= endsOn` 범위에 포함되는 `IN_PROGRESS` 상태 PHOTO 그룹 챌린지를 조회한다.
 3. 각 그룹 챌린지의 인증 수를 참여 인원으로 계산한다.
-4. 인증자가 있으면 가장 먼저 업로드한 인증자의 그룹 내 닉네임을 대표 참여자 닉네임으로 반환한다.
+4. 카드 표시를 위해 시작일, 마감일, 남은 일수와 먼저 인증한 최대 3명의 회원 프로필을 반환한다.
 5. 진행 중인 주간 챌린지가 없으면 빈 배열을 반환한다.
 
 ### 주간 챌린지 상세 조회
@@ -106,6 +107,26 @@ POST /api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs
 4. `imageCropRegion`이 있으면 `x/y/width/height`가 0~1 정규화 좌표이고 원본 범위를 넘지 않는지 검증한다.
 5. 인증 기록을 저장하고 인증 id, 그룹 챌린지 id, 이미지 URL, 이미지 관심 영역 좌표를 반환한다.
 
+인증은 `IN_PROGRESS` 상태이며 시작일과 마감일 사이에 있는 챌린지에서만 가능하다.
+
+### 운영자 주간 사진 챌린지 생성
+
+```http
+POST /api/v1/admin/groups/{groupId}/weekly-challenges
+X-Admin-Api-Key: {ADMIN_API_KEY}
+```
+
+```json
+{
+  "title": "엘리베이터 안 타고 올라가기",
+  "description": "계단으로 이동한 사진을 인증해주세요.",
+  "startsOn": "2026-08-03",
+  "endsOn": "2026-08-09"
+}
+```
+
+요청한 그룹에 사진 챌린지 템플릿과 진행 인스턴스를 생성한다. 현재는 운영 입력을 위한 API만 제공하며, 별도 관리자 웹 화면은 이 API 위에 추가할 수 있다.
+
 ## 5. 예외 코드
 
 - `AUTH401`~`AUTH405`: 인증 실패.
@@ -128,6 +149,5 @@ POST /api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs
 
 ## 7. 미결정 사항 (Open Questions)
 
-- 주간 챌린지를 서비스 배치가 생성할지, 운영자가 수동 생성할지 결정 필요.
 - 완료 기준과 완료 알림 연결 방식 결정 필요.
 - 공유용 합성 이미지 생성은 별도 이슈에서 설계 필요.

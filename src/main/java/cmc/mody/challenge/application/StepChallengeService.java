@@ -5,6 +5,8 @@ import cmc.mody.challenge.domain.ChallengeType;
 import cmc.mody.challenge.domain.GroupChallenge;
 import cmc.mody.challenge.domain.GroupChallengeStatus;
 import cmc.mody.challenge.domain.StepChallengeDetail;
+import cmc.mody.challenge.domain.StepRecord;
+import cmc.mody.challenge.domain.StepSource;
 import cmc.mody.challenge.infrastructure.repository.ChallengeRepository;
 import cmc.mody.challenge.infrastructure.repository.GroupChallengeRepository;
 import cmc.mody.challenge.infrastructure.repository.StepChallengeDetailRepository;
@@ -141,6 +143,54 @@ public class StepChallengeService {
             .filter(groupChallenge -> groupChallenge.getChallengeId().equals(challenge.getId()))
             .map(groupChallenge -> toChangeResult(groupChallenge, challenge, detail, currentStepCount(groupChallenge)))
             .orElseGet(() -> changeToNewChallenge(groupId, challenge, detail, currentGroupChallenge));
+    }
+
+    @Transactional
+    public StepRecordUpsertResult upsertDailyStepRecord(
+        Long memberId,
+        Long groupId,
+        StepRecordUpsertCommand command
+    ) {
+        validateGroupMembership(memberId, groupId);
+        GroupChallenge groupChallenge = getCurrentStepGroupChallenge(groupId);
+        if (command.recordedOn().isBefore(groupChallenge.getStartsOn())) {
+            throw new GeneralException(ErrorStatus.CHALLENGE_VALIDATION_FAILED);
+        }
+
+        StepRecord stepRecord = stepRecordRepository
+            .findByGroupChallengeIdAndMemberIdAndRecordedOnAndDeletedAtIsNull(
+                groupChallenge.getId(),
+                memberId,
+                command.recordedOn()
+            )
+            .map(existing -> {
+                existing.updateStepCount(command.stepCount());
+                return existing;
+            })
+            .orElseGet(() -> stepRecordRepository.save(new StepRecord(
+                idGenerator.nextId(),
+                groupChallenge.getId(),
+                memberId,
+                command.recordedOn(),
+                command.stepCount(),
+                StepSource.API
+            )));
+
+        Challenge challenge = getStepChallenge(groupChallenge.getChallengeId());
+        StepChallengeDetail detail = getStepChallengeDetail(challenge.getId());
+        int currentStepCount = currentStepCount(groupChallenge);
+        boolean completed = currentStepCount >= detail.getTargetStepCount();
+        if (completed) {
+            groupChallenge.complete(LocalDateTime.now());
+        }
+        return new StepRecordUpsertResult(
+            groupChallenge.getId(),
+            stepRecord.getRecordedOn(),
+            stepRecord.getStepCount(),
+            currentStepCount,
+            detail.getTargetStepCount(),
+            completed
+        );
     }
 
     private StepChallengeChangeResult changeToNewChallenge(
@@ -349,6 +399,19 @@ public class StepChallengeService {
         String title,
         int targetStepCount,
         int currentStepCount
+    ) {
+    }
+
+    public record StepRecordUpsertCommand(LocalDate recordedOn, int stepCount) {
+    }
+
+    public record StepRecordUpsertResult(
+        Long groupChallengeId,
+        LocalDate recordedOn,
+        int stepCount,
+        int currentStepCount,
+        int targetStepCount,
+        boolean completed
     ) {
     }
 }

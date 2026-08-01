@@ -5,6 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
@@ -16,6 +17,12 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(
         name = "challenge_proof",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_challenge_proof_group_challenge_member",
+                        columnNames = {"group_challenge_id", "member_id"}
+                )
+        },
         indexes = {
                 @Index(name = "idx_challenge_proof_challenge", columnList = "group_challenge_id"),
                 @Index(name = "idx_challenge_proof_member", columnList = "member_id")

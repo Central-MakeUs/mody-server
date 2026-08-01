@@ -28,6 +28,9 @@ challenge:
   step-master-data-initializer:
     enabled: ${CHALLENGE_STEP_MASTER_DATA_INITIALIZER_ENABLED:true}
 
+admin:
+  api-key: ${ADMIN_API_KEY:}
+
 upload:
   provider: ${UPLOAD_PROVIDER:local}
   gcp-bucket: ${GCP_STORAGE_BUCKET:}
@@ -36,7 +39,7 @@ upload:
 
 invite:
   aasa-resource-path: ${MODY_INVITE_AASA_RESOURCE_PATH:universal-link/apple-app-site-association}
-  app-store-url: ${MODY_INVITE_APP_STORE_URL:https://www.apple.com/kr/app-store/}
+  app-store-url: ${MODY_INVITE_APP_STORE_URL:https://apps.apple.com/kr/app/id6785124295}
   google-play-url: ${MODY_INVITE_GOOGLE_PLAY_URL:https://play.google.com/store}
 
 error-alert:
@@ -67,6 +70,7 @@ notification:
   push:
     provider: ${NOTIFICATION_PUSH_PROVIDER:no-op}
     title: ${NOTIFICATION_PUSH_TITLE:Mody}
+    title-prefix: ${NOTIFICATION_PUSH_TITLE_PREFIX:}
 
 fcm:
   enabled: ${FCM_ENABLED:false}
@@ -174,6 +178,10 @@ oauth:
     client-id: ${APPLE_CLIENT_ID:com.jagsim.mody-dev}
     identity-token:
       audience: ${APPLE_BUNDLE_ID:com.jagsim.mody-dev}
+
+notification:
+  push:
+    title-prefix: ${NOTIFICATION_PUSH_TITLE_PREFIX:[DEV] }
 
 ---
 

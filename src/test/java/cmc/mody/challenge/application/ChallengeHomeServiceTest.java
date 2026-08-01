@@ -88,8 +88,34 @@ class ChallengeHomeServiceTest {
 
         assertThat(result.daysTogether()).isEqualTo(4);
         assertThat(result.allMemberRecordedDays()).isEqualTo(1);
+        assertThat(result.hasStartedStreak()).isTrue();
         assertThat(result.monthlyExerciseMinutes()).isEqualTo(70);
         assertThat(result.monthlyCompletedChallengeCount()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("전원 기록일이 없으면 연속 기록을 시작하지 않은 것으로 반환한다.")
+    void getChallengeSummaryWithoutStartedStreak() {
+        ChallengeHomeService service = service();
+        LocalDate today = LocalDate.now();
+        GroupMember currentMember = groupMember(1L, "민석", today.minusDays(3).atTime(10, 0));
+        GroupMember buddy = groupMember(2L, "친구", today.minusDays(2).atTime(10, 0));
+        givenValidGroupMembership(1L, currentMember);
+        givenJoinedMembers(List.of(currentMember, buddy));
+        given(activityRecordRepository.findActiveGroupRecordsBetween(any(), any(), any(), any()))
+            .willReturn(List.of(mealRecord(1L, today.atTime(9, 0))));
+        given(groupChallengeRepository
+            .countByGroupIdAndGroupChallengeStatusAndCompletedAtGreaterThanEqualAndCompletedAtLessThanAndDeletedAtIsNull(
+                any(),
+                any(),
+                any(),
+                any()
+            ))
+            .willReturn(0L);
+
+        ChallengeSummaryResult result = service.getChallengeSummary(1L, 10L);
+
+        assertThat(result.hasStartedStreak()).isFalse();
     }
 
     @Test
