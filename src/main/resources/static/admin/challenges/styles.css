@@ -1,0 +1,105 @@
+:root {
+  color: #161616;
+  background: #f6f6f4;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; }
+
+button, input, select, textarea { font: inherit; }
+
+button { cursor: pointer; }
+
+.shell { max-width: 1120px; margin: 0 auto; padding: 0 28px 64px; }
+
+.topbar {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #dcdcd8;
+}
+
+.brand { color: #111; text-decoration: none; font-size: 21px; font-weight: 800; letter-spacing: 0; }
+.brand span { margin-left: 7px; color: #777; font-size: 12px; font-weight: 700; }
+
+.access-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 72px;
+  align-items: center;
+  min-height: calc(100vh - 140px);
+}
+
+.eyebrow { margin: 0 0 9px; color: #787874; font-size: 13px; font-weight: 700; }
+h1, h2, p { margin-top: 0; }
+h1 { margin-bottom: 14px; font-size: 36px; line-height: 1.2; }
+h2 { margin-bottom: 7px; font-size: 20px; line-height: 1.3; }
+.lead { max-width: 430px; margin-bottom: 0; color: #5d5d59; font-size: 17px; line-height: 1.6; }
+
+.panel { border: 1px solid #deded9; border-radius: 8px; background: #fff; padding: 30px; }
+.access-form { display: grid; gap: 10px; }
+.challenge-form { display: grid; gap: 10px; }
+.panel-heading { margin-bottom: 13px; }
+.panel-heading p { margin-bottom: 0; color: #686864; font-size: 14px; line-height: 1.5; }
+
+label { font-size: 14px; font-weight: 700; }
+input, select, textarea {
+  width: 100%;
+  border: 1px solid #c9c9c3;
+  border-radius: 5px;
+  background: #fff;
+  color: #161616;
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+textarea { min-height: 112px; resize: vertical; line-height: 1.45; }
+input:focus, select:focus, textarea:focus { outline: 3px solid #ffe56d; border-color: #746600; }
+.key-field { display: flex; gap: 8px; }
+.key-field input { min-width: 0; }
+
+.icon-button, .text-button, .secondary-button, .primary-button {
+  border-radius: 5px;
+  min-height: 42px;
+  font-weight: 700;
+}
+.icon-button { min-width: 58px; border: 1px solid #c9c9c3; background: #fff; font-size: 12px; }
+.text-button { border: 0; background: transparent; color: #555550; padding: 8px; }
+.secondary-button { border: 1px solid #c8c8c2; background: #fff; color: #222; padding: 0 15px; }
+.primary-button { border: 1px solid #171717; background: #171717; color: #fff; margin-top: 8px; padding: 0 17px; }
+.primary-button:hover { background: #373737; }
+.secondary-button:hover, .icon-button:hover { background: #f1f1ed; }
+.primary-button:disabled, .secondary-button:disabled { cursor: wait; opacity: 0.58; }
+
+.help-text, .form-message { margin: 0; color: #74746f; font-size: 13px; line-height: 1.45; }
+.form-message.error { color: #b42318; }
+.form-message.success { color: #137333; }
+
+.page-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; padding: 45px 0 26px; }
+.page-heading h1 { margin-bottom: 0; }
+.workspace-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr); gap: 26px; align-items: start; }
+.date-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.date-grid > div { display: grid; gap: 8px; }
+
+.overview { border-top: 2px solid #181818; }
+.overview-section { padding: 22px 0; border-bottom: 1px solid #d8d8d3; }
+.overview-section strong { display: block; margin-bottom: 9px; font-size: 18px; line-height: 1.4; }
+.overview-section p:last-child { margin-bottom: 0; color: #666661; font-size: 14px; line-height: 1.55; }
+.overview-section.subtle { border-bottom: 0; }
+dl { margin: 14px 0 0; }
+dl div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; border-top: 1px solid #ebebe6; font-size: 14px; }
+dt { color: #777772; } dd { margin: 0; text-align: right; font-weight: 700; }
+
+@media (max-width: 720px) {
+  .shell { padding: 0 20px 40px; }
+  .access-layout, .workspace-grid { grid-template-columns: 1fr; gap: 30px; }
+  .access-layout { min-height: auto; padding: 48px 0; }
+  h1 { font-size: 30px; }
+  .page-heading { align-items: start; flex-direction: column; padding-top: 32px; }
+  .secondary-button { width: 100%; }
+  .panel { padding: 22px; }
+}
