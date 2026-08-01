@@ -88,7 +88,7 @@ async function loadGroups() {
   setLoading(refreshGroupsButton, true, "불러오는 중");
   groupSelect.disabled = true;
   try {
-    groups = await request("/api/v1/admin/groups");
+    groups = (await request("/api/v1/admin/groups")).groups;
     renderGroups();
     setMessage(challengeMessage, "", "");
   } catch (error) {
