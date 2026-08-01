@@ -108,6 +108,16 @@ class WeeklyChallengeServiceTest {
         assertThat(result.challenges())
             .extracting("groupChallengeId", "title", "participantCount", "randomParticipantNickname")
             .containsExactly(org.assertj.core.groups.Tuple.tuple(100L, "물 2L 마시기", 1, "친구"));
+        assertThat(result.challenges().getFirst().startsOn()).isEqualTo(groupChallenge.getStartsOn());
+        assertThat(result.challenges().getFirst().endsOn()).isEqualTo(groupChallenge.getEndsOn());
+        assertThat(result.challenges().getFirst().remainingDays()).isEqualTo(5);
+        assertThat(result.challenges().getFirst().participants())
+            .extracting("memberId", "nickname", "profileImageUrl")
+            .containsExactly(org.assertj.core.groups.Tuple.tuple(
+                2L,
+                "친구",
+                "https://storage.example.com/profiles/member-2.jpg"
+            ));
     }
 
     @Test
@@ -257,6 +267,33 @@ class WeeklyChallengeServiceTest {
         ))
             .isInstanceOfSatisfying(GeneralException.class, exception ->
                 assertThat(exception.getStatus()).isEqualTo(ErrorStatus.CHALLENGE_ALREADY_COMPLETED));
+    }
+
+    @Test
+    @DisplayName("진행 기간이 지난 주간 챌린지에는 인증할 수 없다.")
+    void throwChallengeValidationFailedWhenWeeklyChallengeExpired() {
+        WeeklyChallengeService service = service();
+        GroupChallenge groupChallenge = new GroupChallenge(
+            100L,
+            10L,
+            1L,
+            LocalDate.now().minusDays(7),
+            LocalDate.now().minusDays(1)
+        );
+        givenValidGroupMembership();
+        given(groupChallengeRepository.findByIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
+            .willReturn(Optional.of(groupChallenge));
+        given(challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(1L, ChallengeType.PHOTO))
+            .willReturn(Optional.of(challenge(1L, "물 2L 마시기")));
+
+        assertThatThrownBy(() -> service.createWeeklyChallengeProof(
+            1L,
+            10L,
+            100L,
+            new WeeklyChallengeProofCreateCommand("weekly-challenges/1/proof.jpg", null)
+        ))
+            .isInstanceOfSatisfying(GeneralException.class, exception ->
+                assertThat(exception.getStatus()).isEqualTo(ErrorStatus.CHALLENGE_VALIDATION_FAILED));
     }
 
     @Test
