@@ -57,8 +57,7 @@ POST /api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/share
   - 2명: 1 x 2
   - 3~4명: 2 x 2
   - 5~6명: 2 x 3
-  - 7~9명: 3 x 3
-  - 10~12명: 3 x 4
+  - 7~8명: 3 x 3
 
 ## 5. 저장소 추상화
 

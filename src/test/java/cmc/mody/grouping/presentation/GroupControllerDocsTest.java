@@ -183,7 +183,7 @@ class GroupControllerDocsTest {
                         fieldWithPath("result.name").type(JsonFieldType.STRING).description("그룹명"),
                         fieldWithPath("result.memberCount")
                             .type(JsonFieldType.NUMBER)
-                            .description("그룹 참여 인원. 최대 12명")
+                            .description("그룹 참여 인원. 최대 8명")
                     ))
                     .build())
             ));
@@ -211,7 +211,7 @@ class GroupControllerDocsTest {
                         fieldWithPath("result.groups[].code").type(JsonFieldType.STRING).description("그룹 코드"),
                         fieldWithPath("result.groups[].memberCount")
                             .type(JsonFieldType.NUMBER)
-                            .description("그룹 참여 인원. 최대 12명")
+                            .description("그룹 참여 인원. 최대 8명")
                     ))
                     .build())
             ));
