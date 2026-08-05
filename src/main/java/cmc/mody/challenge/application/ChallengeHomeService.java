@@ -12,7 +12,10 @@ import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
+import cmc.mody.notification.application.BuddyNudgeDedupeKey;
 import cmc.mody.notification.application.NotificationRequestService;
+import cmc.mody.notification.domain.NotificationType;
+import cmc.mody.notification.infrastructure.repository.NotificationRepository;
 import cmc.mody.record.domain.ActivityRecord;
 import cmc.mody.record.domain.RecordType;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
@@ -36,6 +39,7 @@ public class ChallengeHomeService {
     private final ActivityRecordRepository activityRecordRepository;
     private final GroupChallengeRepository groupChallengeRepository;
     private final NotificationRequestService notificationRequestService;
+    private final NotificationRepository notificationRepository;
     private final ImageUrlResolver imageUrlResolver;
 
     @Transactional(readOnly = true)
@@ -78,6 +82,10 @@ public class ChallengeHomeService {
         LocalDate today = LocalDate.now();
         LocalDateTime startAt = today.atStartOfDay();
         LocalDateTime endAt = today.plusDays(1).atStartOfDay();
+        List<GroupMember> targetMembers = getJoinedGroupMembers(groupId)
+            .stream()
+            .filter(groupMember -> !groupMember.getMemberId().equals(memberId))
+            .toList();
         Set<Long> recordedMemberIds = activityRecordRepository.findActiveGroupRecordsBetween(
                 groupId,
                 startAt,
@@ -87,21 +95,22 @@ public class ChallengeHomeService {
             .stream()
             .map(ActivityRecord::getMemberId)
             .collect(Collectors.toSet());
-        List<NudgeTargetResult> members = getJoinedGroupMembers(groupId)
+        Set<Long> nudgedMemberIds = findNudgedMemberIds(memberId, groupId, targetMembers, today, startAt, endAt);
+        List<NudgeTargetResult> members = targetMembers
             .stream()
-            .filter(groupMember -> !groupMember.getMemberId().equals(memberId))
             .map(groupMember -> new NudgeTargetResult(
                 groupMember.getMemberId(),
                 groupMember.getDisplayNickname(),
                 imageUrlResolver.resolve(groupMember.getDisplayProfileImageKey()),
-                recordedMemberIds.contains(groupMember.getMemberId())
+                recordedMemberIds.contains(groupMember.getMemberId()),
+                nudgedMemberIds.contains(groupMember.getMemberId())
             ))
             .toList();
         return new NudgeTargetListResult(members);
     }
 
     @Transactional
-    public void nudgeMember(Long senderMemberId, Long groupId, Long receiverMemberId) {
+    public NudgeResult nudgeMember(Long senderMemberId, Long groupId, Long receiverMemberId) {
         if (senderMemberId.equals(receiverMemberId)) {
             throw new GeneralException(ErrorStatus.CHALLENGE_VALIDATION_FAILED);
         }
@@ -116,6 +125,39 @@ public class ChallengeHomeService {
             receiverMemberId,
             LocalDate.now().toString()
         );
+        return new NudgeResult(true);
+    }
+
+    private Set<Long> findNudgedMemberIds(
+        Long senderMemberId,
+        Long groupId,
+        List<GroupMember> targetMembers,
+        LocalDate today,
+        LocalDateTime startAt,
+        LocalDateTime endAt
+    ) {
+        if (targetMembers.isEmpty()) {
+            return Set.of();
+        }
+        String date = today.toString();
+        Set<String> nudgeDedupeKeys = targetMembers.stream()
+            .flatMap(targetMember -> java.util.stream.Stream.of(
+                BuddyNudgeDedupeKey.create(groupId, senderMemberId, targetMember.getMemberId(), date),
+                BuddyNudgeDedupeKey.legacy(senderMemberId, targetMember.getMemberId(), date)
+            ))
+            .collect(Collectors.toSet());
+        return notificationRepository
+            .findByNotificationTypeAndReferenceIdAndReceiverMemberIdInAndCreatedAtGreaterThanEqualAndCreatedAtLessThanAndDeletedAtIsNull(
+                NotificationType.BUDDY_NUDGE,
+                groupId,
+                targetMembers.stream().map(GroupMember::getMemberId).toList(),
+                startAt,
+                endAt
+            )
+            .stream()
+            .filter(notification -> nudgeDedupeKeys.contains(notification.getDedupeKey()))
+            .map(notification -> notification.getReceiverMemberId())
+            .collect(Collectors.toSet());
     }
 
     private GroupMember validateGroupMembership(Long memberId, Long groupId) {
@@ -201,6 +243,15 @@ public class ChallengeHomeService {
     public record NudgeTargetListResult(List<NudgeTargetResult> members) {
     }
 
-    public record NudgeTargetResult(Long memberId, String nickname, String profileImageUrl, boolean recordedToday) {
+    public record NudgeTargetResult(
+        Long memberId,
+        String nickname,
+        String profileImageUrl,
+        boolean recordedToday,
+        boolean nudgedToday
+    ) {
+    }
+
+    public record NudgeResult(boolean nudgedToday) {
     }
 }

@@ -22,6 +22,10 @@ import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.notification.application.NotificationRequestService;
+import cmc.mody.notification.application.BuddyNudgeDedupeKey;
+import cmc.mody.notification.domain.Notification;
+import cmc.mody.notification.domain.NotificationType;
+import cmc.mody.notification.infrastructure.repository.NotificationRepository;
 import cmc.mody.record.domain.ActivityRecord;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import java.math.BigDecimal;
@@ -55,6 +59,9 @@ class ChallengeHomeServiceTest {
 
     @Mock
     private NotificationRequestService notificationRequestService;
+
+    @Mock
+    private NotificationRepository notificationRepository;
 
     @Test
     @DisplayName("챌린지 홈 요약은 가입일과 이번 달 그룹 활동 통계를 반환한다.")
@@ -119,7 +126,7 @@ class ChallengeHomeServiceTest {
     }
 
     @Test
-    @DisplayName("버디 찌르기 대상은 본인을 제외하고 오늘 기록 여부와 프로필 URL을 반환한다.")
+    @DisplayName("버디 찌르기 대상은 본인을 제외하고 오늘 기록 및 콕찌르기 여부와 프로필 URL을 반환한다.")
     void getNudgeTargets() {
         ChallengeHomeService service = service();
         GroupMember currentMember = groupMember(1L, "민석", LocalDateTime.now().minusDays(2));
@@ -133,21 +140,45 @@ class ChallengeHomeServiceTest {
         NudgeTargetListResult result = service.getNudgeTargets(1L, 10L);
 
         assertThat(result.members())
-            .extracting("memberId", "nickname", "profileImageUrl", "recordedToday")
+            .extracting("memberId", "nickname", "profileImageUrl", "recordedToday", "nudgedToday")
             .containsExactly(
                 org.assertj.core.groups.Tuple.tuple(
                     2L,
                     "기록친구",
                     "https://storage.example.com/profiles/member-2.jpg",
-                    true
+                    true,
+                    false
                 ),
                 org.assertj.core.groups.Tuple.tuple(
                     3L,
                     "미기록친구",
                     "https://storage.example.com/profiles/member-3.jpg",
+                    false,
                     false
                 )
             );
+    }
+
+    @Test
+    @DisplayName("버디 찌르기 대상은 같은 그룹에서 오늘 이미 콕찌른 대상을 반환한다.")
+    void getNudgeTargetsWithNudgedBuddy() {
+        ChallengeHomeService service = service();
+        GroupMember currentMember = groupMember(1L, "민석", LocalDateTime.now().minusDays(2));
+        GroupMember buddy = groupMember(2L, "친구", LocalDateTime.now().minusDays(1));
+        givenValidGroupMembership(1L, currentMember);
+        givenJoinedMembers(List.of(currentMember, buddy));
+        given(activityRecordRepository.findActiveGroupRecordsBetween(any(), any(), any(), any())).willReturn(List.of());
+        given(notificationRepository
+            .findByNotificationTypeAndReferenceIdAndReceiverMemberIdInAndCreatedAtGreaterThanEqualAndCreatedAtLessThanAndDeletedAtIsNull(
+                any(), any(), any(), any(), any()
+            ))
+            .willReturn(List.of(buddyNudge(2L, BuddyNudgeDedupeKey.create(10L, 1L, 2L, LocalDate.now().toString()))));
+
+        NudgeTargetListResult result = service.getNudgeTargets(1L, 10L);
+
+        assertThat(result.members()).singleElement()
+            .extracting("memberId", "recordedToday", "nudgedToday")
+            .containsExactly(2L, false, true);
     }
 
     @Test
@@ -190,6 +221,7 @@ class ChallengeHomeServiceTest {
             activityRecordRepository,
             groupChallengeRepository,
             notificationRequestService,
+            notificationRepository,
             new ImageUrlResolver(uploadProperties)
         );
     }
@@ -247,6 +279,22 @@ class ChallengeHomeServiceTest {
             "러닝",
             "records/exercise.jpg",
             uploadedAt
+        );
+    }
+
+    private Notification buddyNudge(Long receiverMemberId, String dedupeKey) {
+        return new Notification(
+            100L,
+            receiverMemberId,
+            NotificationType.BUDDY_NUDGE,
+            "민석님이 콕 찔렀어요!",
+            "민석님의 응원을 받고 얼른 기록해주세요!",
+            null,
+            "GROUP",
+            10L,
+            LocalDateTime.now(),
+            3,
+            dedupeKey
         );
     }
 }
