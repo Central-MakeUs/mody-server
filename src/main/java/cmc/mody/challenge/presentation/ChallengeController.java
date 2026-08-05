@@ -2,6 +2,7 @@ package cmc.mody.challenge.presentation;
 
 import cmc.mody.auth.presentation.support.CurrentMember;
 import cmc.mody.challenge.application.ChallengeHomeService;
+import cmc.mody.challenge.application.ChallengeHomeService.NudgeResult;
 import cmc.mody.challenge.application.StepChallengeService;
 import cmc.mody.challenge.application.WeeklyChallengeService;
 import cmc.mody.common.api.ApiResponse;
@@ -95,13 +96,13 @@ public class ChallengeController {
     }
 
     @PostMapping("/groups/{groupId}/challenges/nudges/{memberId}")
-    public ApiResponse<Void> nudgeMember(
+    public ApiResponse<NudgeResponse> nudgeMember(
         @Parameter(hidden = true) @CurrentMember Long currentMemberId,
         @PathVariable Long groupId,
         @PathVariable Long memberId
     ) {
-        challengeHomeService.nudgeMember(currentMemberId, groupId, memberId);
-        return ApiResponse.ok();
+        NudgeResult result = challengeHomeService.nudgeMember(currentMemberId, groupId, memberId);
+        return ApiResponse.ok(NudgeResponse.from(result));
     }
 
     @GetMapping("/groups/{groupId}/challenges/step/regions")
@@ -319,14 +320,27 @@ public class ChallengeController {
         }
     }
 
-    public record NudgeTargetResponse(Long memberId, String nickname, String profileImageUrl, boolean recordedToday) {
+    public record NudgeTargetResponse(
+        Long memberId,
+        String nickname,
+        String profileImageUrl,
+        boolean recordedToday,
+        boolean nudgedToday
+    ) {
         public static NudgeTargetResponse from(ChallengeHomeService.NudgeTargetResult result) {
             return new NudgeTargetResponse(
                 result.memberId(),
                 result.nickname(),
                 result.profileImageUrl(),
-                result.recordedToday()
+                result.recordedToday(),
+                result.nudgedToday()
             );
+        }
+    }
+
+    public record NudgeResponse(boolean nudgedToday) {
+        public static NudgeResponse from(NudgeResult result) {
+            return new NudgeResponse(result.nudgedToday());
         }
     }
 

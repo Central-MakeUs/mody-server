@@ -19,6 +19,7 @@ import cmc.mody.challenge.application.ChallengeHomeService;
 import cmc.mody.challenge.application.ChallengeHomeService.ChallengeSummaryResult;
 import cmc.mody.challenge.application.ChallengeHomeService.NudgeTargetListResult;
 import cmc.mody.challenge.application.ChallengeHomeService.NudgeTargetResult;
+import cmc.mody.challenge.application.ChallengeHomeService.NudgeResult;
 import cmc.mody.challenge.application.StepChallengeService;
 import cmc.mody.challenge.application.StepChallengeService.StepChallengeChangeCommand;
 import cmc.mody.challenge.application.StepChallengeService.StepChallengeChangeResult;
@@ -303,7 +304,7 @@ class ChallengeControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(challengeHomeService.getNudgeTargets(1L, 1L))
             .willReturn(new NudgeTargetListResult(List.of(
-                new NudgeTargetResult(2L, "친구", "https://storage.example.com/profiles/member-2.jpg", false)
+                new NudgeTargetResult(2L, "친구", "https://storage.example.com/profiles/member-2.jpg", false, true)
             )));
 
         mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/nudges", 1L)
@@ -320,7 +321,9 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.members[].profileImageUrl").type(JsonFieldType.STRING)
                             .description("프로필 이미지"),
                         fieldWithPath("result.members[].recordedToday").type(JsonFieldType.BOOLEAN)
-                            .description("오늘 기록 여부")
+                            .description("오늘 기록 여부"),
+                        fieldWithPath("result.members[].nudgedToday").type(JsonFieldType.BOOLEAN)
+                            .description("오늘 콕찌르기 여부")
                     ))
                     .build())
             ));
@@ -329,6 +332,7 @@ class ChallengeControllerDocsTest {
     @Test
     void nudgeMember() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(challengeHomeService.nudgeMember(1L, 1L, 2L)).willReturn(new NudgeResult(true));
 
         mockMvc.perform(post("/api/v1/groups/{groupId}/challenges/nudges/{memberId}", 1L, 2L)
                 .header("Authorization", "Bearer access-token"))
@@ -338,7 +342,10 @@ class ChallengeControllerDocsTest {
                     .tag("Challenge")
                     .summary("버디 찌르기")
                     .description(CHALLENGE_HOME_DESCRIPTION)
-                    .responseFields(commonResponseFields())
+                    .responseFields(commonResponseFields(
+                        fieldWithPath("result.nudgedToday").type(JsonFieldType.BOOLEAN)
+                            .description("오늘 콕찌르기 완료 여부")
+                    ))
                     .build())
             ));
     }

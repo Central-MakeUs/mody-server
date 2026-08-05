@@ -1,7 +1,9 @@
 package cmc.mody.notification.infrastructure.repository;
 
 import cmc.mody.notification.domain.Notification;
+import cmc.mody.notification.domain.NotificationType;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -60,6 +62,16 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     List<Notification> findByCreatedAtBeforeAndDeletedAtIsNull(LocalDateTime createdAt, Pageable pageable);
 
     boolean existsByDedupeKeyAndDeletedAtIsNull(String dedupeKey);
+
+    boolean existsByDedupeKeyAndReferenceIdAndDeletedAtIsNull(String dedupeKey, Long referenceId);
+
+    List<Notification> findByNotificationTypeAndReferenceIdAndReceiverMemberIdInAndCreatedAtGreaterThanEqualAndCreatedAtLessThanAndDeletedAtIsNull(
+        NotificationType notificationType,
+        Long referenceId,
+        Collection<Long> receiverMemberIds,
+        LocalDateTime createdAtStart,
+        LocalDateTime createdAtEnd
+    );
 
     @Query(value = """
         select *

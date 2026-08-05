@@ -58,7 +58,9 @@ GET /api/v1/groups/{groupId}/challenges/nudges
 1. 요청 회원의 그룹 참여 여부를 검증한다.
 2. 본인을 제외한 현재 참여 중인 그룹원을 가입일 순서로 조회한다.
 3. 오늘 기록이 1개 이상 있으면 `recordedToday = true`로 반환한다.
-4. 프로필 이미지는 저장소 base URL과 imageKey를 조합해 반환한다.
+4. 요청 회원이 오늘 같은 그룹의 대상 회원을 이미 콕찌른 경우 `nudgedToday = true`로 반환한다.
+5. 클라이언트는 `recordedToday`가 true면 기록 완료 상태를 우선 표시하고, 그렇지 않은 경우 `nudgedToday`로 이미 찔렀어요 상태를 표시한다.
+6. 프로필 이미지는 저장소 base URL과 imageKey를 조합해 반환한다.
 
 ### 버디 찌르기
 
@@ -69,7 +71,8 @@ POST /api/v1/groups/{groupId}/challenges/nudges/{memberId}
 1. 요청 회원과 대상 회원이 모두 같은 그룹에 참여 중인지 확인한다.
 2. 본인을 찌르는 요청은 `CHALLENGE301`로 거절한다.
 3. `NotificationRequestService`에 `BUDDY_NUDGE` 알림 요청을 발행한다.
-4. 알림 중복 제어는 알림 아웃박스의 dedupe key 정책을 따른다.
+4. 같은 발신자와 수신자의 콕찌르기는 그룹별로 하루 1회만 발송한다.
+5. 성공 시 `nudgedToday = true`를 반환한다.
 
 ## 4. 예외 코드
 
@@ -82,8 +85,8 @@ POST /api/v1/groups/{groupId}/challenges/nudges/{memberId}
 ## 5. 테스트 시나리오
 
 - 챌린지 홈 요약은 회원의 그룹 가입일, 월간 운동 시간, 전원 기록 일수, 연속 기록 시작 여부, 완료 챌린지 수를 반환한다.
-- 버디 찌르기 대상은 본인을 제외하고 오늘 기록 여부와 프로필 URL을 반환한다.
-- 버디 찌르기는 대상 회원에게 알림 요청을 발행한다.
+- 버디 찌르기 대상은 본인을 제외하고 오늘 기록 여부, 오늘 콕찌르기 여부와 프로필 URL을 반환한다.
+- 버디 찌르기는 대상 회원에게 알림 요청을 발행하고 오늘 콕찌르기 완료 여부를 반환한다.
 - 본인을 찌르면 `CHALLENGE301`을 반환한다.
 - Swagger에 성공/예외 응답이 생성된다.
 
