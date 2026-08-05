@@ -26,7 +26,7 @@ public final class ApiDocumentDescriptions {
 
     public static final String GROUP_ACCESS_RULES = """
         그룹 API는 현재 로그인한 회원이 참여 중인 그룹을 기준으로 동작한다.
-        회원은 최대 4개 그룹에 참여할 수 있고, 하나의 그룹은 최대 12명까지 참여할 수 있다.
+        회원은 최대 4개 그룹에 참여할 수 있고, 하나의 그룹은 최대 8명까지 참여할 수 있다.
         그룹을 나가면 해당 그룹 기준으로 더 이상 피드/구성원 정보에 접근할 수 없다.
         """;
 

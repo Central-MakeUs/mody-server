@@ -106,7 +106,7 @@ class GroupServiceTest {
     }
 
     @Test
-    @DisplayName("그룹 코드로 참여하면 참여 인원을 반환한다.")
+    @DisplayName("그룹 참여 인원이 7명이면 새 회원이 참여할 수 있다.")
     void joinGroup() {
         GroupService service = service();
         Member member = member();
@@ -121,12 +121,12 @@ class GroupServiceTest {
         given(groupMemberRepository.countByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
             .willReturn(1L);
         given(groupMemberRepository.countByGroupIdAndGroupMemberStatusAndDeletedAtIsNull(10L, GroupMemberStatus.JOINED))
-            .willReturn(3L);
+            .willReturn(7L, 8L);
         given(idGenerator.nextId()).willReturn(20L);
 
         GroupJoinResult result = service.joinGroup(1L, new GroupJoinCommand("ABCD2345"));
 
-        assertThat(result).isEqualTo(new GroupJoinResult(10L, "ABCD2345", "모디 그룹", 3));
+        assertThat(result).isEqualTo(new GroupJoinResult(10L, "ABCD2345", "모디 그룹", 8));
         then(groupMemberRepository).should().save(groupMemberCaptor.capture());
         assertThat(groupMemberCaptor.getValue().getGroupId()).isEqualTo(10L);
         assertThat(member.isGroupOnboardingCompleted()).isTrue();
@@ -173,7 +173,7 @@ class GroupServiceTest {
     }
 
     @Test
-    @DisplayName("그룹 참여 인원이 12명이면 새 회원은 참여할 수 없다.")
+    @DisplayName("그룹 참여 인원이 8명이면 새 회원은 참여할 수 없다.")
     void joinGroupCapacityExceeded() {
         GroupService service = service();
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
@@ -187,7 +187,7 @@ class GroupServiceTest {
         given(groupMemberRepository.countByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
             .willReturn(1L);
         given(groupMemberRepository.countByGroupIdAndGroupMemberStatusAndDeletedAtIsNull(10L, GroupMemberStatus.JOINED))
-            .willReturn(12L);
+            .willReturn(8L);
 
         assertThatThrownBy(() -> service.joinGroup(1L, new GroupJoinCommand("ABCD2345")))
             .isInstanceOfSatisfying(GeneralException.class, exception ->
