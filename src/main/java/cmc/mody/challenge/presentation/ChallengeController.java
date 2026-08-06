@@ -18,6 +18,7 @@ import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -228,14 +229,16 @@ public class ChallengeController {
         Long groupChallengeId,
         String title,
         int targetStepCount,
-        int currentStepCount
+        int currentStepCount,
+        LocalDateTime stepCountFetchFromAt
     ) {
         public static StepChallengeStatusResponse from(StepChallengeService.StepChallengeStatusResult result) {
             return new StepChallengeStatusResponse(
                 result.groupChallengeId(),
                 result.title(),
                 result.targetStepCount(),
-                result.currentStepCount()
+                result.currentStepCount(),
+                result.stepCountFetchFromAt()
             );
         }
     }
@@ -422,7 +425,8 @@ public class ChallengeController {
         Long challengeId,
         String title,
         int targetStepCount,
-        int currentStepCount
+        int currentStepCount,
+        LocalDateTime stepCountFetchFromAt
     ) {
         public static StepChallengeChangeResponse from(StepChallengeService.StepChallengeChangeResult result) {
             return new StepChallengeChangeResponse(
@@ -430,7 +434,8 @@ public class ChallengeController {
                 result.challengeId(),
                 result.title(),
                 result.targetStepCount(),
-                result.currentStepCount()
+                result.currentStepCount(),
+                result.stepCountFetchFromAt()
             );
         }
     }

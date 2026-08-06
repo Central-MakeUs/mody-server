@@ -50,6 +50,7 @@ import cmc.mody.common.config.WebConfig;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -184,7 +185,13 @@ class ChallengeControllerDocsTest {
     void getCurrentStepChallenge() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(stepChallengeService.getCurrentStepChallenge(1L, 1L))
-            .willReturn(new StepChallengeStatusResult(1L, "서울-인천", 150_000, 34_000));
+            .willReturn(new StepChallengeStatusResult(
+                1L,
+                "서울-인천",
+                150_000,
+                34_000,
+                LocalDateTime.of(2026, 8, 6, 14, 40)
+            ));
 
         mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/step/current", 1L)
                 .header("Authorization", "Bearer access-token"))
@@ -198,7 +205,9 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.groupChallengeId").type(JsonFieldType.NUMBER).description("그룹 챌린지 id"),
                         fieldWithPath("result.title").type(JsonFieldType.STRING).description("챌린지명"),
                         fieldWithPath("result.targetStepCount").type(JsonFieldType.NUMBER).description("목표 걸음수"),
-                        fieldWithPath("result.currentStepCount").type(JsonFieldType.NUMBER).description("현재 걸음수")
+                        fieldWithPath("result.currentStepCount").type(JsonFieldType.NUMBER).description("현재 걸음수"),
+                        fieldWithPath("result.stepCountFetchFromAt").type(JsonFieldType.STRING)
+                            .description("걸음수 조회 시작 시각(ISO-8601)")
                     ))
                     .build())
             ));
@@ -437,7 +446,14 @@ class ChallengeControllerDocsTest {
     void changeStepChallenge() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(stepChallengeService.changeStepChallenge(1L, 1L, new StepChallengeChangeCommand(2L)))
-            .willReturn(new StepChallengeChangeResult(2L, 2L, "서울-천안", 200_000, 0));
+            .willReturn(new StepChallengeChangeResult(
+                2L,
+                2L,
+                "서울-천안",
+                200_000,
+                0,
+                LocalDateTime.of(2026, 8, 6, 14, 40)
+            ));
 
         mockMvc.perform(patch("/api/v1/groups/{groupId}/challenges/step/current", 1L)
                 .header("Authorization", "Bearer access-token")
@@ -461,7 +477,9 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.challengeId").type(JsonFieldType.NUMBER).description("챌린지 id"),
                         fieldWithPath("result.title").type(JsonFieldType.STRING).description("챌린지명"),
                         fieldWithPath("result.targetStepCount").type(JsonFieldType.NUMBER).description("목표 걸음수"),
-                        fieldWithPath("result.currentStepCount").type(JsonFieldType.NUMBER).description("현재 걸음수")
+                        fieldWithPath("result.currentStepCount").type(JsonFieldType.NUMBER).description("현재 걸음수"),
+                        fieldWithPath("result.stepCountFetchFromAt").type(JsonFieldType.STRING)
+                            .description("걸음수 조회 시작 시각(ISO-8601)")
                     ))
                     .build())
             ));

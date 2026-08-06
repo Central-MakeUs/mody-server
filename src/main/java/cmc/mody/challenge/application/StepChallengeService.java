@@ -220,7 +220,8 @@ public class StepChallengeService {
             groupChallenge.getId(),
             challenge.getTitle(),
             detail.getTargetStepCount(),
-            currentStepCount
+            currentStepCount,
+            groupChallenge.getCreatedAt()
         );
     }
 
@@ -235,7 +236,8 @@ public class StepChallengeService {
             challenge.getId(),
             challenge.getTitle(),
             detail.getTargetStepCount(),
-            currentStepCount
+            currentStepCount,
+            groupChallenge.getCreatedAt()
         );
     }
 
@@ -354,7 +356,8 @@ public class StepChallengeService {
         Long groupChallengeId,
         String title,
         int targetStepCount,
-        int currentStepCount
+        int currentStepCount,
+        LocalDateTime stepCountFetchFromAt
     ) {
     }
 
@@ -398,7 +401,8 @@ public class StepChallengeService {
         Long challengeId,
         String title,
         int targetStepCount,
-        int currentStepCount
+        int currentStepCount,
+        LocalDateTime stepCountFetchFromAt
     ) {
     }
 

@@ -49,6 +49,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class StepChallengeServiceTest {
@@ -87,6 +88,8 @@ class StepChallengeServiceTest {
     void getCurrentStepChallenge() {
         StepChallengeService service = service();
         GroupChallenge groupChallenge = new GroupChallenge(100L, 10L, 1L, LocalDate.now(), LocalDate.of(9999, 12, 31));
+        LocalDateTime fetchFromAt = LocalDateTime.of(2026, 8, 6, 14, 40);
+        setCreatedAt(groupChallenge, fetchFromAt);
         givenValidGroupMembership();
         givenStepChallenges(List.of(challenge(1L, "서울-인천")));
         given(groupChallengeRepository.findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
@@ -106,6 +109,7 @@ class StepChallengeServiceTest {
         assertThat(result.title()).isEqualTo("서울-인천");
         assertThat(result.targetStepCount()).isEqualTo(150_000);
         assertThat(result.currentStepCount()).isEqualTo(34_000);
+        assertThat(result.stepCountFetchFromAt()).isEqualTo(fetchFromAt);
     }
 
     @Test
@@ -308,6 +312,7 @@ class StepChallengeServiceTest {
     void changeStepChallenge() {
         StepChallengeService service = service();
         GroupChallenge current = new GroupChallenge(100L, 10L, 1L, LocalDate.now(), LocalDate.of(9999, 12, 31));
+        LocalDateTime fetchFromAt = LocalDateTime.of(2026, 8, 6, 14, 40);
         givenValidGroupMembership();
         given(challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(2L, ChallengeType.STEP))
             .willReturn(Optional.of(challenge(2L, "서울-천안")));
@@ -321,7 +326,11 @@ class StepChallengeServiceTest {
         )).willReturn(Optional.of(current));
         given(idGenerator.nextId()).willReturn(200L);
         given(groupChallengeRepository.save(any(GroupChallenge.class)))
-            .willAnswer(invocation -> invocation.getArgument(0));
+            .willAnswer(invocation -> {
+                GroupChallenge groupChallenge = invocation.getArgument(0);
+                setCreatedAt(groupChallenge, fetchFromAt);
+                return groupChallenge;
+            });
 
         StepChallengeChangeResult result = service.changeStepChallenge(1L, 10L, new StepChallengeChangeCommand(2L));
 
@@ -331,7 +340,7 @@ class StepChallengeServiceTest {
         assertThat(groupChallengeCaptor.getValue().getId()).isEqualTo(200L);
         assertThat(groupChallengeCaptor.getValue().getGroupId()).isEqualTo(10L);
         assertThat(groupChallengeCaptor.getValue().getChallengeId()).isEqualTo(2L);
-        assertThat(result).isEqualTo(new StepChallengeChangeResult(200L, 2L, "서울-천안", 200_000, 0));
+        assertThat(result).isEqualTo(new StepChallengeChangeResult(200L, 2L, "서울-천안", 200_000, 0, fetchFromAt));
     }
 
     @Test
@@ -339,6 +348,8 @@ class StepChallengeServiceTest {
     void changeSameStepChallenge() {
         StepChallengeService service = service();
         GroupChallenge current = new GroupChallenge(100L, 10L, 2L, LocalDate.now(), LocalDate.of(9999, 12, 31));
+        LocalDateTime fetchFromAt = LocalDateTime.of(2026, 8, 6, 14, 40);
+        setCreatedAt(current, fetchFromAt);
         givenValidGroupMembership();
         given(challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(2L, ChallengeType.STEP))
             .willReturn(Optional.of(challenge(2L, "서울-천안")));
@@ -357,7 +368,7 @@ class StepChallengeServiceTest {
         assertThat(current.getGroupChallengeStatus()).isEqualTo(GroupChallengeStatus.IN_PROGRESS);
         assertThat(current.getEndedAt()).isNull();
         then(groupChallengeRepository).should(org.mockito.Mockito.never()).save(any(GroupChallenge.class));
-        assertThat(result).isEqualTo(new StepChallengeChangeResult(100L, 2L, "서울-천안", 200_000, 12_345));
+        assertThat(result).isEqualTo(new StepChallengeChangeResult(100L, 2L, "서울-천안", 200_000, 12_345, fetchFromAt));
     }
 
     @Test
@@ -434,5 +445,9 @@ class StepChallengeServiceTest {
             "profiles/member-" + memberId + ".jpg",
             joinedAt
         );
+    }
+
+    private void setCreatedAt(GroupChallenge groupChallenge, LocalDateTime createdAt) {
+        ReflectionTestUtils.setField(groupChallenge, "createdAt", createdAt);
     }
 }
