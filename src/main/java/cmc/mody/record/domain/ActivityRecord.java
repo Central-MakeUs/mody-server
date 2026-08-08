@@ -224,4 +224,18 @@ public class ActivityRecord extends BaseEntity {
             uploadedAt
         );
     }
+
+    public void update(
+        RecordType recordType,
+        LocalTime mealTime,
+        String menu,
+        Integer exerciseDurationMinutes,
+        String exerciseName
+    ) {
+        this.recordType = recordType;
+        this.mealTime = mealTime;
+        this.menu = menu;
+        this.exerciseDurationMinutes = exerciseDurationMinutes;
+        this.exerciseName = exerciseName;
+    }
 }
