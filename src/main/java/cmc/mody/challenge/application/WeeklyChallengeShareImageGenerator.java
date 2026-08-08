@@ -2,7 +2,6 @@ package cmc.mody.challenge.application;
 
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
-import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Font;
 import java.awt.FontMetrics;
@@ -35,15 +34,15 @@ public class WeeklyChallengeShareImageGenerator {
     private static final int CANVAS_HEIGHT = scaled(874);
     private static final int OUTER_RADIUS = scaled(20);
     private static final int OUTER_BORDER_WIDTH = scaled(2);
-    private static final int HEADER_X = scaled(24);
-    private static final int HEADER_Y = scaled(31);
+    private static final int HEADER_X = scaled(22);
+    private static final int HEADER_Y = scaled(29);
     private static final int HEADER_WIDTH = scaled(354);
     private static final int HEADER_HEIGHT = scaled(81);
     private static final int HEADER_RADIUS = scaled(12);
     private static final int HEADER_PADDING = scaled(16);
     private static final int HEADER_TEXT_GAP = scaled(4);
-    private static final int GRID_X = scaled(24);
-    private static final int GRID_Y = scaled(125);
+    private static final int GRID_X = scaled(22);
+    private static final int GRID_Y = scaled(123);
     private static final int CELL_SIZE = scaled(172);
     private static final int CELL_GAP = scaled(10);
     private static final int CELL_RADIUS = scaled(12);
@@ -55,13 +54,13 @@ public class WeeklyChallengeShareImageGenerator {
     private static final int NICKNAME_FONT_SIZE = scaled(14);
     private static final String IMAGE_FORMAT = "jpg";
     private static final String FONT_PATH = "/fonts/";
-    private static final Color BACKGROUND_COLOR = new Color(30, 30, 30);
-    private static final Color OUTER_BORDER_COLOR = new Color(132, 132, 132);
+    private static final Color BACKGROUND_COLOR = new Color(34, 34, 34);
+    private static final Color OUTER_BORDER_COLOR = new Color(159, 159, 159);
     private static final Color HEADER_COLOR = new Color(255, 252, 235);
-    private static final Color TITLE_COLOR = new Color(20, 20, 20);
-    private static final Color DESCRIPTION_COLOR = new Color(54, 54, 54);
+    private static final Color TITLE_COLOR = new Color(17, 17, 17);
+    private static final Color DESCRIPTION_COLOR = new Color(76, 76, 76);
     private static final Color FALLBACK_AVATAR_COLOR = new Color(255, 231, 86);
-    private static final Color AVATAR_BORDER_COLOR = new Color(255, 255, 245);
+    private static final Color AVATAR_BORDER_COLOR = new Color(246, 246, 246);
     private static final Font TITLE_FONT = loadFont("Pretendard-SemiBold.otf", Font.BOLD);
     private static final Font MEDIUM_FONT = loadFont("Pretendard-Medium.otf", Font.PLAIN);
 
@@ -189,10 +188,8 @@ public class WeeklyChallengeShareImageGenerator {
         Shape previousClip = graphics.getClip();
         RoundRectangle2D tile = new RoundRectangle2D.Double(x, y, CELL_SIZE, CELL_SIZE, CELL_RADIUS, CELL_RADIUS);
         graphics.setClip(tile);
-        graphics.setComposite(AlphaComposite.SrcOver.derive(0.46f));
-        graphics.setPaint(new GradientPaint(x, y, Color.BLACK, x, y + scaled(58), new Color(0, 0, 0, 0)));
-        graphics.fillRect(x, y, CELL_SIZE, scaled(72));
-        graphics.setComposite(AlphaComposite.SrcOver);
+        graphics.setPaint(new GradientPaint(x, y, new Color(0, 0, 0, 153), x, y + scaled(90), new Color(0, 0, 0, 0)));
+        graphics.fillRect(x, y, CELL_SIZE, scaled(90));
         graphics.setClip(previousClip);
     }
 
@@ -238,7 +235,7 @@ public class WeeklyChallengeShareImageGenerator {
         }
         graphics.setColor(AVATAR_BORDER_COLOR);
         Stroke previousStroke = graphics.getStroke();
-        graphics.setStroke(new BasicStroke(1));
+        graphics.setStroke(new BasicStroke(0.818f * SCALE));
         graphics.draw(avatar);
         graphics.setStroke(previousStroke);
     }
