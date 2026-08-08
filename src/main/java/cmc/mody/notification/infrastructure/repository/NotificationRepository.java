@@ -22,8 +22,23 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
         from Notification notification
         where notification.receiverMemberId = :receiverMemberId
           and notification.deletedAt is null
-          and (:cursor is null or notification.id < :cursor)
-        order by notification.id desc
+          and (
+              :cursor is null
+              or notification.createdAt < (
+                  select cursorNotification.createdAt
+                  from Notification cursorNotification
+                  where cursorNotification.id = :cursor
+              )
+              or (
+                  notification.createdAt = (
+                      select cursorNotification.createdAt
+                      from Notification cursorNotification
+                      where cursorNotification.id = :cursor
+                  )
+                  and notification.id < :cursor
+              )
+          )
+        order by notification.createdAt desc, notification.id desc
         """)
     List<Notification> findByReceiverMemberIdByCursor(
         @Param("receiverMemberId") Long receiverMemberId,

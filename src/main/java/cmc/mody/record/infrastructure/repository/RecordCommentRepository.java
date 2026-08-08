@@ -19,7 +19,22 @@ public interface RecordCommentRepository extends JpaRepository<RecordComment, Lo
         where comment.recordId = :recordId
           and comment.groupId = :groupId
           and comment.deletedAt is null
-          and (:cursor is null or comment.id > :cursor)
+          and (
+              :cursor is null
+              or comment.createdAt > (
+                  select cursorComment.createdAt
+                  from RecordComment cursorComment
+                  where cursorComment.id = :cursor
+              )
+              or (
+                  comment.createdAt = (
+                      select cursorComment.createdAt
+                      from RecordComment cursorComment
+                      where cursorComment.id = :cursor
+                  )
+                  and comment.id > :cursor
+              )
+          )
           and exists (
               select 1
               from GroupMember groupMember
@@ -28,7 +43,7 @@ public interface RecordCommentRepository extends JpaRepository<RecordComment, Lo
                 and groupMember.groupMemberStatus = :joinedStatus
                 and groupMember.deletedAt is null
           )
-        order by comment.id asc
+        order by comment.createdAt asc, comment.id asc
         """)
     List<RecordComment> findActiveCommentsByCursor(
         @Param("recordId") Long recordId,
