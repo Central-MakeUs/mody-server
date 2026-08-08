@@ -328,7 +328,8 @@ public class ChallengeController {
         String nickname,
         String profileImageUrl,
         boolean recordedToday,
-        boolean nudgedToday
+        boolean nudgedToday,
+        ChallengeHomeService.NudgeButtonStatus buttonStatus
     ) {
         public static NudgeTargetResponse from(ChallengeHomeService.NudgeTargetResult result) {
             return new NudgeTargetResponse(
@@ -336,14 +337,15 @@ public class ChallengeController {
                 result.nickname(),
                 result.profileImageUrl(),
                 result.recordedToday(),
-                result.nudgedToday()
+                result.nudgedToday(),
+                result.buttonStatus()
             );
         }
     }
 
-    public record NudgeResponse(boolean nudgedToday) {
+    public record NudgeResponse(boolean nudgedToday, ChallengeHomeService.NudgeButtonStatus buttonStatus) {
         public static NudgeResponse from(NudgeResult result) {
-            return new NudgeResponse(result.nudgedToday());
+            return new NudgeResponse(result.nudgedToday(), result.buttonStatus());
         }
     }
 

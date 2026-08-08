@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 
 import cmc.mody.challenge.application.ChallengeHomeService.ChallengeSummaryResult;
+import cmc.mody.challenge.application.ChallengeHomeService.NudgeButtonStatus;
 import cmc.mody.challenge.application.ChallengeHomeService.NudgeTargetListResult;
 import cmc.mody.challenge.domain.GroupChallengeStatus;
 import cmc.mody.challenge.infrastructure.repository.GroupChallengeRepository;
@@ -140,21 +141,23 @@ class ChallengeHomeServiceTest {
         NudgeTargetListResult result = service.getNudgeTargets(1L, 10L);
 
         assertThat(result.members())
-            .extracting("memberId", "nickname", "profileImageUrl", "recordedToday", "nudgedToday")
+            .extracting("memberId", "nickname", "profileImageUrl", "recordedToday", "nudgedToday", "buttonStatus")
             .containsExactly(
                 org.assertj.core.groups.Tuple.tuple(
                     2L,
                     "기록친구",
                     "https://storage.example.com/profiles/member-2.jpg",
                     true,
-                    false
+                    false,
+                    NudgeButtonStatus.RECORDED
                 ),
                 org.assertj.core.groups.Tuple.tuple(
                     3L,
                     "미기록친구",
                     "https://storage.example.com/profiles/member-3.jpg",
                     false,
-                    false
+                    false,
+                    NudgeButtonStatus.AVAILABLE
                 )
             );
     }
@@ -177,8 +180,31 @@ class ChallengeHomeServiceTest {
         NudgeTargetListResult result = service.getNudgeTargets(1L, 10L);
 
         assertThat(result.members()).singleElement()
-            .extracting("memberId", "recordedToday", "nudgedToday")
-            .containsExactly(2L, false, true);
+            .extracting("memberId", "recordedToday", "nudgedToday", "buttonStatus")
+            .containsExactly(2L, false, true, NudgeButtonStatus.NUDGED);
+    }
+
+    @Test
+    @DisplayName("오늘 기록을 완료한 버디는 이미 콕찌른 이력이 있어도 기록 완료 상태를 우선 반환한다.")
+    void getNudgeTargetsPrioritizesRecordedStatus() {
+        ChallengeHomeService service = service();
+        GroupMember currentMember = groupMember(1L, "민석", LocalDateTime.now().minusDays(2));
+        GroupMember buddy = groupMember(2L, "친구", LocalDateTime.now().minusDays(1));
+        givenValidGroupMembership(1L, currentMember);
+        givenJoinedMembers(List.of(currentMember, buddy));
+        given(activityRecordRepository.findActiveGroupRecordsBetween(any(), any(), any(), any()))
+            .willReturn(List.of(mealRecord(2L, LocalDate.now().atTime(9, 0))));
+        given(notificationRepository
+            .findByNotificationTypeAndReferenceIdAndReceiverMemberIdInAndCreatedAtGreaterThanEqualAndCreatedAtLessThanAndDeletedAtIsNull(
+                any(), any(), any(), any(), any()
+            ))
+            .willReturn(List.of(buddyNudge(2L, BuddyNudgeDedupeKey.create(10L, 1L, 2L, LocalDate.now().toString()))));
+
+        NudgeTargetListResult result = service.getNudgeTargets(1L, 10L);
+
+        assertThat(result.members()).singleElement()
+            .extracting("recordedToday", "nudgedToday", "buttonStatus")
+            .containsExactly(true, true, NudgeButtonStatus.RECORDED);
     }
 
     @Test
@@ -199,6 +225,29 @@ class ChallengeHomeServiceTest {
 
         then(notificationRequestService).should()
             .requestBuddyNudge(10L, 1L, "민석", 2L, LocalDate.now().toString());
+    }
+
+    @Test
+    @DisplayName("같은 버디에게 같은 날 다시 콕찌르기를 요청할 수 없다.")
+    void throwWhenNudgingSameBuddyAgainToday() {
+        ChallengeHomeService service = service();
+        GroupMember sender = groupMember(1L, "민석", LocalDateTime.now().minusDays(2));
+        GroupMember receiver = groupMember(2L, "친구", LocalDateTime.now().minusDays(1));
+        givenValidGroupMembership(1L, sender);
+        given(memberRepository.findById(2L)).willReturn(Optional.of(member(2L)));
+        given(groupMemberRepository.findByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            2L,
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(Optional.of(receiver));
+        given(notificationRepository.existsByDedupeKeyAndDeletedAtIsNull(
+            BuddyNudgeDedupeKey.create(10L, 1L, 2L, LocalDate.now().toString())
+        )).willReturn(true);
+
+        assertThatThrownBy(() -> service.nudgeMember(1L, 10L, 2L))
+            .isInstanceOfSatisfying(GeneralException.class, exception ->
+                assertThat(exception.getStatus()).isEqualTo(ErrorStatus.CHALLENGE_NUDGE_ALREADY_SENT));
+        then(notificationRequestService).shouldHaveNoInteractions();
     }
 
     @Test
