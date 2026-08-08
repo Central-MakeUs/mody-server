@@ -4,9 +4,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "notification.retention")
 public class NotificationRetentionProperties {
-    private boolean enabled = false;
+    private boolean enabled = true;
     private String cron = "0 0 4 * * *";
-    private int retentionDays = 90;
+    private int retentionDays = 7;
     private int batchSize = 500;
 
     public boolean isEnabled() {
