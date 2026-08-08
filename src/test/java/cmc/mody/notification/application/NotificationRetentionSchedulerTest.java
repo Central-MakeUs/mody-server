@@ -24,6 +24,15 @@ class NotificationRetentionSchedulerTest {
     private NotificationRepository notificationRepository;
 
     @Test
+    @DisplayName("알림 보관 기본 기간은 7일이다.")
+    void defaultRetentionDays() {
+        NotificationRetentionProperties properties = new NotificationRetentionProperties();
+
+        assertThat(properties.isEnabled()).isTrue();
+        assertThat(properties.getRetentionDays()).isEqualTo(7);
+    }
+
+    @Test
     @DisplayName("보관 기간이 지난 알림을 배치 크기만큼 조회해서 소프트 삭제한다.")
     void deleteExpiredNotifications() {
         NotificationRetentionProperties properties = new NotificationRetentionProperties();

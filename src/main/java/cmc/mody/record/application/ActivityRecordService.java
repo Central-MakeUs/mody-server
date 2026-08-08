@@ -218,6 +218,21 @@ public class ActivityRecordService {
     }
 
     @Transactional
+    public void deleteRecord(Long memberId, Long recordId) {
+        getMember(memberId);
+        ActivityRecord record = activityRecordRepository.findById(recordId)
+            .filter(ActivityRecord::isActive)
+            .filter(foundRecord -> memberId.equals(foundRecord.getMemberId()))
+            .orElseThrow(() -> new GeneralException(ErrorStatus.RECORD_NOT_FOUND));
+
+        recordCommentRepository.findByRecordIdInAndDeletedAtIsNull(List.of(recordId))
+            .forEach(RecordComment::delete);
+        activityRecordGroupRepository.findByRecordIdAndDeletedAtIsNull(recordId)
+            .forEach(ActivityRecordGroup::delete);
+        record.delete();
+    }
+
+    @Transactional
     public CommentCreateResult createComment(Long memberId, Long groupId, Long recordId, CommentCreateCommand command) {
         Member member = getMember(memberId);
         ActivityRecord record = getAccessibleRecord(memberId, groupId, recordId);

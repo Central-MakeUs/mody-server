@@ -59,9 +59,9 @@ notification:
     enabled: ${NOTIFICATION_REMINDER_ENABLED:false}
     cron: ${NOTIFICATION_REMINDER_CRON:0 * * * * *}
   retention:
-    enabled: ${NOTIFICATION_RETENTION_ENABLED:false}
+    enabled: ${NOTIFICATION_RETENTION_ENABLED:true}
     cron: ${NOTIFICATION_RETENTION_CRON:0 0 4 * * *}
-    retention-days: ${NOTIFICATION_RETENTION_DAYS:90}
+    retention-days: ${NOTIFICATION_RETENTION_DAYS:7}
     batch-size: ${NOTIFICATION_RETENTION_BATCH_SIZE:500}
   streak-risk:
     enabled: ${NOTIFICATION_STREAK_RISK_ENABLED:false}

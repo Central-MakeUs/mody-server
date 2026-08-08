@@ -437,6 +437,53 @@ class ActivityRecordServiceTest {
     }
 
     @Test
+    @DisplayName("기록을 삭제하면 모든 그룹 노출과 댓글을 함께 소프트 삭제한다.")
+    void deleteRecord() {
+        ActivityRecordService service = service();
+        ActivityRecord record = mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30));
+        ActivityRecordGroup firstGroup = recordGroup(100L, 10L, 1L, record.getUploadedAt());
+        ActivityRecordGroup secondGroup = recordGroup(100L, 11L, 1L, record.getUploadedAt());
+        RecordComment firstComment = new RecordComment(200L, 100L, 10L, 2L, "좋다");
+        RecordComment secondComment = new RecordComment(201L, 100L, 11L, 3L, "멋져요");
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(activityRecordRepository.findById(100L)).willReturn(Optional.of(record));
+        given(recordCommentRepository.findByRecordIdInAndDeletedAtIsNull(List.of(100L)))
+            .willReturn(List.of(firstComment, secondComment));
+        given(activityRecordGroupRepository.findByRecordIdAndDeletedAtIsNull(100L))
+            .willReturn(List.of(firstGroup, secondGroup));
+
+        service.deleteRecord(1L, 100L);
+
+        assertThat(record.getDeletedAt()).isNotNull();
+        assertThat(firstGroup.getDeletedAt()).isNotNull();
+        assertThat(secondGroup.getDeletedAt()).isNotNull();
+        assertThat(firstComment.getDeletedAt()).isNotNull();
+        assertThat(secondComment.getDeletedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("다른 회원의 기록은 삭제할 수 없다.")
+    void deleteRecordByAnotherMember() {
+        ActivityRecordService service = service();
+        ActivityRecord record = ActivityRecord.meal(
+            100L,
+            2L,
+            null,
+            LocalTime.of(12, 30),
+            "샐러드",
+            "records/2/2026/07/meal.jpg",
+            LocalDateTime.of(2026, 7, 1, 12, 30)
+        );
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(activityRecordRepository.findById(100L)).willReturn(Optional.of(record));
+
+        assertThatThrownBy(() -> service.deleteRecord(1L, 100L))
+            .isInstanceOfSatisfying(GeneralException.class, exception ->
+                assertThat(exception.getStatus()).isEqualTo(ErrorStatus.RECORD_NOT_FOUND));
+        assertThat(record.getDeletedAt()).isNull();
+    }
+
+    @Test
     @DisplayName("접근 가능한 기록에 댓글을 작성한다.")
     void createComment() {
         ActivityRecordService service = service();
