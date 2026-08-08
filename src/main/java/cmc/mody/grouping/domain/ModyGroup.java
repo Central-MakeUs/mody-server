@@ -30,4 +30,8 @@ public class ModyGroup extends BaseEntity {
         this.code = code;
         this.name = name;
     }
+
+    public void updateName(String name) {
+        this.name = name;
+    }
 }

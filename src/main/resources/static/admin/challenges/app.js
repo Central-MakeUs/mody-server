@@ -1,140 +1,40 @@
 const ADMIN_KEY_STORAGE = "mody.admin.api-key";
-
 const $ = (selector) => document.querySelector(selector);
-const accessSection = $("#access-section");
-const workspace = $("#workspace");
-const accessForm = $("#access-form");
-const accessMessage = $("#access-message");
-const adminKeyInput = $("#admin-key");
-const groupSelect = $("#group-id");
-const workspaceMessage = $("#workspace-message");
-const challengeDialog = $("#challenge-dialog");
-const recordDialog = $("#record-dialog");
-const confirmDialog = $("#confirm-dialog");
+const accessSection = $("#access-section"), workspace = $("#workspace"), accessForm = $("#access-form"), adminKeyInput = $("#admin-key");
+const groupSelect = $("#group-id"), workspaceMessage = $("#workspace-message"), challengeDialog = $("#challenge-dialog"), recordDialog = $("#record-dialog"), confirmDialog = $("#confirm-dialog");
+let groups = [], challenges = [], records = [], activeTab = "challenge", pendingDelete = null, groupDetail = null;
 
-let groups = [];
-let challenges = [];
-let records = [];
-let activeTab = "challenge";
-let pendingDelete = null;
-
-function adminKey() { return sessionStorage.getItem(ADMIN_KEY_STORAGE); }
-function selectedGroupId() { return groupSelect.value; }
-function setMessage(element, message = "", type = "") { element.textContent = message; element.className = `form-message ${type}`.trim(); }
-function setLoading(button, loading, label) {
-  button.disabled = loading;
-  if (loading) { button.dataset.label = button.textContent; button.textContent = label; }
-  else if (button.dataset.label) { button.textContent = button.dataset.label; }
-}
-
-async function request(path, options = {}) {
-  const response = await fetch(path, { ...options, headers: { "X-Admin-Api-Key": adminKey(), ...(options.headers ?? {}) } });
-  const payload = await response.json().catch(() => null);
-  if (!response.ok || !payload?.isSuccess) { const error = new Error(payload?.message ?? "요청을 처리하지 못했습니다."); error.status = response.status; throw error; }
-  return payload.result;
-}
-
-function showAccess(message = "") {
-  workspace.hidden = true; accessSection.hidden = false; setMessage(accessMessage, message, message ? "error" : ""); adminKeyInput.focus();
-}
+const adminKey = () => sessionStorage.getItem(ADMIN_KEY_STORAGE);
+const selectedGroupId = () => groupSelect.value;
+const setMessage = (element, message = "", type = "") => { element.textContent = message; element.className = `form-message ${type}`.trim(); };
+const escapeHtml = (value) => { const node = document.createElement("span"); node.textContent = value ?? ""; return node.innerHTML; };
+const formatDateTime = (value) => value ? value.replace("T", " ").slice(0, 16) : "-";
+const request = async (path, options = {}) => { const response = await fetch(path, { ...options, headers: { "X-Admin-Api-Key": adminKey(), ...(options.headers ?? {}) } }); const payload = await response.json().catch(() => null); if (!response.ok || !payload?.isSuccess) throw new Error(payload?.message ?? "요청을 처리하지 못했습니다."); return payload.result; };
+function showAccess(message = "") { workspace.hidden = true; accessSection.hidden = false; setMessage($("#access-message"), message, message ? "error" : ""); adminKeyInput.focus(); }
 function showWorkspace() { accessSection.hidden = true; workspace.hidden = false; }
-function dateString(date) { return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 10); }
-function setDefaultDates() { const today = new Date(); $("#starts-on").value = dateString(today); const end = new Date(today); end.setDate(end.getDate() + 6); $("#ends-on").value = dateString(end); }
-function formatDateTime(value) { return value ? value.replace("T", " ").slice(0, 16) : "-"; }
-function escapeHtml(value) { const node = document.createElement("span"); node.textContent = value ?? ""; return node.innerHTML; }
+function setDefaultDates() { const now = new Date(), end = new Date(now); end.setDate(end.getDate() + 6); const date = (value) => new Date(value.getTime() - value.getTimezoneOffset() * 60000).toISOString().slice(0, 10); $("#starts-on").value = date(now); $("#ends-on").value = date(end); }
 
-function renderGroups() {
-  groupSelect.replaceChildren(new Option("대상 그룹을 선택하세요.", ""));
-  groups.forEach((group) => groupSelect.add(new Option(`${group.name} · ${group.memberCount}명`, group.groupId)));
-  groupSelect.disabled = groups.length === 0;
-  $("#group-summary").textContent = groups.length ? `${groups.length}개 운영 그룹` : "운영 그룹 없음";
-}
-
+function renderGroups() { groupSelect.replaceChildren(new Option("대상 그룹을 선택하세요.", "")); groups.forEach((group) => groupSelect.add(new Option(`${group.name} · ${group.memberCount}명`, group.groupId))); groupSelect.disabled = groups.length === 0; $("#group-summary").textContent = groups.length ? `${groups.length}개 운영 그룹` : "운영 그룹 없음"; $("#metric-member-count").textContent = groups.find((group) => String(group.groupId) === selectedGroupId())?.memberCount ?? 0; renderGroupList(); }
 function challengeStatus(status) { return status === "COMPLETED" ? "완료" : status === "RESET" ? "종료" : "진행 중"; }
-function renderChallenges() {
-  const list = $("#challenge-list"); list.replaceChildren(); $("#challenge-count").textContent = challenges.length;
-  challenges.forEach((challenge) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `<td><strong>${escapeHtml(challenge.title)}</strong><small>${escapeHtml(challenge.description)}</small></td><td>${challenge.startsOn} ~ ${challenge.endsOn}</td><td><span class="status ${challenge.status === "COMPLETED" ? "completed" : ""}">${challengeStatus(challenge.status)}</span></td><td class="action-column"><div class="actions"><button class="table-button" data-action="edit-challenge" data-id="${challenge.groupChallengeId}" type="button">수정</button><button class="table-button delete" data-action="delete-challenge" data-id="${challenge.groupChallengeId}" type="button">삭제</button></div></td>`;
-    list.append(row);
-  });
-  $("#challenge-empty").hidden = challenges.length !== 0;
-}
-
-function recordSummary(record) {
-  return record.recordType === "MEAL" ? `${record.mealTime ?? ""} · ${record.menu ?? ""}` : `${record.exerciseName ?? ""} · ${record.exerciseDurationMinutes ?? 0}분`;
-}
-function renderRecords() {
-  const list = $("#record-list"); list.replaceChildren(); $("#record-count").textContent = records.length;
-  records.forEach((record) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `<td><strong>${escapeHtml(record.memberNickname || `회원 #${record.memberId}`)}</strong><small>기록 ID ${record.recordId}</small></td><td><span class="status">${record.recordType === "MEAL" ? "식사" : "운동"}</span></td><td><strong>${escapeHtml(recordSummary(record))}</strong><small>${escapeHtml(record.imageKey)}</small></td><td>${formatDateTime(record.uploadedAt)}</td><td class="action-column"><div class="actions"><button class="table-button" data-action="edit-record" data-id="${record.recordId}" type="button">수정</button><button class="table-button delete" data-action="delete-record" data-id="${record.recordId}" type="button">삭제</button></div></td>`;
-    list.append(row);
-  });
-  $("#record-empty").hidden = records.length !== 0;
-}
-
-function selectTab(tab) {
-  activeTab = tab;
-  $("#challenge-tab").classList.toggle("active", tab === "challenge"); $("#record-tab").classList.toggle("active", tab === "record");
-  $("#challenge-tab").setAttribute("aria-selected", tab === "challenge"); $("#record-tab").setAttribute("aria-selected", tab === "record");
-  $("#challenge-panel").hidden = tab !== "challenge"; $("#record-panel").hidden = tab !== "record";
-}
-
-async function loadGroupData() {
-  const groupId = selectedGroupId(); if (!groupId) { challenges = []; records = []; renderChallenges(); renderRecords(); return; }
-  setMessage(workspaceMessage);
-  try {
-    const [challengeResult, recordResult] = await Promise.all([request(`/api/v1/admin/groups/${groupId}/weekly-challenges`), request(`/api/v1/admin/groups/${groupId}/records`)]);
-    challenges = challengeResult.challenges; records = recordResult.records; renderChallenges(); renderRecords();
-  } catch (error) { setMessage(workspaceMessage, error.message, "error"); }
-}
-async function loadGroups() {
-  setLoading($("#refresh-button"), true, "불러오는 중");
-  try {
-    groups = (await request("/api/v1/admin/groups")).groups;
-    renderGroups();
-    if (groups.length) { groupSelect.value = groups[0].groupId; await loadGroupData(); }
-    return true;
-  } catch (error) {
-    if (error.status === 403) { sessionStorage.removeItem(ADMIN_KEY_STORAGE); showAccess("관리자 API 키를 다시 확인해주세요."); }
-    else setMessage(workspaceMessage, error.message, "error");
-    return false;
-  } finally { setLoading($("#refresh-button"), false); }
-}
-
-function openChallengeDialog(challenge = null) {
-  $("#challenge-form").reset(); setMessage($("#challenge-form-message")); $("#editing-challenge-id").value = challenge?.groupChallengeId ?? "";
-  $("#challenge-dialog-title").textContent = challenge ? "챌린지 수정" : "챌린지 등록";
-  $("#challenge-title").value = challenge?.title ?? ""; $("#challenge-description").value = challenge?.description ?? "";
-  $("#starts-on").value = challenge?.startsOn ?? ""; $("#ends-on").value = challenge?.endsOn ?? ""; if (!challenge) setDefaultDates(); challengeDialog.showModal();
-}
+function renderMetrics() { $("#metric-challenge-count").textContent = challenges.length; $("#metric-in-progress-count").textContent = challenges.filter((item) => item.status === "IN_PROGRESS").length; $("#metric-record-count").textContent = records.length; $("#metric-member-count").textContent = groups.find((group) => String(group.groupId) === selectedGroupId())?.memberCount ?? 0; }
+function renderChallenges() { const search = $("#challenge-search").value.trim().toLowerCase(), status = $("#challenge-status-filter").value; const filtered = challenges.filter((item) => (status === "ALL" || item.status === status) && `${item.title} ${item.description}`.toLowerCase().includes(search)); const list = $("#challenge-list"); list.replaceChildren(); $("#challenge-count").textContent = challenges.length; filtered.forEach((item) => { const row = document.createElement("tr"); row.innerHTML = `<td><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.description)}</small></td><td>${item.startsOn} ~ ${item.endsOn}</td><td><span class="status ${item.status === "COMPLETED" ? "completed" : ""}">${challengeStatus(item.status)}</span></td><td class="action-column"><div class="actions"><button class="table-button" data-action="edit-challenge" data-id="${item.groupChallengeId}" type="button">수정</button><button class="table-button delete" data-action="delete-challenge" data-id="${item.groupChallengeId}" type="button">삭제</button></div></td>`; list.append(row); }); $("#challenge-empty").hidden = filtered.length !== 0; renderMetrics(); }
+function recordSummary(item) { return item.recordType === "MEAL" ? `${item.mealTime ?? ""} · ${item.menu ?? ""}` : `${item.exerciseName ?? ""} · ${item.exerciseDurationMinutes ?? 0}분`; }
+function renderRecords() { const search = $("#record-search").value.trim().toLowerCase(), type = $("#record-type-filter").value; const filtered = records.filter((item) => (type === "ALL" || item.recordType === type) && `${item.memberNickname} ${recordSummary(item)}`.toLowerCase().includes(search)); const list = $("#record-list"); list.replaceChildren(); $("#record-count").textContent = records.length; filtered.forEach((item) => { const row = document.createElement("tr"), image = item.imageUrl ? `<button class="image-thumb" data-action="view-image" data-id="${item.recordId}" type="button"><img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.memberNickname || "회원")} 인증 이미지"></button>` : "-"; row.innerHTML = `<td>${image}</td><td><strong>${escapeHtml(item.memberNickname || `회원 #${item.memberId}`)}</strong><small>기록 ID ${item.recordId}</small></td><td><span class="status">${item.recordType === "MEAL" ? "식사" : "운동"}</span></td><td><strong>${escapeHtml(recordSummary(item))}</strong><small>${escapeHtml(item.imageKey)}</small></td><td>${formatDateTime(item.uploadedAt)}</td><td class="action-column"><div class="actions"><button class="table-button" data-action="edit-record" data-id="${item.recordId}" type="button">수정</button><button class="table-button delete" data-action="delete-record" data-id="${item.recordId}" type="button">삭제</button></div></td>`; list.append(row); }); $("#record-empty").hidden = filtered.length !== 0; renderMetrics(); }
+function selectTab(tab) { activeTab = tab; ["challenge", "record", "group"].forEach((name) => { const tabButton = $("#" + name + "-tab"), panel = $("#" + name + "-panel"); if (tabButton) { tabButton.classList.toggle("active", name === tab); tabButton.setAttribute("aria-selected", name === tab); } if (panel) panel.hidden = name !== tab; }); $("#group-nav-button").classList.toggle("active", tab === "group"); }
+async function loadGroupData() { if (!selectedGroupId()) { challenges = []; records = []; renderChallenges(); renderRecords(); return; } try { const [challengeResult, recordResult] = await Promise.all([request(`/api/v1/admin/groups/${selectedGroupId()}/weekly-challenges`), request(`/api/v1/admin/groups/${selectedGroupId()}/records`)]); challenges = challengeResult.challenges; records = recordResult.records; renderChallenges(); renderRecords(); } catch (error) { setMessage(workspaceMessage, error.message, "error"); } }
+async function loadGroups() { try { groups = (await request("/api/v1/admin/groups")).groups; renderGroups(); if (groups.length) { groupSelect.value = groups[0].groupId; await loadGroupData(); } return true; } catch (error) { showAccess("관리자 API 키를 다시 확인해주세요."); return false; } }
+function renderGroupList() { const list = $("#group-list"); if (!list) return; list.replaceChildren(); groups.forEach((group) => { const button = document.createElement("button"); button.className = "group-row"; button.dataset.action = "view-group"; button.dataset.id = group.groupId; button.type = "button"; button.innerHTML = `<strong>${escapeHtml(group.name)}</strong><span>${group.memberCount}명 · ${escapeHtml(group.code)}</span>`; list.append(button); }); }
+async function showGroupDetail(groupId) { groupDetail = await request(`/api/v1/admin/groups/${groupId}`); const detail = $("#group-detail"); detail.innerHTML = `<form id="group-name-form"><label for="group-name">그룹명</label><div class="inline-form"><input id="group-name" maxlength="30" value="${escapeHtml(groupDetail.name)}"><button class="primary-button" type="submit">저장</button></div></form><dl class="group-meta"><div><dt>초대 코드</dt><dd>${escapeHtml(groupDetail.code)}</dd></div><div><dt>참여 멤버</dt><dd>${groupDetail.members.length}명</dd></div></dl><div class="member-list">${groupDetail.members.map((member) => `<div><strong>${escapeHtml(member.nickname || `회원 #${member.memberId}`)}</strong><span>${formatDateTime(member.joinedAt)} 참여</span></div>`).join("") || "<p class=\"empty-state\">참여 멤버가 없습니다.</p>"}</div><button class="secondary-button" data-action="open-group-workspace" data-id="${groupId}" type="button">이 그룹의 챌린지 관리</button>`; $("#group-name-form").addEventListener("submit", async (event) => { event.preventDefault(); await request(`/api/v1/admin/groups/${groupId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: $("#group-name").value }) }); await loadGroups(); await showGroupDetail(groupId); }); }
+function openChallengeDialog(item = null) { $("#challenge-form").reset(); $("#editing-challenge-id").value = item?.groupChallengeId ?? ""; $("#challenge-dialog-title").textContent = item ? "챌린지 수정" : "챌린지 등록"; $("#challenge-title").value = item?.title ?? ""; $("#challenge-description").value = item?.description ?? ""; $("#starts-on").value = item?.startsOn ?? ""; $("#ends-on").value = item?.endsOn ?? ""; if (!item) setDefaultDates(); challengeDialog.showModal(); }
+function openRecordDialog(item) { $("#record-form").reset(); $("#editing-record-id").value = item.recordId; $("#record-type").value = item.recordType; $("#record-meal-time").value = item.mealTime ?? ""; $("#record-menu").value = item.menu ?? ""; $("#record-duration").value = item.exerciseDurationMinutes ?? ""; $("#record-exercise-name").value = item.exerciseName ?? ""; syncRecordFields(); recordDialog.showModal(); }
 function syncRecordFields() { const meal = $("#record-type").value === "MEAL"; $("#meal-fields").hidden = !meal; $("#exercise-fields").hidden = meal; }
-function openRecordDialog(record) {
-  $("#record-form").reset(); setMessage($("#record-form-message")); $("#editing-record-id").value = record.recordId; $("#record-type").value = record.recordType;
-  $("#record-meal-time").value = record.mealTime ?? ""; $("#record-menu").value = record.menu ?? ""; $("#record-duration").value = record.exerciseDurationMinutes ?? ""; $("#record-exercise-name").value = record.exerciseName ?? ""; syncRecordFields(); recordDialog.showModal();
-}
-function requestDelete(kind, id) {
-  pendingDelete = { kind, id }; const isChallenge = kind === "challenge"; $("#confirm-title").textContent = isChallenge ? "챌린지를 삭제할까요?" : "활동 기록을 삭제할까요?"; $("#confirm-copy").textContent = isChallenge ? "삭제한 챌린지는 그룹 화면에서 더 이상 노출되지 않습니다." : "이 기록은 모든 그룹 노출과 연결된 댓글에서 함께 삭제됩니다."; confirmDialog.showModal();
-}
+function requestDelete(kind, id) { pendingDelete = { kind, id }; $("#confirm-title").textContent = kind === "challenge" ? "챌린지를 삭제할까요?" : "활동 기록을 삭제할까요?"; $("#confirm-copy").textContent = kind === "challenge" ? "삭제한 챌린지는 그룹 화면에서 더 이상 노출되지 않습니다." : "이 기록은 모든 그룹 노출과 연결된 댓글에서 함께 삭제됩니다."; confirmDialog.showModal(); }
 
 accessForm.addEventListener("submit", async (event) => { event.preventDefault(); sessionStorage.setItem(ADMIN_KEY_STORAGE, adminKeyInput.value.trim()); if (await loadGroups()) showWorkspace(); });
-$("#key-visibility-button").addEventListener("click", () => { const show = adminKeyInput.type === "password"; adminKeyInput.type = show ? "text" : "password"; $("#key-visibility-button").textContent = show ? "숨김" : "보기"; });
-$("#sign-out-button").addEventListener("click", () => { sessionStorage.removeItem(ADMIN_KEY_STORAGE); groups = []; challenges = []; records = []; showAccess(); });
-$("#refresh-button").addEventListener("click", loadGroups); groupSelect.addEventListener("change", loadGroupData); $("#challenge-tab").addEventListener("click", () => selectTab("challenge")); $("#record-tab").addEventListener("click", () => selectTab("record")); $("#new-challenge-button").addEventListener("click", () => openChallengeDialog()); $("#record-type").addEventListener("change", syncRecordFields);
-
-document.addEventListener("click", (event) => {
-  const dialogId = event.target.dataset.close;
-  if (dialogId) { $("#" + dialogId).close(); return; }
-  const button = event.target.closest("button[data-action]"); if (!button) return; const id = button.dataset.id;
-  if (button.dataset.action === "edit-challenge") openChallengeDialog(challenges.find((item) => String(item.groupChallengeId) === id));
-  if (button.dataset.action === "delete-challenge") requestDelete("challenge", id);
-  if (button.dataset.action === "edit-record") openRecordDialog(records.find((item) => String(item.recordId) === id));
-  if (button.dataset.action === "delete-record") requestDelete("record", id);
-});
-
-$("#challenge-form").addEventListener("submit", async (event) => { event.preventDefault(); const id = $("#editing-challenge-id").value; const body = { title: $("#challenge-title").value, description: $("#challenge-description").value, startsOn: $("#starts-on").value, endsOn: $("#ends-on").value }; setLoading($("#save-challenge-button"), true, "저장 중"); try { await request(`/api/v1/admin/groups/${selectedGroupId()}/weekly-challenges${id ? `/${id}` : ""}`, { method: id ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); challengeDialog.close(); await loadGroupData(); setMessage(workspaceMessage, "챌린지를 저장했습니다.", "success"); } catch (error) { setMessage($("#challenge-form-message"), error.message, "error"); } finally { setLoading($("#save-challenge-button"), false); } });
-$("#record-form").addEventListener("submit", async (event) => { event.preventDefault(); const type = $("#record-type").value; const body = type === "MEAL" ? { recordType:type, mealTime:$("#record-meal-time").value || null, menu:$("#record-menu").value, exerciseDurationMinutes:null, exerciseName:null } : { recordType:type, mealTime:null, menu:null, exerciseDurationMinutes:Number($("#record-duration").value) || null, exerciseName:$("#record-exercise-name").value }; setLoading($("#save-record-button"), true, "저장 중"); try { await request(`/api/v1/admin/groups/${selectedGroupId()}/records/${$("#editing-record-id").value}`, { method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body) }); recordDialog.close(); await loadGroupData(); setMessage(workspaceMessage, "기록을 저장했습니다.", "success"); } catch (error) { setMessage($("#record-form-message"), error.message, "error"); } finally { setLoading($("#save-record-button"), false); } });
-$("#confirm-delete-button").addEventListener("click", async (event) => { event.preventDefault(); if (!pendingDelete) return; const endpoint = pendingDelete.kind === "challenge" ? `/api/v1/admin/groups/${selectedGroupId()}/weekly-challenges/${pendingDelete.id}` : `/api/v1/admin/groups/${selectedGroupId()}/records/${pendingDelete.id}`; setLoading(event.target, true, "삭제 중"); try { await request(endpoint, { method:"DELETE" }); confirmDialog.close(); await loadGroupData(); setMessage(workspaceMessage, "삭제했습니다.", "success"); } catch (error) { confirmDialog.close(); setMessage(workspaceMessage, error.message, "error"); } finally { pendingDelete = null; setLoading(event.target, false); } });
-
-if (adminKey()) { loadGroups().then((loaded) => { if (loaded && adminKey()) showWorkspace(); }); }
+$("#key-visibility-button").addEventListener("click", () => { const visible = adminKeyInput.type === "password"; adminKeyInput.type = visible ? "text" : "password"; $("#key-visibility-button").textContent = visible ? "숨김" : "보기"; });
+$("#sign-out-button").addEventListener("click", () => { sessionStorage.removeItem(ADMIN_KEY_STORAGE); showAccess(); }); $("#refresh-button").addEventListener("click", loadGroups); groupSelect.addEventListener("change", loadGroupData); $("#challenge-tab").addEventListener("click", () => selectTab("challenge")); $("#record-tab").addEventListener("click", () => selectTab("record")); $("#group-nav-button").addEventListener("click", () => selectTab("group")); $("#new-challenge-button").addEventListener("click", () => openChallengeDialog()); $("#record-type").addEventListener("change", syncRecordFields); ["#challenge-search", "#challenge-status-filter"].forEach((selector) => $(selector).addEventListener("input", renderChallenges)); ["#record-search", "#record-type-filter"].forEach((selector) => $(selector).addEventListener("input", renderRecords));
+document.addEventListener("click", (event) => { const close = event.target.dataset.close; if (close) return $("#" + close).close(); const button = event.target.closest("button[data-action]"); if (!button) return; const id = button.dataset.id, action = button.dataset.action; if (action === "edit-challenge") openChallengeDialog(challenges.find((item) => String(item.groupChallengeId) === id)); if (action === "delete-challenge") requestDelete("challenge", id); if (action === "edit-record") openRecordDialog(records.find((item) => String(item.recordId) === id)); if (action === "delete-record") requestDelete("record", id); if (action === "view-image") { const record = records.find((item) => String(item.recordId) === id); $("#record-image-preview").src = record.imageUrl; $("#image-dialog-title").textContent = `${record.memberNickname || "회원"} 인증 이미지`; $("#image-dialog").showModal(); } if (action === "view-group") showGroupDetail(id); if (action === "open-group-workspace") { groupSelect.value = id; selectTab("challenge"); loadGroupData(); } });
+$("#challenge-form").addEventListener("submit", async (event) => { event.preventDefault(); const id = $("#editing-challenge-id").value, body = { title: $("#challenge-title").value, description: $("#challenge-description").value, startsOn: $("#starts-on").value, endsOn: $("#ends-on").value }; await request(`/api/v1/admin/groups/${selectedGroupId()}/weekly-challenges${id ? `/${id}` : ""}`, { method: id ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); challengeDialog.close(); await loadGroupData(); });
+$("#record-form").addEventListener("submit", async (event) => { event.preventDefault(); const meal = $("#record-type").value === "MEAL", body = meal ? { recordType: "MEAL", mealTime: $("#record-meal-time").value, menu: $("#record-menu").value, exerciseDurationMinutes: null, exerciseName: null } : { recordType: "EXERCISE", mealTime: null, menu: null, exerciseDurationMinutes: Number($("#record-duration").value), exerciseName: $("#record-exercise-name").value }; await request(`/api/v1/admin/groups/${selectedGroupId()}/records/${$("#editing-record-id").value}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); recordDialog.close(); await loadGroupData(); });
+$("#confirm-delete-button").addEventListener("click", async () => { if (!pendingDelete) return; const path = pendingDelete.kind === "challenge" ? `/api/v1/admin/groups/${selectedGroupId()}/weekly-challenges/${pendingDelete.id}` : `/api/v1/admin/groups/${selectedGroupId()}/records/${pendingDelete.id}`; await request(path, { method: "DELETE" }); confirmDialog.close(); pendingDelete = null; await loadGroupData(); });
+if (adminKey()) loadGroups().then((loaded) => { if (loaded) showWorkspace(); });
