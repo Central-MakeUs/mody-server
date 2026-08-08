@@ -20,6 +20,7 @@ import cmc.mody.challenge.application.ChallengeHomeService.ChallengeSummaryResul
 import cmc.mody.challenge.application.ChallengeHomeService.NudgeTargetListResult;
 import cmc.mody.challenge.application.ChallengeHomeService.NudgeTargetResult;
 import cmc.mody.challenge.application.ChallengeHomeService.NudgeResult;
+import cmc.mody.challenge.application.ChallengeHomeService.NudgeButtonStatus;
 import cmc.mody.challenge.application.StepChallengeService;
 import cmc.mody.challenge.application.StepChallengeService.StepChallengeChangeCommand;
 import cmc.mody.challenge.application.StepChallengeService.StepChallengeChangeResult;
@@ -89,6 +90,7 @@ class ChallengeControllerDocsTest {
         - GROUP302: 그룹 없음
         - GROUP306: 그룹 참여 정보 없음
         - CHALLENGE301: 본인 찌르기 등 챌린지 요청값 검증 실패
+        - CHALLENGE308: 오늘 이미 콕찌르기를 보냄
         """;
     private static final String STEP_CHALLENGE_DESCRIPTION = """
         걸음수 챌린지 API는 access token의 회원 id 기준으로 그룹 참여 여부를 검증한다.
@@ -313,7 +315,14 @@ class ChallengeControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(challengeHomeService.getNudgeTargets(1L, 1L))
             .willReturn(new NudgeTargetListResult(List.of(
-                new NudgeTargetResult(2L, "친구", "https://storage.example.com/profiles/member-2.jpg", false, true)
+                new NudgeTargetResult(
+                    2L,
+                    "친구",
+                    "https://storage.example.com/profiles/member-2.jpg",
+                    false,
+                    true,
+                    NudgeButtonStatus.NUDGED
+                )
             )));
 
         mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/nudges", 1L)
@@ -332,7 +341,9 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.members[].recordedToday").type(JsonFieldType.BOOLEAN)
                             .description("오늘 기록 여부"),
                         fieldWithPath("result.members[].nudgedToday").type(JsonFieldType.BOOLEAN)
-                            .description("오늘 콕찌르기 여부")
+                            .description("오늘 콕찌르기 여부"),
+                        fieldWithPath("result.members[].buttonStatus").type(JsonFieldType.STRING)
+                            .description("버튼 상태: RECORDED(기록 완료), NUDGED(이미 찔렀어요), AVAILABLE(콕찌르기 가능)")
                     ))
                     .build())
             ));
@@ -341,7 +352,8 @@ class ChallengeControllerDocsTest {
     @Test
     void nudgeMember() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
-        given(challengeHomeService.nudgeMember(1L, 1L, 2L)).willReturn(new NudgeResult(true));
+        given(challengeHomeService.nudgeMember(1L, 1L, 2L))
+            .willReturn(new NudgeResult(true, NudgeButtonStatus.NUDGED));
 
         mockMvc.perform(post("/api/v1/groups/{groupId}/challenges/nudges/{memberId}", 1L, 2L)
                 .header("Authorization", "Bearer access-token"))
@@ -353,7 +365,9 @@ class ChallengeControllerDocsTest {
                     .description(CHALLENGE_HOME_DESCRIPTION)
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.nudgedToday").type(JsonFieldType.BOOLEAN)
-                            .description("오늘 콕찌르기 완료 여부")
+                            .description("오늘 콕찌르기 완료 여부"),
+                        fieldWithPath("result.buttonStatus").type(JsonFieldType.STRING)
+                            .description("버튼 상태: NUDGED(이미 찔렀어요)")
                     ))
                     .build())
             ));

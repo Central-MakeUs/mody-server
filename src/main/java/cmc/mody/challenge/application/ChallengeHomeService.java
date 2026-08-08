@@ -103,7 +103,11 @@ public class ChallengeHomeService {
                 groupMember.getDisplayNickname(),
                 imageUrlResolver.resolve(groupMember.getDisplayProfileImageKey()),
                 recordedMemberIds.contains(groupMember.getMemberId()),
-                nudgedMemberIds.contains(groupMember.getMemberId())
+                nudgedMemberIds.contains(groupMember.getMemberId()),
+                resolveNudgeButtonStatus(
+                    recordedMemberIds.contains(groupMember.getMemberId()),
+                    nudgedMemberIds.contains(groupMember.getMemberId())
+                )
             ))
             .toList();
         return new NudgeTargetListResult(members);
@@ -117,6 +121,9 @@ public class ChallengeHomeService {
         GroupMember sender = validateGroupMembership(senderMemberId, groupId);
         validateMember(receiverMemberId);
         validateGroupMembership(receiverMemberId, groupId);
+        if (hasNudgedToday(senderMemberId, groupId, receiverMemberId, LocalDate.now())) {
+            throw new GeneralException(ErrorStatus.CHALLENGE_NUDGE_ALREADY_SENT);
+        }
 
         notificationRequestService.requestBuddyNudge(
             groupId,
@@ -125,7 +132,27 @@ public class ChallengeHomeService {
             receiverMemberId,
             LocalDate.now().toString()
         );
-        return new NudgeResult(true);
+        return new NudgeResult(true, NudgeButtonStatus.NUDGED);
+    }
+
+    private boolean hasNudgedToday(Long senderMemberId, Long groupId, Long receiverMemberId, LocalDate today) {
+        String date = today.toString();
+        return notificationRepository.existsByDedupeKeyAndDeletedAtIsNull(
+            BuddyNudgeDedupeKey.create(groupId, senderMemberId, receiverMemberId, date)
+        ) || notificationRepository.existsByDedupeKeyAndReferenceIdAndDeletedAtIsNull(
+            BuddyNudgeDedupeKey.legacy(senderMemberId, receiverMemberId, date),
+            groupId
+        );
+    }
+
+    private NudgeButtonStatus resolveNudgeButtonStatus(boolean recordedToday, boolean nudgedToday) {
+        if (recordedToday) {
+            return NudgeButtonStatus.RECORDED;
+        }
+        if (nudgedToday) {
+            return NudgeButtonStatus.NUDGED;
+        }
+        return NudgeButtonStatus.AVAILABLE;
     }
 
     private Set<Long> findNudgedMemberIds(
@@ -248,10 +275,17 @@ public class ChallengeHomeService {
         String nickname,
         String profileImageUrl,
         boolean recordedToday,
-        boolean nudgedToday
+        boolean nudgedToday,
+        NudgeButtonStatus buttonStatus
     ) {
     }
 
-    public record NudgeResult(boolean nudgedToday) {
+    public record NudgeResult(boolean nudgedToday, NudgeButtonStatus buttonStatus) {
+    }
+
+    public enum NudgeButtonStatus {
+        AVAILABLE,
+        NUDGED,
+        RECORDED
     }
 }

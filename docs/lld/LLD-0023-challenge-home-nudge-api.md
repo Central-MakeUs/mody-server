@@ -59,8 +59,16 @@ GET /api/v1/groups/{groupId}/challenges/nudges
 2. 본인을 제외한 현재 참여 중인 그룹원을 가입일 순서로 조회한다.
 3. 오늘 기록이 1개 이상 있으면 `recordedToday = true`로 반환한다.
 4. 요청 회원이 오늘 같은 그룹의 대상 회원을 이미 콕찌른 경우 `nudgedToday = true`로 반환한다.
-5. 클라이언트는 `recordedToday`가 true면 기록 완료 상태를 우선 표시하고, 그렇지 않은 경우 `nudgedToday`로 이미 찔렀어요 상태를 표시한다.
+5. `buttonStatus`는 `RECORDED > NUDGED > AVAILABLE` 우선순위로 반환한다. 오늘 기록이 있으면 콕찌른 이력과 무관하게 `RECORDED`다.
 6. 프로필 이미지는 저장소 base URL과 imageKey를 조합해 반환한다.
+
+`buttonStatus` 값은 다음과 같다.
+
+| 값 | 표시 문구 | 조건 |
+| --- | --- | --- |
+| `RECORDED` | 기록 완료 | 대상 회원이 오늘 기록을 1개 이상 완료함. `nudgedToday`가 true여도 이 상태가 우선함. |
+| `NUDGED` | 이미 찔렀어요 | 대상 회원은 오늘 기록이 없고, 요청 회원이 오늘 해당 버디를 콕찌름. |
+| `AVAILABLE` | 콕찌르기 | 대상 회원이 오늘 기록하지 않았고, 요청 회원도 오늘 해당 버디를 콕찌르지 않음. |
 
 ### 버디 찌르기
 
@@ -71,8 +79,8 @@ POST /api/v1/groups/{groupId}/challenges/nudges/{memberId}
 1. 요청 회원과 대상 회원이 모두 같은 그룹에 참여 중인지 확인한다.
 2. 본인을 찌르는 요청은 `CHALLENGE301`로 거절한다.
 3. `NotificationRequestService`에 `BUDDY_NUDGE` 알림 요청을 발행한다.
-4. 같은 발신자와 수신자의 콕찌르기는 그룹별로 하루 1회만 발송한다.
-5. 성공 시 `nudgedToday = true`를 반환한다.
+4. 같은 발신자와 수신자의 콕찌르기는 그룹별로 하루 1회만 허용하며, 재요청은 `CHALLENGE308`로 거절한다.
+5. 성공 시 `nudgedToday = true`, `buttonStatus = NUDGED`를 반환한다.
 
 ## 4. 예외 코드
 
@@ -81,16 +89,18 @@ POST /api/v1/groups/{groupId}/challenges/nudges/{memberId}
 - `GROUP302`: 그룹 없음.
 - `GROUP306`: 그룹 참여 정보 없음.
 - `CHALLENGE301`: 본인 찌르기 등 챌린지 요청값 검증 실패.
+- `CHALLENGE308`: 오늘 이미 콕찌르기를 보냄.
 
 ## 5. 테스트 시나리오
 
 - 챌린지 홈 요약은 회원의 그룹 가입일, 월간 운동 시간, 전원 기록 일수, 연속 기록 시작 여부, 완료 챌린지 수를 반환한다.
-- 버디 찌르기 대상은 본인을 제외하고 오늘 기록 여부, 오늘 콕찌르기 여부와 프로필 URL을 반환한다.
+- 버디 찌르기 대상은 본인을 제외하고 오늘 기록 여부, 오늘 콕찌르기 여부, 버튼 상태와 프로필 URL을 반환한다.
+- 오늘 기록과 콕찌르기 이력이 모두 있으면 버튼 상태는 `RECORDED`다.
 - 버디 찌르기는 대상 회원에게 알림 요청을 발행하고 오늘 콕찌르기 완료 여부를 반환한다.
+- 같은 대상에게 같은 날 재요청하면 `CHALLENGE308`을 반환한다.
 - 본인을 찌르면 `CHALLENGE301`을 반환한다.
 - Swagger에 성공/예외 응답이 생성된다.
 
 ## 6. 미결정 사항 (Open Questions)
 
-- 버디 찌르기 일일 횟수 제한은 정책 확정 후 알림 dedupe 또는 별도 이력 테이블로 확장한다.
 - 그룹 홈 통계를 현재 JOINED 멤버 기준으로 계산한다. 탈퇴 회원 포함 정책이 필요하면 별도 통계 기준을 추가한다.

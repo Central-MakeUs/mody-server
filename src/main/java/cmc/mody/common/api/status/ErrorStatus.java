@@ -54,6 +54,7 @@ public enum ErrorStatus implements BaseCode {
     CHALLENGE_ALREADY_COMPLETED(409, "CHALLENGE305", "이미 완료된 챌린지입니다."),
     CHALLENGE_NOT_COMPLETED(409, "CHALLENGE306", "완료되지 않은 챌린지입니다."),
     CHALLENGE_PROOF_NOT_FOUND(404, "CHALLENGE307", "챌린지 인증 이미지를 찾을 수 없습니다."),
+    CHALLENGE_NUDGE_ALREADY_SENT(409, "CHALLENGE308", "오늘은 이미 콕찌르기를 보냈습니다."),
     NOTIFICATION_UNSUPPORTED_TYPE(400, "NOTIFICATION301", "지원하지 않는 알림 타입입니다."),
     NOTIFICATION_NOT_FOUND(404, "NOTIFICATION302", "알림을 찾을 수 없습니다."),
     NOTIFICATION_PAYLOAD_INVALID(400, "NOTIFICATION303", "알림 요청값이 올바르지 않습니다."),
