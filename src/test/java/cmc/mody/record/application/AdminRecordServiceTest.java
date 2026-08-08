@@ -3,6 +3,7 @@ package cmc.mody.record.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
+import cmc.mody.common.upload.ImageUrlResolver;
 import cmc.mody.grouping.domain.ModyGroup;
 import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
@@ -40,6 +41,9 @@ class AdminRecordServiceTest {
 
     @Mock
     private RecordCommentRepository recordCommentRepository;
+
+    @Mock
+    private ImageUrlResolver imageUrlResolver;
 
     @Test
     @DisplayName("운영자가 그룹에 노출된 식사 기록을 수정한다.")
@@ -97,7 +101,8 @@ class AdminRecordServiceTest {
             groupMemberRepository,
             activityRecordRepository,
             activityRecordGroupRepository,
-            recordCommentRepository
+            recordCommentRepository,
+            imageUrlResolver
         );
     }
 }

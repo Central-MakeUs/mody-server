@@ -79,6 +79,7 @@ public class AdminRecordController {
         Integer exerciseDurationMinutes,
         String exerciseName,
         String imageKey,
+        String imageUrl,
         LocalDateTime uploadedAt
     ) {
         private static AdminRecordResponse from(AdminRecordService.AdminRecordResult result) {
@@ -92,6 +93,7 @@ public class AdminRecordController {
                 result.exerciseDurationMinutes(),
                 result.exerciseName(),
                 result.imageKey(),
+                result.imageUrl(),
                 result.uploadedAt()
             );
         }
