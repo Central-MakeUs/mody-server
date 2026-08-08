@@ -65,6 +65,11 @@ public class GroupChallenge extends BaseEntity {
         this.endedAt = completedAt;
     }
 
+    public void updatePeriod(LocalDate startsOn, LocalDate endsOn) {
+        this.startsOn = startsOn;
+        this.endsOn = endsOn;
+    }
+
     public DayOfWeek getDueDayOfWeek() {
         return endsOn.getDayOfWeek();
     }

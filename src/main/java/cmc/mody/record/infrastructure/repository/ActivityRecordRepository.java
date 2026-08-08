@@ -17,6 +17,17 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
           and recordGroup.groupId = :groupId
           and recordGroup.deletedAt is null
           and record.deletedAt is null
+        order by recordGroup.uploadedAt desc, record.id desc
+        """)
+    List<ActivityRecord> findActiveAdminRecordsByGroupId(@Param("groupId") Long groupId);
+
+    @Query("""
+        select record
+        from ActivityRecord record, ActivityRecordGroup recordGroup
+        where recordGroup.recordId = record.id
+          and recordGroup.groupId = :groupId
+          and recordGroup.deletedAt is null
+          and record.deletedAt is null
           and recordGroup.uploadedAt >= :startAt
           and recordGroup.uploadedAt < :endAt
           and exists (
