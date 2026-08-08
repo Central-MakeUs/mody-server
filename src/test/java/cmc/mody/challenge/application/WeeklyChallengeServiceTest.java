@@ -312,12 +312,13 @@ class WeeklyChallengeServiceTest {
                 proof(1000L, 100L, 1L, "weekly-challenges/1/proof.jpg"),
                 proof(1001L, 100L, 2L, "weekly-challenges/2/proof.jpg")
             ));
+        givenJoinedMembers();
         given(shareImageGenerator.calculateGridSize(2))
             .willReturn(new WeeklyChallengeShareImageGenerator.GridSize(1, 2));
         given(imageObjectStorage.exists("weekly-challenge-shares/10/100.jpg")).willReturn(false);
         given(imageObjectStorage.read("weekly-challenges/1/proof.jpg")).willReturn(new byte[]{1});
         given(imageObjectStorage.read("weekly-challenges/2/proof.jpg")).willReturn(new byte[]{2});
-        given(shareImageGenerator.generate(any(), any())).willReturn(new byte[]{3});
+        given(shareImageGenerator.generate(any(), any(), any(), any())).willReturn(new byte[]{3});
         given(imageObjectStorage.toUrl("weekly-challenge-shares/10/100.jpg"))
             .willReturn("https://storage.example.com/weekly-challenge-shares/10/100.jpg");
 

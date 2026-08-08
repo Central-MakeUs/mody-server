@@ -150,6 +150,7 @@ public class WeeklyChallengeService {
     public WeeklyChallengeShareResult shareWeeklyChallenge(Long memberId, Long groupId, Long groupChallengeId) {
         validateGroupMembership(memberId, groupId);
         GroupChallenge groupChallenge = getWeeklyGroupChallenge(groupId, groupChallengeId);
+        Challenge challenge = getWeeklyChallenge(groupChallenge.getChallengeId());
         if (groupChallenge.getGroupChallengeStatus() != GroupChallengeStatus.COMPLETED) {
             throw new GeneralException(ErrorStatus.CHALLENGE_NOT_COMPLETED);
         }
@@ -163,11 +164,16 @@ public class WeeklyChallengeService {
         WeeklyChallengeShareImageGenerator.GridSize gridSize = shareImageGenerator.calculateGridSize(proofs.size());
         String shareImageKey = shareImageKey(groupId, groupChallengeId);
         if (!imageObjectStorage.exists(shareImageKey)) {
-            List<byte[]> sourceImages = proofs.stream()
-                .map(ChallengeProof::getImageKey)
-                .map(imageObjectStorage::read)
+            Map<Long, GroupMember> membersById = getJoinedGroupMembersById(groupId);
+            List<WeeklyChallengeShareImageGenerator.ShareImageSource> sources = proofs.stream()
+                .map(proof -> toShareImageSource(proof, membersById.get(proof.getMemberId())))
                 .toList();
-            byte[] sharedImage = shareImageGenerator.generate(sourceImages, gridSize);
+            byte[] sharedImage = shareImageGenerator.generate(
+                challenge.getTitle(),
+                challenge.getDescription(),
+                sources,
+                gridSize
+            );
             imageObjectStorage.write(shareImageKey, sharedImage, "image/jpeg");
         }
         return new WeeklyChallengeShareResult(
@@ -176,6 +182,50 @@ public class WeeklyChallengeService {
             gridSize.rows(),
             gridSize.columns()
         );
+    }
+
+    private WeeklyChallengeShareImageGenerator.ShareImageSource toShareImageSource(
+        ChallengeProof proof,
+        GroupMember groupMember
+    ) {
+        if (groupMember == null) {
+            throw new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND);
+        }
+        return new WeeklyChallengeShareImageGenerator.ShareImageSource(
+            imageObjectStorage.read(proof.getImageKey()),
+            toGeneratorCropRegion(proof),
+            groupMember.getDisplayNickname(),
+            readProfileImage(groupMember.getDisplayProfileImageKey())
+        );
+    }
+
+    private WeeklyChallengeShareImageGenerator.ImageCropRegion toGeneratorCropRegion(ChallengeProof proof) {
+        if (proof.getCropX() == null
+            || proof.getCropY() == null
+            || proof.getCropWidth() == null
+            || proof.getCropHeight() == null) {
+            return null;
+        }
+        return new WeeklyChallengeShareImageGenerator.ImageCropRegion(
+            proof.getCropX(),
+            proof.getCropY(),
+            proof.getCropWidth(),
+            proof.getCropHeight()
+        );
+    }
+
+    private byte[] readProfileImage(String imageKey) {
+        if (imageKey == null || imageKey.isBlank() || imageKey.startsWith("http://") || imageKey.startsWith("https://")) {
+            return null;
+        }
+        try {
+            if (!imageObjectStorage.exists(imageKey)) {
+                return null;
+            }
+            return imageObjectStorage.read(imageKey);
+        } catch (GeneralException e) {
+            return null;
+        }
     }
 
     private void completeIfAllMembersProved(GroupChallenge groupChallenge, String groupName) {
