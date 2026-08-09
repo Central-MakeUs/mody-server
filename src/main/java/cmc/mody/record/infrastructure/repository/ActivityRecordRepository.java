@@ -56,6 +56,23 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
           and record.deletedAt is null
           and recordGroup.uploadedAt >= :startAt
           and recordGroup.uploadedAt < :endAt
+        order by recordGroup.uploadedAt asc, record.id asc
+        """)
+    List<ActivityRecord> findGroupRecordsBetween(
+        @Param("groupId") Long groupId,
+        @Param("startAt") LocalDateTime startAt,
+        @Param("endAt") LocalDateTime endAt
+    );
+
+    @Query("""
+        select record
+        from ActivityRecord record, ActivityRecordGroup recordGroup
+        where recordGroup.recordId = record.id
+          and recordGroup.groupId = :groupId
+          and recordGroup.deletedAt is null
+          and record.deletedAt is null
+          and recordGroup.uploadedAt >= :startAt
+          and recordGroup.uploadedAt < :endAt
           and (
               :cursor is null
               or record.uploadedAt < (

@@ -173,7 +173,7 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.allMemberRecordedDays").type(JsonFieldType.NUMBER)
                             .description("모든 구성원이 기록한 일수"),
                         fieldWithPath("result.hasStartedStreak").type(JsonFieldType.BOOLEAN)
-                            .description("현재 참여 중인 모든 구성원이 같은 날짜에 기록한 이력이 한 번이라도 있는지 여부"),
+                            .description("각 기록일 당시 참여 중인 모든 구성원이 같은 날짜에 기록한 이력이 한 번이라도 있는지 여부"),
                         fieldWithPath("result.monthlyExerciseMinutes").type(JsonFieldType.NUMBER)
                             .description("이번달 운동 시간 분"),
                         fieldWithPath("result.monthlyCompletedChallengeCount").type(JsonFieldType.NUMBER)

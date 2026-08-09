@@ -58,7 +58,7 @@ public class ChallengeHomeService {
 
         int daysTogether = daysTogether(currentMember.getJoinedAt().toLocalDate(), today);
         int allMemberRecordedDays = allMemberRecordedDays(monthlyRecords, joinedMembers);
-        boolean hasStartedStreak = hasStartedStreak(groupId, joinedMembers, today);
+        boolean hasStartedStreak = hasStartedStreak(groupId, today);
         int monthlyExerciseMinutes = monthlyExerciseMinutes(monthlyRecords);
         int monthlyCompletedChallengeCount = Math.toIntExact(groupChallengeRepository
             .countByGroupIdAndGroupChallengeStatusAndCompletedAtGreaterThanEqualAndCompletedAtLessThanAndDeletedAtIsNull(
@@ -244,18 +244,46 @@ public class ChallengeHomeService {
             .sum();
     }
 
-    private boolean hasStartedStreak(Long groupId, List<GroupMember> joinedMembers, LocalDate today) {
-        LocalDate historyStart = joinedMembers.stream()
+    private boolean hasStartedStreak(Long groupId, LocalDate today) {
+        List<GroupMember> groupMemberHistory = groupMemberRepository.findByGroupIdOrderByJoinedAtAsc(groupId);
+        LocalDate historyStart = groupMemberHistory.stream()
             .map(groupMember -> groupMember.getJoinedAt().toLocalDate())
             .min(LocalDate::compareTo)
             .orElse(today);
-        List<ActivityRecord> groupRecordHistory = activityRecordRepository.findActiveGroupRecordsBetween(
+        List<ActivityRecord> groupRecordHistory = activityRecordRepository.findGroupRecordsBetween(
             groupId,
             historyStart.atStartOfDay(),
-            today.plusDays(1).atStartOfDay(),
-            GroupMemberStatus.JOINED
+            today.plusDays(1).atStartOfDay()
         );
-        return allMemberRecordedDays(groupRecordHistory, joinedMembers) > 0;
+        Map<LocalDate, Set<Long>> recordedMemberIdsByDate = groupRecordHistory.stream()
+            .collect(Collectors.groupingBy(
+                record -> record.getUploadedAt().toLocalDate(),
+                Collectors.mapping(ActivityRecord::getMemberId, Collectors.toSet())
+            ));
+        return recordedMemberIdsByDate.entrySet().stream()
+            .anyMatch(entry -> allActiveMembersRecordedOn(
+                groupMemberHistory,
+                entry.getKey(),
+                entry.getValue()
+            ));
+    }
+
+    private boolean allActiveMembersRecordedOn(
+        List<GroupMember> groupMemberHistory,
+        LocalDate recordDate,
+        Set<Long> recordedMemberIds
+    ) {
+        Set<Long> activeMemberIds = groupMemberHistory.stream()
+            .filter(groupMember -> isActiveOn(groupMember, recordDate))
+            .map(GroupMember::getMemberId)
+            .collect(Collectors.toSet());
+        return !activeMemberIds.isEmpty() && recordedMemberIds.containsAll(activeMemberIds);
+    }
+
+    private boolean isActiveOn(GroupMember groupMember, LocalDate date) {
+        LocalDate joinedDate = groupMember.getJoinedAt().toLocalDate();
+        LocalDate leftDate = groupMember.getLeftAt() == null ? null : groupMember.getLeftAt().toLocalDate();
+        return !joinedDate.isAfter(date) && (leftDate == null || leftDate.isAfter(date));
     }
 
     public record ChallengeSummaryResult(
