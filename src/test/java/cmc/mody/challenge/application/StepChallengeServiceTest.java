@@ -113,6 +113,28 @@ class StepChallengeServiceTest {
     }
 
     @Test
+    @DisplayName("그룹 기본 걸음수 챌린지는 displayOrder가 가장 낮은 마스터로 한 번만 생성한다.")
+    void initializeDefaultStepChallenge() {
+        StepChallengeService service = service();
+        given(idGenerator.nextId()).willReturn(100L);
+        givenStepChallenges(List.of(challenge(1L, "서울-인천"), challenge(2L, "서울-천안")));
+        given(groupChallengeRepository.findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
+            10L,
+            List.of(1L, 2L),
+            GroupChallengeStatus.IN_PROGRESS
+        )).willReturn(Optional.empty());
+        given(stepChallengeDetailRepository.findByChallengeIdInAndDeletedAtIsNull(List.of(1L, 2L)))
+            .willReturn(List.of(stepDetail(2L, "천안", 200_000), stepDetail(1L, "인천", 150_000)));
+
+        service.initializeDefaultStepChallenge(10L);
+
+        then(groupChallengeRepository).should().save(groupChallengeCaptor.capture());
+        assertThat(groupChallengeCaptor.getValue().getGroupId()).isEqualTo(10L);
+        assertThat(groupChallengeCaptor.getValue().getChallengeId()).isEqualTo(1L);
+        assertThat(groupChallengeCaptor.getValue().getGroupChallengeStatus()).isEqualTo(GroupChallengeStatus.IN_PROGRESS);
+    }
+
+    @Test
     @DisplayName("일일 누적 걸음 수를 저장하고 목표에 도달하면 걸음수 챌린지를 완료 처리한다.")
     void upsertDailyStepRecordAndCompleteChallenge() {
         StepChallengeService service = service();

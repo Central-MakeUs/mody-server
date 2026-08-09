@@ -60,6 +60,28 @@ public class StepChallengeService {
         return toStatusResult(groupChallenge, challenge, detail, currentStepCount(groupChallenge));
     }
 
+    @Transactional
+    public void initializeDefaultStepChallenge(Long groupId) {
+        List<Challenge> challenges = getStepChallenges();
+        if (challenges.isEmpty() || getCurrentStepGroupChallengeOrNull(groupId, challengeIds(challenges)).isPresent()) {
+            return;
+        }
+        Map<Long, Challenge> challengesById = challenges.stream()
+            .collect(Collectors.toMap(Challenge::getId, Function.identity()));
+        stepChallengeDetailRepository.findByChallengeIdInAndDeletedAtIsNull(challengeIds(challenges))
+            .stream()
+            .min(Comparator.comparingInt(StepChallengeDetail::getDisplayOrder))
+            .map(detail -> challengesById.get(detail.getChallengeId()))
+            .filter(java.util.Objects::nonNull)
+            .ifPresent(challenge -> groupChallengeRepository.save(new GroupChallenge(
+                idGenerator.nextId(),
+                groupId,
+                challenge.getId(),
+                LocalDate.now(),
+                OPEN_ENDED_DATE
+            )));
+    }
+
     @Transactional(readOnly = true)
     public StepChallengeOptionListResult getStepChallengeOptions(Long memberId, Long groupId) {
         validateGroupMembership(memberId, groupId);
