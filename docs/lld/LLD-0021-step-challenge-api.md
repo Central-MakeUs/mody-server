@@ -96,6 +96,7 @@ PUT /api/v1/groups/{groupId}/challenges/step/records
 2. `STEP` 타입 챌린지와 `step_challenge_detail`을 조회한다.
 3. `step_challenge_detail.displayOrder` 오름차순으로 반환한다.
 4. 현재 그룹에서 진행 중인 챌린지는 `selected = true`로 표시한다.
+5. 그룹이 과거에 완료한 챌린지는 `completed = true`로 표시한다. 진행 중인 챌린지가 우선이며, 클라이언트는 `selected`, `completed` 순서로 상태를 구분한다.
 
 ### 기여도 순위 조회
 

@@ -378,7 +378,8 @@ public class ChallengeController {
         String destination,
         double distanceKm,
         int targetStepCount,
-        boolean selected
+        boolean selected,
+        boolean completed
     ) {
         public static StepChallengeOptionResponse from(StepChallengeService.StepChallengeOptionResult result) {
             return new StepChallengeOptionResponse(
@@ -388,7 +389,8 @@ public class ChallengeController {
                 result.destination(),
                 result.distanceKm(),
                 result.targetStepCount(),
-                result.selected()
+                result.selected(),
+                result.completed()
             );
         }
     }

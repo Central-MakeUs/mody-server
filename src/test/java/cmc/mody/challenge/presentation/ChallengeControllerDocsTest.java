@@ -401,8 +401,8 @@ class ChallengeControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(stepChallengeService.getStepChallengeOptions(1L, 1L))
             .willReturn(new StepChallengeOptionListResult(List.of(
-                new StepChallengeOptionResult(1L, "서울-인천", "서울", "인천", 60.0, 150_000, true),
-                new StepChallengeOptionResult(2L, "서울-천안", "서울", "천안", 90.0, 200_000, false)
+                new StepChallengeOptionResult(1L, "서울-인천", "서울", "인천", 60.0, 150_000, true, false),
+                new StepChallengeOptionResult(2L, "서울-천안", "서울", "천안", 90.0, 200_000, false, true)
             )));
 
         mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/step/options", 1L)
@@ -422,7 +422,9 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.options[].targetStepCount").type(JsonFieldType.NUMBER)
                             .description("목표 걸음수"),
                         fieldWithPath("result.options[].selected").type(JsonFieldType.BOOLEAN)
-                            .description("현재 진행 중인 챌린지 여부")
+                            .description("현재 진행 중인 챌린지 여부"),
+                        fieldWithPath("result.options[].completed").type(JsonFieldType.BOOLEAN)
+                            .description("그룹이 해당 챌린지를 완료한 이력이 있는지 여부")
                     ))
                     .build())
             ));
