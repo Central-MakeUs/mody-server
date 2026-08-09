@@ -4,6 +4,7 @@ import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
 import cmc.mody.common.upload.ImageUrlResolver;
+import cmc.mody.challenge.application.StepChallengeService;
 import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.grouping.domain.ModyGroup;
@@ -40,6 +41,7 @@ public class GroupService {
     private final MemberRepository memberRepository;
     private final ModyGroupRepository modyGroupRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final StepChallengeService stepChallengeService;
     private final NotificationRequestService notificationRequestService;
     private final ActivityRecordRepository activityRecordRepository;
     private final ActivityRecordGroupRepository activityRecordGroupRepository;
@@ -65,6 +67,7 @@ public class GroupService {
             command.name()
         ));
         groupMemberRepository.save(newGroupMember(member, group.getId()));
+        stepChallengeService.initializeDefaultStepChallenge(group.getId());
         member.completeGroupOnboarding();
 
         return new GroupCreateResult(group.getId(), group.getCode(), group.getName());
