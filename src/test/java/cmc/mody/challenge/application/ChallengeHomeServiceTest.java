@@ -70,19 +70,22 @@ class ChallengeHomeServiceTest {
         ChallengeHomeService service = service();
         LocalDate today = LocalDate.now();
         LocalDate monthStart = today.withDayOfMonth(1);
-        LocalDateTime firstDay = monthStart.atTime(9, 0);
-        LocalDateTime secondDay = monthStart.plusDays(1).atTime(9, 0);
+        LocalDateTime firstDay = today.minusDays(1).atTime(9, 0);
+        LocalDateTime secondDay = today.atTime(9, 0);
         GroupMember currentMember = groupMember(1L, "민석", today.minusDays(3).atTime(10, 0));
         GroupMember buddy = groupMember(2L, "친구", today.minusDays(2).atTime(10, 0));
         givenValidGroupMembership(1L, currentMember);
         givenJoinedMembers(List.of(currentMember, buddy));
+        givenGroupMemberHistory(List.of(currentMember, buddy));
+        List<ActivityRecord> records = List.of(
+            mealRecord(1L, firstDay),
+            exerciseRecord(1L, firstDay.plusHours(1), 30),
+            mealRecord(2L, firstDay.plusHours(2)),
+            exerciseRecord(1L, secondDay, 40)
+        );
         given(activityRecordRepository.findActiveGroupRecordsBetween(any(), any(), any(), any()))
-            .willReturn(List.of(
-                mealRecord(1L, firstDay),
-                exerciseRecord(1L, firstDay.plusHours(1), 30),
-                mealRecord(2L, firstDay.plusHours(2)),
-                exerciseRecord(1L, secondDay, 40)
-            ));
+            .willReturn(records);
+        given(activityRecordRepository.findGroupRecordsBetween(any(), any(), any())).willReturn(records);
         given(groupChallengeRepository
             .countByGroupIdAndGroupChallengeStatusAndCompletedAtGreaterThanEqualAndCompletedAtLessThanAndDeletedAtIsNull(
                 10L,
@@ -110,7 +113,10 @@ class ChallengeHomeServiceTest {
         GroupMember buddy = groupMember(2L, "친구", today.minusDays(2).atTime(10, 0));
         givenValidGroupMembership(1L, currentMember);
         givenJoinedMembers(List.of(currentMember, buddy));
+        givenGroupMemberHistory(List.of(currentMember, buddy));
         given(activityRecordRepository.findActiveGroupRecordsBetween(any(), any(), any(), any()))
+            .willReturn(List.of(mealRecord(1L, today.atTime(9, 0))));
+        given(activityRecordRepository.findGroupRecordsBetween(any(), any(), any()))
             .willReturn(List.of(mealRecord(1L, today.atTime(9, 0))));
         given(groupChallengeRepository
             .countByGroupIdAndGroupChallengeStatusAndCompletedAtGreaterThanEqualAndCompletedAtLessThanAndDeletedAtIsNull(
@@ -124,6 +130,39 @@ class ChallengeHomeServiceTest {
         ChallengeSummaryResult result = service.getChallengeSummary(1L, 10L);
 
         assertThat(result.hasStartedStreak()).isFalse();
+    }
+
+    @Test
+    @DisplayName("새 구성원이 합류한 뒤에도 이전 구성원 전원이 기록한 이력이 있으면 연속 기록을 시작한 것으로 반환한다.")
+    void getChallengeSummaryKeepsStartedStreakAfterNewMemberJoined() {
+        ChallengeHomeService service = service();
+        LocalDate today = LocalDate.now();
+        LocalDate recordedDate = today.minusDays(5);
+        GroupMember currentMember = groupMember(1L, "민석", today.minusDays(10).atTime(10, 0));
+        GroupMember buddy = groupMember(2L, "친구", today.minusDays(10).atTime(10, 0));
+        GroupMember newMember = groupMember(3L, "새친구", today.minusDays(1).atTime(10, 0));
+        List<ActivityRecord> startedStreakRecords = List.of(
+            mealRecord(1L, recordedDate.atTime(9, 0)),
+            mealRecord(2L, recordedDate.atTime(10, 0))
+        );
+        givenValidGroupMembership(1L, currentMember);
+        givenJoinedMembers(List.of(currentMember, buddy, newMember));
+        givenGroupMemberHistory(List.of(currentMember, buddy, newMember));
+        given(activityRecordRepository.findActiveGroupRecordsBetween(any(), any(), any(), any()))
+            .willReturn(List.of());
+        given(activityRecordRepository.findGroupRecordsBetween(any(), any(), any())).willReturn(startedStreakRecords);
+        given(groupChallengeRepository
+            .countByGroupIdAndGroupChallengeStatusAndCompletedAtGreaterThanEqualAndCompletedAtLessThanAndDeletedAtIsNull(
+                any(),
+                any(),
+                any(),
+                any()
+            ))
+            .willReturn(0L);
+
+        ChallengeSummaryResult result = service.getChallengeSummary(1L, 10L);
+
+        assertThat(result.hasStartedStreak()).isTrue();
     }
 
     @Test
@@ -290,6 +329,10 @@ class ChallengeHomeServiceTest {
             10L,
             GroupMemberStatus.JOINED
         )).willReturn(groupMembers);
+    }
+
+    private void givenGroupMemberHistory(List<GroupMember> groupMembers) {
+        given(groupMemberRepository.findByGroupIdOrderByJoinedAtAsc(10L)).willReturn(groupMembers);
     }
 
     private Member member(Long memberId) {
