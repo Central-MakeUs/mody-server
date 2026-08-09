@@ -28,6 +28,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -72,12 +73,26 @@ public class StepChallengeService {
         Long currentChallengeId = getCurrentStepGroupChallengeOrNull(groupId, challengeIds(challenges))
             .map(GroupChallenge::getChallengeId)
             .orElse(null);
+        Set<Long> completedChallengeIds = groupChallengeRepository
+            .findAllByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
+                groupId,
+                challengeIds(challenges),
+                GroupChallengeStatus.COMPLETED
+            )
+            .stream()
+            .map(GroupChallenge::getChallengeId)
+            .collect(Collectors.toSet());
 
         List<StepChallengeOptionResult> options = stepChallengeDetailRepository
             .findByChallengeIdInAndDeletedAtIsNull(challengeIds(challenges))
             .stream()
             .sorted(Comparator.comparingInt(StepChallengeDetail::getDisplayOrder))
-            .map(detail -> toStepChallengeOption(detail, challengesById.get(detail.getChallengeId()), currentChallengeId))
+            .map(detail -> toStepChallengeOption(
+                detail,
+                challengesById.get(detail.getChallengeId()),
+                currentChallengeId,
+                completedChallengeIds
+            ))
             .toList();
         return new StepChallengeOptionListResult(options);
     }
@@ -336,7 +351,8 @@ public class StepChallengeService {
     private StepChallengeOptionResult toStepChallengeOption(
         StepChallengeDetail detail,
         Challenge challenge,
-        Long currentChallengeId
+        Long currentChallengeId,
+        Set<Long> completedChallengeIds
     ) {
         if (challenge == null) {
             throw new GeneralException(ErrorStatus.CHALLENGE_NOT_FOUND);
@@ -348,7 +364,8 @@ public class StepChallengeService {
             detail.getDestination(),
             detail.getDistanceKm().doubleValue(),
             detail.getTargetStepCount(),
-            challenge.getId().equals(currentChallengeId)
+            challenge.getId().equals(currentChallengeId),
+            completedChallengeIds.contains(challenge.getId())
         );
     }
 
@@ -377,7 +394,8 @@ public class StepChallengeService {
         String destination,
         double distanceKm,
         int targetStepCount,
-        boolean selected
+        boolean selected,
+        boolean completed
     ) {
     }
 

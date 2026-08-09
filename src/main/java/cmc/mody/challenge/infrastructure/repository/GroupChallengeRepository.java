@@ -18,6 +18,12 @@ public interface GroupChallengeRepository extends JpaRepository<GroupChallenge, 
         GroupChallengeStatus status
     );
 
+    List<GroupChallenge> findAllByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
+        Long groupId,
+        Collection<Long> challengeIds,
+        GroupChallengeStatus status
+    );
+
     List<GroupChallenge> findByGroupIdAndChallengeIdInAndGroupChallengeStatusInAndDeletedAtIsNullOrderByEndedAtAscIdAsc(
         Long groupId,
         Collection<Long> challengeIds,

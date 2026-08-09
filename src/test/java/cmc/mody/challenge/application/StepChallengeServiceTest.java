@@ -228,10 +228,12 @@ class StepChallengeServiceTest {
     }
 
     @Test
-    @DisplayName("변경 가능한 걸음수 챌린지 목록은 노출 순서와 현재 선택 여부를 반환한다.")
+    @DisplayName("변경 가능한 걸음수 챌린지 목록은 노출 순서와 현재 선택 및 달성 여부를 반환한다.")
     void getStepChallengeOptions() {
         StepChallengeService service = service();
         GroupChallenge current = new GroupChallenge(100L, 10L, 2L, LocalDate.now(), LocalDate.of(9999, 12, 31));
+        GroupChallenge completed = new GroupChallenge(101L, 10L, 1L, LocalDate.now().minusDays(2), LocalDate.now());
+        completed.complete(LocalDateTime.now());
         givenValidGroupMembership();
         givenStepChallenges(List.of(challenge(1L, "서울-인천"), challenge(2L, "서울-천안")));
         given(groupChallengeRepository.findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
@@ -239,6 +241,11 @@ class StepChallengeServiceTest {
             List.of(1L, 2L),
             GroupChallengeStatus.IN_PROGRESS
         )).willReturn(Optional.of(current));
+        given(groupChallengeRepository.findAllByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
+            10L,
+            List.of(1L, 2L),
+            GroupChallengeStatus.COMPLETED
+        )).willReturn(List.of(completed));
         given(stepChallengeDetailRepository.findByChallengeIdInAndDeletedAtIsNull(List.of(1L, 2L)))
             .willReturn(List.of(
                 stepDetail(2L, "천안", 200_000),
@@ -248,10 +255,10 @@ class StepChallengeServiceTest {
         StepChallengeService.StepChallengeOptionListResult result = service.getStepChallengeOptions(1L, 10L);
 
         assertThat(result.options())
-            .extracting("challengeId", "title", "destination", "targetStepCount", "selected")
+            .extracting("challengeId", "title", "destination", "targetStepCount", "selected", "completed")
             .containsExactly(
-                org.assertj.core.groups.Tuple.tuple(1L, "서울-인천", "인천", 150_000, false),
-                org.assertj.core.groups.Tuple.tuple(2L, "서울-천안", "천안", 200_000, true)
+                org.assertj.core.groups.Tuple.tuple(1L, "서울-인천", "인천", 150_000, false, true),
+                org.assertj.core.groups.Tuple.tuple(2L, "서울-천안", "천안", 200_000, true, false)
             );
     }
 
