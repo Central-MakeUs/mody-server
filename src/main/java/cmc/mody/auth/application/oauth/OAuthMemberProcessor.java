@@ -39,6 +39,8 @@ public class OAuthMemberProcessor {
     private OAuthMemberResult buildExistingMemberResult(Long memberId, OAuthProfile profile) {
         Member member = getMember(memberId);
         member.updateProfileImage(profile.profileImageUrl());
+        groupMemberRepository.findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(memberId, GroupMemberStatus.JOINED)
+            .forEach(groupMember -> groupMember.updateDisplayProfileImageKey(member.getProfileImageKey()));
         boolean personalInfoCompleted = member.isPersonalInfoCompleted();
         boolean mainAccessible = personalInfoCompleted && hasJoinedGroup(memberId);
         return new OAuthMemberResult(
