@@ -13,6 +13,7 @@ import cmc.mody.common.id.IdGenerator;
 import cmc.mody.common.upload.ImageUrlResolver;
 import cmc.mody.common.upload.UploadProperties;
 import cmc.mody.challenge.application.StepChallengeService;
+import cmc.mody.challenge.application.GlobalWeeklyChallengeService;
 import cmc.mody.grouping.application.GroupService.GroupCreateCommand;
 import cmc.mody.grouping.application.GroupService.GroupCreateResult;
 import cmc.mody.grouping.application.GroupService.GroupJoinCommand;
@@ -63,6 +64,9 @@ class GroupServiceTest {
     private StepChallengeService stepChallengeService;
 
     @Mock
+    private GlobalWeeklyChallengeService globalWeeklyChallengeService;
+
+    @Mock
     private NotificationRequestService notificationRequestService;
 
     @Mock
@@ -107,6 +111,7 @@ class GroupServiceTest {
         assertThat(groupMemberCaptor.getValue().getGroupId()).isEqualTo(10L);
         assertThat(groupMemberCaptor.getValue().getDisplayNickname()).isEqualTo("민석");
         then(stepChallengeService).should().initializeDefaultStepChallenge(10L);
+        then(globalWeeklyChallengeService).should().initializeForNewGroup(10L);
         assertThat(member.isGroupOnboardingCompleted()).isTrue();
     }
 
@@ -278,6 +283,7 @@ class GroupServiceTest {
             modyGroupRepository,
             groupMemberRepository,
             stepChallengeService,
+            globalWeeklyChallengeService,
             notificationRequestService,
             activityRecordRepository,
             activityRecordGroupRepository,
