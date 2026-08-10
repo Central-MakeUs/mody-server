@@ -25,6 +25,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -288,6 +290,7 @@ public class WeeklyChallengeService {
         if (challenge == null) {
             throw new GeneralException(ErrorStatus.CHALLENGE_NOT_FOUND);
         }
+        List<GroupMember> participants = randomizedParticipants(proofs, membersById);
         return new WeeklyChallengeSummaryResult(
             groupChallenge.getId(),
             challenge.getTitle(),
@@ -296,29 +299,29 @@ public class WeeklyChallengeService {
             groupChallenge.getEndsOn(),
             Math.toIntExact(ChronoUnit.DAYS.between(LocalDate.now(), groupChallenge.getEndsOn())),
             proofs.size(),
-            representativeParticipantNickname(proofs, membersById),
-            representativeParticipants(proofs, membersById)
+            representativeParticipantNickname(participants),
+            representativeParticipants(participants)
         );
     }
 
-    private String representativeParticipantNickname(List<ChallengeProof> proofs, Map<Long, GroupMember> membersById) {
-        return proofs.stream()
-            .sorted(Comparator.comparing(ChallengeProof::getUploadedAt).thenComparing(ChallengeProof::getId))
+    private List<GroupMember> randomizedParticipants(List<ChallengeProof> proofs, Map<Long, GroupMember> membersById) {
+        List<GroupMember> participants = new ArrayList<>(proofs.stream()
             .map(proof -> membersById.get(proof.getMemberId()))
             .filter(member -> member != null)
+            .toList());
+        Collections.shuffle(participants);
+        return participants;
+    }
+
+    private String representativeParticipantNickname(List<GroupMember> participants) {
+        return participants.stream()
             .map(GroupMember::getDisplayNickname)
             .findFirst()
             .orElse(null);
     }
 
-    private List<WeeklyChallengeParticipantResult> representativeParticipants(
-        List<ChallengeProof> proofs,
-        Map<Long, GroupMember> membersById
-    ) {
-        return proofs.stream()
-            .sorted(Comparator.comparing(ChallengeProof::getUploadedAt).thenComparing(ChallengeProof::getId))
-            .map(proof -> membersById.get(proof.getMemberId()))
-            .filter(member -> member != null)
+    private List<WeeklyChallengeParticipantResult> representativeParticipants(List<GroupMember> participants) {
+        return participants.stream()
             .limit(3)
             .map(member -> new WeeklyChallengeParticipantResult(
                 member.getMemberId(),
