@@ -68,6 +68,7 @@ public class AdminChallengeService {
             .collect(Collectors.toMap(Challenge::getId, Function.identity()));
 
         return new WeeklyChallengeListResult(groupChallenges.stream()
+            .filter(groupChallenge -> groupChallenge.getGlobalWeeklyChallengeId() == null)
             .filter(groupChallenge -> challengesById.containsKey(groupChallenge.getChallengeId()))
             .map(groupChallenge -> WeeklyChallengeResult.from(groupChallenge, challengesById.get(groupChallenge.getChallengeId())))
             .toList());
@@ -82,6 +83,7 @@ public class AdminChallengeService {
         validateGroup(groupId);
         GroupChallenge groupChallenge = groupChallengeRepository.findByIdAndGroupIdAndDeletedAtIsNull(groupChallengeId, groupId)
             .orElseThrow(() -> new GeneralException(ErrorStatus.CHALLENGE_NOT_FOUND));
+        validateLegacyWeeklyChallenge(groupChallenge);
         Challenge challenge = challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(
                 groupChallenge.getChallengeId(),
                 ChallengeType.PHOTO
@@ -97,6 +99,7 @@ public class AdminChallengeService {
         validateGroup(groupId);
         GroupChallenge groupChallenge = groupChallengeRepository.findByIdAndGroupIdAndDeletedAtIsNull(groupChallengeId, groupId)
             .orElseThrow(() -> new GeneralException(ErrorStatus.CHALLENGE_NOT_FOUND));
+        validateLegacyWeeklyChallenge(groupChallenge);
         groupChallenge.delete();
     }
 
@@ -104,6 +107,12 @@ public class AdminChallengeService {
         modyGroupRepository.findById(groupId)
             .filter(ModyGroup::isActive)
             .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_NOT_FOUND));
+    }
+
+    private void validateLegacyWeeklyChallenge(GroupChallenge groupChallenge) {
+        if (groupChallenge.getGlobalWeeklyChallengeId() != null) {
+            throw new GeneralException(ErrorStatus.CHALLENGE_VALIDATION_FAILED);
+        }
     }
 
     public record WeeklyChallengeCreateCommand(String title, String description, LocalDate startsOn, LocalDate endsOn) {

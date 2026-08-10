@@ -12,7 +12,7 @@
 
 ## 1. 목적 / 배경
 
-주간 챌린지는 그룹 단위로 특정 기간 동안 사진 인증을 수행하는 챌린지다.
+주간 챌린지는 전역 원본을 한 번 운영하고, 각 그룹이 연결된 별도 진행 항목에서 사진 인증을 수행하는 챌린지다.
 앱은 이번 주 챌린지 목록, 챌린지 상세, 그룹원 인증 이미지, 내 인증 업로드 결과를 조회할 수 있어야 한다.
 
 ## 2. 범위
@@ -23,27 +23,28 @@
 - 주간 챌린지 상세 조회.
 - 그룹원 인증 이미지 조회.
 - 주간 챌린지 인증 imageKey와 이미지 crop region 저장.
-- 운영자 주간 사진 챌린지 생성.
+- 운영자 전역 주간 사진 챌린지 등록·조회·수정·삭제.
 - 그룹 구성원 권한 검증.
 - 중복 인증 방지.
 - Swagger 성공/예외 응답 문서화.
 
 ### Out of scope
 
-- 주간 챌린지 자동 배정/생성 배치.
+- 완료된 전역 주간 챌린지의 재사용 정책.
 - 챌린지 완료 자동 판정.
 - 공유용 합성 이미지 생성.
 - 주간 챌린지 완료 알림 발송.
 
 ## 3. 데이터 모델
 
-- `challenge`: 주간 챌린지 마스터. `challengeType = PHOTO`.
-- `group_challenge`: 그룹에서 특정 기간 동안 진행하는 챌린지 인스턴스.
+- `challenge`: 사진 챌린지 제목과 설명 메타데이터. `challengeType = PHOTO`.
+- `global_weekly_challenge`: 전역 운영 원본. `challenge_id`, 시작일, 마감일을 소유한다.
+- `group_challenge`: 그룹에서 특정 기간 동안 진행하는 챌린지 인스턴스. 전역 항목은 `global_weekly_challenge_id`로 원본을 연결하고, 기존 그룹별 항목은 이 값이 `null`인 레거시 데이터로 유지한다.
 - `challenge_proof`: 그룹 챌린지에 대한 회원별 사진 인증 기록.
   - `image_key`: 원본 이미지 key.
   - `crop_x`, `crop_y`, `crop_width`, `crop_height`: 원본 이미지 기준 관심 영역 정규화 좌표. 없으면 null.
 
-운영자는 관리자 API로 임의의 `PHOTO` 타입 챌린지와 그룹 챌린지 인스턴스를 함께 생성한다.
+운영자는 전역 관리자 API로 원본을 한 번 생성한다. 생성 시 모든 활성 그룹에 연결된 진행 인스턴스를 만들고, 새 그룹 생성 시 진행 중인 원본도 자동으로 연결한다.
 관리자 API는 `X-Admin-Api-Key` 헤더가 `ADMIN_API_KEY` 환경변수와 일치해야 호출할 수 있다.
 
 ## 4. API 동작
@@ -109,10 +110,10 @@ POST /api/v1/groups/{groupId}/weekly-challenges/{groupChallengeId}/proofs
 
 인증은 `IN_PROGRESS` 상태이며 시작일과 마감일 사이에 있는 챌린지에서만 가능하다.
 
-### 운영자 주간 사진 챌린지 생성
+### 운영자 전역 주간 사진 챌린지 관리
 
 ```http
-POST /api/v1/admin/groups/{groupId}/weekly-challenges
+POST /api/v1/admin/weekly-challenges
 X-Admin-Api-Key: {ADMIN_API_KEY}
 ```
 
@@ -125,7 +126,15 @@ X-Admin-Api-Key: {ADMIN_API_KEY}
 }
 ```
 
-요청한 그룹에 사진 챌린지 템플릿과 진행 인스턴스를 생성한다. 현재는 운영 입력을 위한 API만 제공하며, 별도 관리자 웹 화면은 이 API 위에 추가할 수 있다.
+전역 원본과 사진 챌린지 메타데이터를 생성하고, 모든 활성 그룹에 원본을 참조하는 진행 인스턴스를 생성한다.
+
+```http
+GET /api/v1/admin/weekly-challenges
+PUT /api/v1/admin/weekly-challenges/{globalWeeklyChallengeId}
+DELETE /api/v1/admin/weekly-challenges/{globalWeeklyChallengeId}
+```
+
+수정은 원본과 연결된 그룹 진행 인스턴스의 기간에 반영한다. 삭제는 원본과 사진 챌린지 메타데이터를 비활성화하며, 연결된 그룹 인증 데이터는 보존한다. 기존 그룹별 관리자 API는 레거시 그룹별 항목과의 호환성을 위해 유지한다.
 
 ## 5. 예외 코드
 

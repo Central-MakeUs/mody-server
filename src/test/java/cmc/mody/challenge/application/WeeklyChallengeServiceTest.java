@@ -217,10 +217,17 @@ class WeeklyChallengeServiceTest {
     }
 
     @Test
-    @DisplayName("마지막 그룹원이 인증하면 주간 챌린지를 완료 처리하고 완료 알림을 요청한다.")
+    @DisplayName("전역 원본에 연결된 그룹 진행 항목도 마지막 그룹원이 인증하면 그룹 단위로 완료 처리하고 알림을 요청한다.")
     void completeWeeklyChallengeWhenAllJoinedMembersProved() {
         WeeklyChallengeService service = service();
-        GroupChallenge groupChallenge = groupChallenge(100L, 10L, 1L);
+        GroupChallenge groupChallenge = new GroupChallenge(
+            100L,
+            10L,
+            1L,
+            900L,
+            LocalDate.now().minusDays(1),
+            LocalDate.now().plusDays(5)
+        );
         givenValidGroupMembership();
         given(groupChallengeRepository.findByIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
             .willReturn(Optional.of(groupChallenge));
@@ -243,6 +250,7 @@ class WeeklyChallengeServiceTest {
         );
 
         assertThat(groupChallenge.getGroupChallengeStatus()).isEqualTo(GroupChallengeStatus.COMPLETED);
+        assertThat(groupChallenge.getGlobalWeeklyChallengeId()).isEqualTo(900L);
         assertThat(groupChallenge.getCompletedAt()).isNotNull();
         then(notificationRequestService).should().requestWeeklyChallengeCompleted(10L, "모디", 100L);
     }
