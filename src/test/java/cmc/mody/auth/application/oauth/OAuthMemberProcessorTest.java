@@ -9,6 +9,7 @@ import cmc.mody.auth.application.oauth.dto.OAuthMemberResult;
 import cmc.mody.auth.application.oauth.dto.OAuthProfile;
 import cmc.mody.common.domain.Status;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.member.domain.LoginType;
@@ -18,6 +19,8 @@ import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.member.infrastructure.repository.SocialAccountRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -59,11 +62,22 @@ class OAuthMemberProcessorTest {
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
         given(groupMemberRepository.countByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
             .willReturn(1L);
+        GroupMember groupMember = new GroupMember(
+            2L,
+            1L,
+            10L,
+            "민석",
+            "old-profile",
+            LocalDateTime.now()
+        );
+        given(groupMemberRepository.findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
+            .willReturn(List.of(groupMember));
 
         OAuthMemberResult result = processor.ensure(profile);
 
         assertThat(result).isEqualTo(new OAuthMemberResult(1L, true, true, true));
         assertThat(member.getProfileImageKey()).isEqualTo("kakao-profile");
+        assertThat(groupMember.getDisplayProfileImageKey()).isEqualTo("kakao-profile");
         then(memberRepository).should().findById(1L);
     }
 
