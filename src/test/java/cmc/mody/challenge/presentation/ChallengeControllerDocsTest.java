@@ -222,6 +222,7 @@ class ChallengeControllerDocsTest {
             .willReturn(new WeeklyChallengeListResult(List.of(
                 new WeeklyChallengeSummaryResult(
                     1L,
+                    10L,
                     "물 2L 마시기",
                     "SUNDAY",
                     LocalDate.of(2026, 8, 3),
@@ -248,6 +249,8 @@ class ChallengeControllerDocsTest {
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.challenges[].groupChallengeId").type(JsonFieldType.NUMBER)
                             .description("그룹 챌린지 id"),
+                        fieldWithPath("result.challenges[].challengeId").type(JsonFieldType.NUMBER)
+                            .description("주간 챌린지 원본 id"),
                         fieldWithPath("result.challenges[].title").type(JsonFieldType.STRING).description("챌린지명"),
                         fieldWithPath("result.challenges[].deadlineDayOfWeek").type(JsonFieldType.STRING)
                             .description("마감 요일"),

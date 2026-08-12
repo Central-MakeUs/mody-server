@@ -305,6 +305,7 @@ public class WeeklyChallengeService {
         List<GroupMember> participants = randomizedParticipants(proofs, membersById);
         return new WeeklyChallengeSummaryResult(
             groupChallenge.getId(),
+            challenge.getId(),
             challenge.getTitle(),
             groupChallenge.getDueDayOfWeek().name(),
             groupChallenge.getStartsOn(),
@@ -415,6 +416,7 @@ public class WeeklyChallengeService {
 
     public record WeeklyChallengeSummaryResult(
         Long groupChallengeId,
+        Long challengeId,
         String title,
         String deadlineDayOfWeek,
         LocalDate startsOn,

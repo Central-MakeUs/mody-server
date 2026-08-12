@@ -285,6 +285,7 @@ public class ChallengeController {
 
     public record WeeklyChallengeSummaryResponse(
         Long groupChallengeId,
+        Long challengeId,
         String title,
         String deadlineDayOfWeek,
         LocalDate startsOn,
@@ -297,6 +298,7 @@ public class ChallengeController {
         public static WeeklyChallengeSummaryResponse from(WeeklyChallengeService.WeeklyChallengeSummaryResult result) {
             return new WeeklyChallengeSummaryResponse(
                 result.groupChallengeId(),
+                result.challengeId(),
                 result.title(),
                 result.deadlineDayOfWeek(),
                 result.startsOn(),
