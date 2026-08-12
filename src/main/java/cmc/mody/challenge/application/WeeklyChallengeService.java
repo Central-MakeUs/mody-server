@@ -3,11 +3,13 @@ package cmc.mody.challenge.application;
 import cmc.mody.challenge.domain.Challenge;
 import cmc.mody.challenge.domain.ChallengeProof;
 import cmc.mody.challenge.domain.ChallengeType;
+import cmc.mody.challenge.domain.GlobalWeeklyChallenge;
 import cmc.mody.challenge.domain.GroupChallenge;
 import cmc.mody.challenge.domain.GroupChallengeStatus;
 import cmc.mody.challenge.infrastructure.repository.ChallengeProofRepository;
 import cmc.mody.challenge.infrastructure.repository.ChallengeRepository;
 import cmc.mody.challenge.infrastructure.repository.GroupChallengeRepository;
+import cmc.mody.challenge.infrastructure.repository.GlobalWeeklyChallengeRepository;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
@@ -44,6 +46,7 @@ public class WeeklyChallengeService {
     private final ModyGroupRepository modyGroupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final ChallengeRepository challengeRepository;
+    private final GlobalWeeklyChallengeRepository globalWeeklyChallengeRepository;
     private final GroupChallengeRepository groupChallengeRepository;
     private final ChallengeProofRepository challengeProofRepository;
     private final NotificationRequestService notificationRequestService;
@@ -82,7 +85,16 @@ public class WeeklyChallengeService {
     public WeeklyChallengeDetailResult getWeeklyChallengeDetail(Long memberId, Long challengeId) {
         validateMember(memberId);
         Challenge challenge = getWeeklyChallenge(challengeId);
-        return new WeeklyChallengeDetailResult(challenge.getId(), challenge.getTitle(), challenge.getDescription());
+        GlobalWeeklyChallenge globalWeeklyChallenge = globalWeeklyChallengeRepository
+            .findByChallengeIdAndDeletedAtIsNull(challengeId)
+            .orElseThrow(() -> new GeneralException(ErrorStatus.CHALLENGE_NOT_FOUND));
+        int remainingDays = Math.toIntExact(ChronoUnit.DAYS.between(LocalDate.now(), globalWeeklyChallenge.getEndsOn()));
+        return new WeeklyChallengeDetailResult(
+            challenge.getId(),
+            challenge.getTitle(),
+            challenge.getDescription(),
+            remainingDays
+        );
     }
 
     @Transactional(readOnly = true)
@@ -417,7 +429,7 @@ public class WeeklyChallengeService {
     public record WeeklyChallengeParticipantResult(Long memberId, String nickname, String profileImageUrl) {
     }
 
-    public record WeeklyChallengeDetailResult(Long challengeId, String title, String description) {
+    public record WeeklyChallengeDetailResult(Long challengeId, String title, String description, int remainingDays) {
     }
 
     public record WeeklyChallengeProofListResult(List<WeeklyChallengeProofResult> proofs) {

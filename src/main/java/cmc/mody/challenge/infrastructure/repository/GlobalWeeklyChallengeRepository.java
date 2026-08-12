@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface GlobalWeeklyChallengeRepository extends JpaRepository<GlobalWeeklyChallenge, Long> {
     Optional<GlobalWeeklyChallenge> findByIdAndDeletedAtIsNull(Long id);
 
+    Optional<GlobalWeeklyChallenge> findByChallengeIdAndDeletedAtIsNull(Long challengeId);
+
     List<GlobalWeeklyChallenge> findByDeletedAtIsNullOrderByStartsOnDescIdDesc();
 
     List<GlobalWeeklyChallenge>

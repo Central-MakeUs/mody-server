@@ -15,11 +15,13 @@ import cmc.mody.challenge.application.WeeklyChallengeService.ImageCropRegionResu
 import cmc.mody.challenge.domain.Challenge;
 import cmc.mody.challenge.domain.ChallengeProof;
 import cmc.mody.challenge.domain.ChallengeType;
+import cmc.mody.challenge.domain.GlobalWeeklyChallenge;
 import cmc.mody.challenge.domain.GroupChallenge;
 import cmc.mody.challenge.domain.GroupChallengeStatus;
 import cmc.mody.challenge.infrastructure.repository.ChallengeProofRepository;
 import cmc.mody.challenge.infrastructure.repository.ChallengeRepository;
 import cmc.mody.challenge.infrastructure.repository.GroupChallengeRepository;
+import cmc.mody.challenge.infrastructure.repository.GlobalWeeklyChallengeRepository;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
@@ -63,6 +65,9 @@ class WeeklyChallengeServiceTest {
 
     @Mock
     private ChallengeRepository challengeRepository;
+
+    @Mock
+    private GlobalWeeklyChallengeRepository globalWeeklyChallengeRepository;
 
     @Mock
     private GroupChallengeRepository groupChallengeRepository;
@@ -127,12 +132,15 @@ class WeeklyChallengeServiceTest {
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
         given(challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(1L, ChallengeType.PHOTO))
             .willReturn(Optional.of(challenge(1L, "물 2L 마시기")));
+        given(globalWeeklyChallengeRepository.findByChallengeIdAndDeletedAtIsNull(1L))
+            .willReturn(Optional.of(new GlobalWeeklyChallenge(10L, 1L, LocalDate.now().minusDays(3), LocalDate.now().plusDays(4))));
 
         WeeklyChallengeService.WeeklyChallengeDetailResult result = service.getWeeklyChallengeDetail(1L, 1L);
 
         assertThat(result.challengeId()).isEqualTo(1L);
         assertThat(result.title()).isEqualTo("물 2L 마시기");
         assertThat(result.description()).isEqualTo("물 2L 마시기 설명");
+        assertThat(result.remainingDays()).isEqualTo(4);
     }
 
     @Test
@@ -433,6 +441,7 @@ class WeeklyChallengeServiceTest {
             modyGroupRepository,
             groupMemberRepository,
             challengeRepository,
+            globalWeeklyChallengeRepository,
             groupChallengeRepository,
             challengeProofRepository,
             notificationRequestService,

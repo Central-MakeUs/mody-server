@@ -444,9 +444,14 @@ public class ChallengeController {
         }
     }
 
-    public record WeeklyChallengeDetailResponse(Long challengeId, String title, String description) {
+    public record WeeklyChallengeDetailResponse(Long challengeId, String title, String description, int remainingDays) {
         public static WeeklyChallengeDetailResponse from(WeeklyChallengeService.WeeklyChallengeDetailResult result) {
-            return new WeeklyChallengeDetailResponse(result.challengeId(), result.title(), result.description());
+            return new WeeklyChallengeDetailResponse(
+                result.challengeId(),
+                result.title(),
+                result.description(),
+                result.remainingDays()
+            );
         }
     }
 

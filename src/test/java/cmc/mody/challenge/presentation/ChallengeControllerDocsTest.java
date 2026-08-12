@@ -749,7 +749,7 @@ class ChallengeControllerDocsTest {
     void getWeeklyChallengeDetail() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(weeklyChallengeService.getWeeklyChallengeDetail(1L, 1L))
-            .willReturn(new WeeklyChallengeDetailResult(1L, "물 2L 마시기", "하루 동안 물 2L를 마시고 사진으로 인증한다."));
+            .willReturn(new WeeklyChallengeDetailResult(1L, "물 2L 마시기", "하루 동안 물 2L를 마시고 사진으로 인증한다.", 4));
 
         mockMvc.perform(get("/api/v1/weekly-challenges/{challengeId}", 1L)
                 .header("Authorization", "Bearer access-token"))
@@ -762,7 +762,8 @@ class ChallengeControllerDocsTest {
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.challengeId").type(JsonFieldType.NUMBER).description("챌린지 id"),
                         fieldWithPath("result.title").type(JsonFieldType.STRING).description("챌린지명"),
-                        fieldWithPath("result.description").type(JsonFieldType.STRING).description("상세 설명")
+                        fieldWithPath("result.description").type(JsonFieldType.STRING).description("상세 설명"),
+                        fieldWithPath("result.remainingDays").type(JsonFieldType.NUMBER).description("종료일까지 남은 일수")
                     ))
                     .build())
             ));
