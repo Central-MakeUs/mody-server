@@ -110,6 +110,40 @@ class StepChallengeServiceTest {
         assertThat(result.targetStepCount()).isEqualTo(150_000);
         assertThat(result.currentStepCount()).isEqualTo(34_000);
         assertThat(result.stepCountFetchFromAt()).isEqualTo(fetchFromAt);
+        assertThat(result.challengeStatus()).isEqualTo(GroupChallengeStatus.IN_PROGRESS);
+    }
+
+    @Test
+    @DisplayName("진행 중인 걸음수 챌린지가 없으면 가장 최근 완료한 챌린지 현황을 반환한다.")
+    void getCurrentStepChallengeFallsBackToLatestCompletedChallenge() {
+        StepChallengeService service = service();
+        GroupChallenge groupChallenge = new GroupChallenge(100L, 10L, 1L, LocalDate.now(), LocalDate.of(9999, 12, 31));
+        groupChallenge.complete(LocalDateTime.of(2026, 8, 13, 20, 0));
+        givenValidGroupMembership();
+        givenStepChallenges(List.of(challenge(1L, "서울-인천")));
+        given(groupChallengeRepository.findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
+            10L,
+            List.of(1L),
+            GroupChallengeStatus.IN_PROGRESS
+        )).willReturn(Optional.empty());
+        given(groupChallengeRepository
+            .findFirstByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNullOrderByCompletedAtDescIdDesc(
+                10L,
+                List.of(1L),
+                GroupChallengeStatus.COMPLETED
+            ))
+            .willReturn(Optional.of(groupChallenge));
+        given(challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(1L, ChallengeType.STEP))
+            .willReturn(Optional.of(challenge(1L, "서울-인천")));
+        given(stepChallengeDetailRepository.findByChallengeIdAndDeletedAtIsNull(1L))
+            .willReturn(Optional.of(stepDetail(1L, "인천", 150_000)));
+        given(stepRecordRepository.sumStepCountByGroupChallengeId(100L)).willReturn(187_267L);
+
+        StepChallengeStatusResult result = service.getCurrentStepChallenge(1L, 10L);
+
+        assertThat(result.groupChallengeId()).isEqualTo(100L);
+        assertThat(result.currentStepCount()).isEqualTo(187_267);
+        assertThat(result.challengeStatus()).isEqualTo(GroupChallengeStatus.COMPLETED);
     }
 
     @Test
@@ -334,6 +368,40 @@ class StepChallengeServiceTest {
                     0
                 )
             );
+    }
+
+    @Test
+    @DisplayName("진행 중인 걸음수 챌린지가 없으면 가장 최근 완료한 챌린지의 최종 기여도 순위를 반환한다.")
+    void getStepRankingsForLatestCompletedChallenge() {
+        StepChallengeService service = service();
+        GroupChallenge groupChallenge = new GroupChallenge(100L, 10L, 1L, LocalDate.now(), LocalDate.of(9999, 12, 31));
+        groupChallenge.complete(LocalDateTime.of(2026, 8, 13, 20, 0));
+        givenValidGroupMembership();
+        givenStepChallenges(List.of(challenge(1L, "서울-인천")));
+        given(groupChallengeRepository.findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
+            10L,
+            List.of(1L),
+            GroupChallengeStatus.IN_PROGRESS
+        )).willReturn(Optional.empty());
+        given(groupChallengeRepository
+            .findFirstByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNullOrderByCompletedAtDescIdDesc(
+                10L,
+                List.of(1L),
+                GroupChallengeStatus.COMPLETED
+            ))
+            .willReturn(Optional.of(groupChallenge));
+        given(stepRecordRepository.sumStepCountByMember(100L))
+            .willReturn(List.<Object[]>of(new Object[]{1L, 150_000L}));
+        given(groupMemberRepository.findByGroupIdAndGroupMemberStatusAndDeletedAtIsNullOrderByJoinedAtAsc(
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(List.of(groupMember(1L, "민석", LocalDateTime.of(2026, 1, 1, 10, 0))));
+
+        StepRankingListResult result = service.getStepRankings(1L, 10L);
+
+        assertThat(result.rankings()).singleElement()
+            .extracting("rank", "memberId", "stepCount")
+            .containsExactly(1, 1L, 150_000);
     }
 
     @Test

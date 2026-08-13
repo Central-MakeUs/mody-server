@@ -34,6 +34,7 @@ import cmc.mody.challenge.application.StepChallengeService.StepRecordUpsertResul
 import cmc.mody.challenge.application.StepChallengeService.WalkedRegionListResult;
 import cmc.mody.challenge.application.StepChallengeService.WalkedRegionResult;
 import cmc.mody.challenge.application.WeeklyChallengeService;
+import cmc.mody.challenge.domain.GroupChallengeStatus;
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeDetailResult;
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeListResult;
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProofCreateCommand;
@@ -192,7 +193,8 @@ class ChallengeControllerDocsTest {
                 "서울-인천",
                 150_000,
                 34_000,
-                LocalDateTime.of(2026, 8, 6, 14, 40)
+                LocalDateTime.of(2026, 8, 6, 14, 40),
+                GroupChallengeStatus.IN_PROGRESS
             ));
 
         mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/step/current", 1L)
@@ -209,7 +211,9 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.targetStepCount").type(JsonFieldType.NUMBER).description("목표 걸음수"),
                         fieldWithPath("result.currentStepCount").type(JsonFieldType.NUMBER).description("현재 걸음수"),
                         fieldWithPath("result.stepCountFetchFromAt").type(JsonFieldType.STRING)
-                            .description("걸음수 조회 시작 시각(ISO-8601)")
+                            .description("걸음수 조회 시작 시각(ISO-8601)"),
+                        fieldWithPath("result.challengeStatus").type(JsonFieldType.STRING)
+                            .description("챌린지 상태(IN_PROGRESS 또는 COMPLETED)")
                     ))
                     .build())
             ));

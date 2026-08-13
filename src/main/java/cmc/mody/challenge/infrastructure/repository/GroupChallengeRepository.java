@@ -24,6 +24,12 @@ public interface GroupChallengeRepository extends JpaRepository<GroupChallenge, 
         GroupChallengeStatus status
     );
 
+    Optional<GroupChallenge> findFirstByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNullOrderByCompletedAtDescIdDesc(
+        Long groupId,
+        Collection<Long> challengeIds,
+        GroupChallengeStatus status
+    );
+
     List<GroupChallenge> findAllByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
         Long groupId,
         Collection<Long> challengeIds,
