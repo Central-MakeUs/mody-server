@@ -54,7 +54,7 @@ public class StepChallengeService {
     @Transactional(readOnly = true)
     public StepChallengeStatusResult getCurrentStepChallenge(Long memberId, Long groupId) {
         validateGroupMembership(memberId, groupId);
-        GroupChallenge groupChallenge = getCurrentStepGroupChallenge(groupId);
+        GroupChallenge groupChallenge = getDisplayedStepGroupChallenge(groupId);
         Challenge challenge = getStepChallenge(groupChallenge.getChallengeId());
         StepChallengeDetail detail = getStepChallengeDetail(challenge.getId());
         return toStatusResult(groupChallenge, challenge, detail, currentStepCount(groupChallenge));
@@ -149,7 +149,7 @@ public class StepChallengeService {
     @Transactional(readOnly = true)
     public StepRankingListResult getStepRankings(Long memberId, Long groupId) {
         validateGroupMembership(memberId, groupId);
-        GroupChallenge groupChallenge = getCurrentStepGroupChallenge(groupId);
+        GroupChallenge groupChallenge = getDisplayedStepGroupChallenge(groupId);
         Map<Long, Integer> stepCounts = getStepCountsByMember(groupChallenge);
 
         List<GroupMember> members = groupMemberRepository
@@ -258,7 +258,8 @@ public class StepChallengeService {
             challenge.getTitle(),
             detail.getTargetStepCount(),
             currentStepCount,
-            groupChallenge.getCreatedAt()
+            groupChallenge.getCreatedAt(),
+            groupChallenge.getGroupChallengeStatus()
         );
     }
 
@@ -328,6 +329,13 @@ public class StepChallengeService {
             .orElseThrow(() -> new GeneralException(ErrorStatus.CHALLENGE_IN_PROGRESS_NOT_FOUND));
     }
 
+    private GroupChallenge getDisplayedStepGroupChallenge(Long groupId) {
+        List<Long> stepChallengeIds = getStepChallengeIds();
+        return getCurrentStepGroupChallengeOrNull(groupId, stepChallengeIds)
+            .or(() -> getLatestCompletedStepGroupChallengeOrNull(groupId, stepChallengeIds))
+            .orElseThrow(() -> new GeneralException(ErrorStatus.CHALLENGE_IN_PROGRESS_NOT_FOUND));
+    }
+
     private Optional<GroupChallenge> getCurrentStepGroupChallengeOrNull(Long groupId) {
         return getCurrentStepGroupChallengeOrNull(groupId, getStepChallengeIds());
     }
@@ -341,6 +349,18 @@ public class StepChallengeService {
             stepChallengeIds,
             GroupChallengeStatus.IN_PROGRESS
         );
+    }
+
+    private Optional<GroupChallenge> getLatestCompletedStepGroupChallengeOrNull(Long groupId, List<Long> stepChallengeIds) {
+        if (stepChallengeIds.isEmpty()) {
+            return Optional.empty();
+        }
+        return groupChallengeRepository
+            .findFirstByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNullOrderByCompletedAtDescIdDesc(
+                groupId,
+                stepChallengeIds,
+                GroupChallengeStatus.COMPLETED
+            );
     }
 
     private void validateGroupMembership(Long memberId, Long groupId) {
@@ -396,7 +416,8 @@ public class StepChallengeService {
         String title,
         int targetStepCount,
         int currentStepCount,
-        LocalDateTime stepCountFetchFromAt
+        LocalDateTime stepCountFetchFromAt,
+        GroupChallengeStatus challengeStatus
     ) {
     }
 

@@ -5,6 +5,7 @@ import cmc.mody.challenge.application.ChallengeHomeService;
 import cmc.mody.challenge.application.ChallengeHomeService.NudgeResult;
 import cmc.mody.challenge.application.StepChallengeService;
 import cmc.mody.challenge.application.WeeklyChallengeService;
+import cmc.mody.challenge.domain.GroupChallengeStatus;
 import cmc.mody.common.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.constraints.AssertTrue;
@@ -230,7 +231,8 @@ public class ChallengeController {
         String title,
         int targetStepCount,
         int currentStepCount,
-        LocalDateTime stepCountFetchFromAt
+        LocalDateTime stepCountFetchFromAt,
+        GroupChallengeStatus challengeStatus
     ) {
         public static StepChallengeStatusResponse from(StepChallengeService.StepChallengeStatusResult result) {
             return new StepChallengeStatusResponse(
@@ -238,7 +240,8 @@ public class ChallengeController {
                 result.title(),
                 result.targetStepCount(),
                 result.currentStepCount(),
-                result.stepCountFetchFromAt()
+                result.stepCountFetchFromAt(),
+                result.challengeStatus()
             );
         }
     }
