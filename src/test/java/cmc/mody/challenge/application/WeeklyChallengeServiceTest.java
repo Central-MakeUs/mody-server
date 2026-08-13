@@ -88,7 +88,7 @@ class WeeklyChallengeServiceTest {
     private ArgumentCaptor<ChallengeProof> proofCaptor;
 
     @Test
-    @DisplayName("이번 주 주간 챌린지는 진행 중인 PHOTO 그룹 챌린지와 인증 참여 현황을 반환한다.")
+    @DisplayName("이번 주 주간 챌린지는 진행 및 완료된 PHOTO 그룹 챌린지와 인증 참여 현황을 반환한다.")
     void getWeeklyChallenges() {
         WeeklyChallengeService service = service();
         GroupChallenge groupChallenge = groupChallenge(100L, 10L, 1L);
@@ -96,7 +96,7 @@ class WeeklyChallengeServiceTest {
         givenValidGroupMembership();
         givenWeeklyChallenges(List.of(challenge(1L, "물 2L 마시기")));
         given(groupChallengeRepository
-            .findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndStartsOnLessThanEqualAndEndsOnGreaterThanEqualAndDeletedAtIsNullOrderByEndsOnAscIdAsc(
+            .findByGroupIdAndChallengeIdInAndGroupChallengeStatusInAndStartsOnLessThanEqualAndEndsOnGreaterThanEqualAndDeletedAtIsNullOrderByEndsOnAscIdAsc(
                 any(),
                 any(),
                 any(),
@@ -111,8 +111,8 @@ class WeeklyChallengeServiceTest {
         WeeklyChallengeListResult result = service.getWeeklyChallenges(1L, 10L);
 
         assertThat(result.challenges())
-            .extracting("groupChallengeId", "title", "participantCount", "randomParticipantNickname")
-            .containsExactly(org.assertj.core.groups.Tuple.tuple(100L, "물 2L 마시기", 1, "친구"));
+            .extracting("groupChallengeId", "title", "isComplete", "participantCount", "randomParticipantNickname")
+            .containsExactly(org.assertj.core.groups.Tuple.tuple(100L, "물 2L 마시기", false, 1, "친구"));
         assertThat(result.challenges().getFirst().startsOn()).isEqualTo(groupChallenge.getStartsOn());
         assertThat(result.challenges().getFirst().endsOn()).isEqualTo(groupChallenge.getEndsOn());
         assertThat(result.challenges().getFirst().remainingDays()).isEqualTo(5);
@@ -123,6 +123,30 @@ class WeeklyChallengeServiceTest {
                 "친구",
                 "https://storage.example.com/profiles/member-2.jpg"
             ));
+    }
+
+    @Test
+    @DisplayName("완료된 이번 주 주간 챌린지는 목록에 완료 상태로 반환한다.")
+    void getWeeklyChallengesIncludesCompletedChallenge() {
+        WeeklyChallengeService service = service();
+        GroupChallenge groupChallenge = groupChallenge(100L, 10L, 1L);
+        groupChallenge.complete(LocalDateTime.now());
+        givenValidGroupMembership();
+        givenWeeklyChallenges(List.of(challenge(1L, "물 2L 마시기")));
+        given(groupChallengeRepository
+            .findByGroupIdAndChallengeIdInAndGroupChallengeStatusInAndStartsOnLessThanEqualAndEndsOnGreaterThanEqualAndDeletedAtIsNullOrderByEndsOnAscIdAsc(
+                any(), any(), any(), any(), any()
+            ))
+            .willReturn(List.of(groupChallenge));
+        given(challengeProofRepository.findByGroupChallengeIdInAndDeletedAtIsNullOrderByUploadedAtAscIdAsc(List.of(100L)))
+            .willReturn(List.of());
+        givenJoinedMembers();
+
+        WeeklyChallengeListResult result = service.getWeeklyChallenges(1L, 10L);
+
+        assertThat(result.challenges()).singleElement()
+            .extracting("groupChallengeId", "isComplete")
+            .containsExactly(100L, true);
     }
 
     @Test

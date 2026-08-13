@@ -272,10 +272,10 @@ public class WeeklyChallengeService {
 
         LocalDate today = LocalDate.now();
         return groupChallengeRepository
-            .findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndStartsOnLessThanEqualAndEndsOnGreaterThanEqualAndDeletedAtIsNullOrderByEndsOnAscIdAsc(
+            .findByGroupIdAndChallengeIdInAndGroupChallengeStatusInAndStartsOnLessThanEqualAndEndsOnGreaterThanEqualAndDeletedAtIsNullOrderByEndsOnAscIdAsc(
                 groupId,
                 weeklyChallengeIds,
-                GroupChallengeStatus.IN_PROGRESS,
+                List.of(GroupChallengeStatus.IN_PROGRESS, GroupChallengeStatus.COMPLETED),
                 today,
                 today
             );
@@ -311,6 +311,7 @@ public class WeeklyChallengeService {
             groupChallenge.getStartsOn(),
             groupChallenge.getEndsOn(),
             Math.toIntExact(ChronoUnit.DAYS.between(LocalDate.now(), groupChallenge.getEndsOn())),
+            groupChallenge.getGroupChallengeStatus() == GroupChallengeStatus.COMPLETED,
             proofs.size(),
             representativeParticipantNickname(participants),
             representativeParticipants(participants)
@@ -422,6 +423,7 @@ public class WeeklyChallengeService {
         LocalDate startsOn,
         LocalDate endsOn,
         int remainingDays,
+        boolean isComplete,
         int participantCount,
         String randomParticipantNickname,
         List<WeeklyChallengeParticipantResult> participants
