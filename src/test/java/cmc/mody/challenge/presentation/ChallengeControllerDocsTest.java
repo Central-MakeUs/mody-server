@@ -232,6 +232,7 @@ class ChallengeControllerDocsTest {
                     LocalDate.of(2026, 8, 3),
                     LocalDate.of(2026, 8, 9),
                     4,
+                    false,
                     3,
                     "민석",
                     List.of(new WeeklyChallengeParticipantResult(
@@ -262,6 +263,8 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.challenges[].endsOn").type(JsonFieldType.STRING).description("마감일"),
                         fieldWithPath("result.challenges[].remainingDays").type(JsonFieldType.NUMBER)
                             .description("마감일까지 남은 일수"),
+                        fieldWithPath("result.challenges[].isComplete").type(JsonFieldType.BOOLEAN)
+                            .description("그룹의 해당 주간 챌린지 완료 여부"),
                         fieldWithPath("result.challenges[].participantCount").type(JsonFieldType.NUMBER)
                             .description("참여 인원"),
                         fieldWithPath("result.challenges[].randomParticipantNickname").type(JsonFieldType.STRING)

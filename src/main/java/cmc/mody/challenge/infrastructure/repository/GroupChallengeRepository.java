@@ -51,6 +51,15 @@ public interface GroupChallengeRepository extends JpaRepository<GroupChallenge, 
             LocalDate endsOn
         );
 
+    List<GroupChallenge>
+        findByGroupIdAndChallengeIdInAndGroupChallengeStatusInAndStartsOnLessThanEqualAndEndsOnGreaterThanEqualAndDeletedAtIsNullOrderByEndsOnAscIdAsc(
+            Long groupId,
+            Collection<Long> challengeIds,
+            Collection<GroupChallengeStatus> statuses,
+            LocalDate startsOn,
+            LocalDate endsOn
+        );
+
     Optional<GroupChallenge> findByIdAndGroupIdAndDeletedAtIsNull(Long id, Long groupId);
 
     Optional<GroupChallenge> findByIdAndDeletedAtIsNull(Long id);

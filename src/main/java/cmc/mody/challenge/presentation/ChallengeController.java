@@ -294,6 +294,7 @@ public class ChallengeController {
         LocalDate startsOn,
         LocalDate endsOn,
         int remainingDays,
+        boolean isComplete,
         int participantCount,
         String randomParticipantNickname,
         List<WeeklyChallengeParticipantResponse> participants
@@ -307,6 +308,7 @@ public class ChallengeController {
                 result.startsOn(),
                 result.endsOn(),
                 result.remainingDays(),
+                result.isComplete(),
                 result.participantCount(),
                 result.randomParticipantNickname(),
                 result.participants().stream().map(WeeklyChallengeParticipantResponse::from).toList()
