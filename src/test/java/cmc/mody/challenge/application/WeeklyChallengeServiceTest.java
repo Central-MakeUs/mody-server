@@ -355,18 +355,18 @@ class WeeklyChallengeServiceTest {
         givenJoinedMembers();
         given(shareImageGenerator.calculateGridSize(2))
             .willReturn(new WeeklyChallengeShareImageGenerator.GridSize(1, 2));
-        given(imageObjectStorage.exists("weekly-challenge-shares/10/100.jpg")).willReturn(false);
+        given(imageObjectStorage.exists("weekly-challenge-shares/v2/10/100.jpg")).willReturn(false);
         given(imageObjectStorage.read("weekly-challenges/1/proof.jpg")).willReturn(new byte[]{1});
         given(imageObjectStorage.read("weekly-challenges/2/proof.jpg")).willReturn(new byte[]{2});
         given(shareImageGenerator.generate(any(), any(), any(), any())).willReturn(new byte[]{3});
-        given(imageObjectStorage.toUrl("weekly-challenge-shares/10/100.jpg"))
-            .willReturn("https://storage.example.com/weekly-challenge-shares/10/100.jpg");
+        given(imageObjectStorage.toUrl("weekly-challenge-shares/v2/10/100.jpg"))
+            .willReturn("https://storage.example.com/weekly-challenge-shares/v2/10/100.jpg");
 
         WeeklyChallengeService.WeeklyChallengeShareResult result = service.shareWeeklyChallenge(1L, 10L, 100L);
 
-        then(imageObjectStorage).should().write("weekly-challenge-shares/10/100.jpg", new byte[]{3}, "image/jpeg");
+        then(imageObjectStorage).should().write("weekly-challenge-shares/v2/10/100.jpg", new byte[]{3}, "image/jpeg");
         assertThat(result).isEqualTo(new WeeklyChallengeService.WeeklyChallengeShareResult(
-            "https://storage.example.com/weekly-challenge-shares/10/100.jpg",
+            "https://storage.example.com/weekly-challenge-shares/v2/10/100.jpg",
             null,
             1,
             2
@@ -388,9 +388,9 @@ class WeeklyChallengeServiceTest {
             .willReturn(List.of(proof(1000L, 100L, 1L, "weekly-challenges/1/proof.jpg")));
         given(shareImageGenerator.calculateGridSize(1))
             .willReturn(new WeeklyChallengeShareImageGenerator.GridSize(1, 1));
-        given(imageObjectStorage.exists("weekly-challenge-shares/10/100.jpg")).willReturn(true);
-        given(imageObjectStorage.toUrl("weekly-challenge-shares/10/100.jpg"))
-            .willReturn("https://storage.example.com/weekly-challenge-shares/10/100.jpg");
+        given(imageObjectStorage.exists("weekly-challenge-shares/v2/10/100.jpg")).willReturn(true);
+        given(imageObjectStorage.toUrl("weekly-challenge-shares/v2/10/100.jpg"))
+            .willReturn("https://storage.example.com/weekly-challenge-shares/v2/10/100.jpg");
 
         WeeklyChallengeService.WeeklyChallengeShareResult result = service.shareWeeklyChallenge(1L, 10L, 100L);
 

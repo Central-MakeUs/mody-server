@@ -2,6 +2,10 @@ package cmc.mody.challenge.application;
 
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
+import com.drew.imaging.ImageMetadataReader;
+import com.drew.imaging.ImageProcessingException;
+import com.drew.metadata.Metadata;
+import com.drew.metadata.exif.ExifIFD0Directory;
 import java.awt.BasicStroke;
 import java.awt.Font;
 import java.awt.FontMetrics;
@@ -13,6 +17,7 @@ import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.RoundRectangle2D;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -240,16 +245,87 @@ public class WeeklyChallengeShareImageGenerator {
         graphics.setStroke(previousStroke);
     }
 
-    private BufferedImage readImage(byte[] bytes) {
+    BufferedImage readImage(byte[] bytes) {
         try {
             BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
             if (image == null) {
                 throw new GeneralException(ErrorStatus.UPLOAD_STORAGE_OPERATION_FAILED);
             }
-            return image;
+            return applyExifOrientation(image, readExifOrientation(bytes));
         } catch (IOException e) {
             throw new GeneralException(ErrorStatus.UPLOAD_STORAGE_OPERATION_FAILED);
         }
+    }
+
+    private int readExifOrientation(byte[] bytes) {
+        try {
+            Metadata metadata = ImageMetadataReader.readMetadata(new ByteArrayInputStream(bytes));
+            ExifIFD0Directory exifDirectory = metadata.getFirstDirectoryOfType(ExifIFD0Directory.class);
+            Integer orientation = exifDirectory == null ? null : exifDirectory.getInteger(ExifIFD0Directory.TAG_ORIENTATION);
+            return orientation == null ? 1 : orientation;
+        } catch (ImageProcessingException | IOException e) {
+            return 1;
+        }
+    }
+
+    private BufferedImage applyExifOrientation(BufferedImage source, int orientation) {
+        if (orientation < 2 || orientation > 8) {
+            return source;
+        }
+
+        boolean swapsDimensions = orientation >= 5;
+        int sourceWidth = source.getWidth();
+        int sourceHeight = source.getHeight();
+        BufferedImage oriented = new BufferedImage(
+            swapsDimensions ? sourceHeight : sourceWidth,
+            swapsDimensions ? sourceWidth : sourceHeight,
+            source.getColorModel().hasAlpha() ? BufferedImage.TYPE_INT_ARGB : BufferedImage.TYPE_INT_RGB
+        );
+        Graphics2D graphics = oriented.createGraphics();
+        try {
+            graphics.drawImage(source, orientationTransform(orientation, sourceWidth, sourceHeight), null);
+        } finally {
+            graphics.dispose();
+        }
+        return oriented;
+    }
+
+    private AffineTransform orientationTransform(int orientation, int width, int height) {
+        AffineTransform transform = new AffineTransform();
+        switch (orientation) {
+            case 2 -> {
+                transform.translate(width, 0);
+                transform.scale(-1, 1);
+            }
+            case 3 -> {
+                transform.translate(width, height);
+                transform.rotate(Math.PI);
+            }
+            case 4 -> {
+                transform.translate(0, height);
+                transform.scale(1, -1);
+            }
+            case 5 -> {
+                transform.rotate(Math.PI / 2);
+                transform.scale(1, -1);
+            }
+            case 6 -> {
+                transform.translate(height, 0);
+                transform.rotate(Math.PI / 2);
+            }
+            case 7 -> {
+                transform.translate(height, width);
+                transform.rotate(-Math.PI / 2);
+                transform.scale(1, -1);
+            }
+            case 8 -> {
+                transform.translate(0, width);
+                transform.rotate(-Math.PI / 2);
+            }
+            default -> {
+            }
+        }
+        return transform;
     }
 
     private BufferedImage cropSquare(BufferedImage source) {

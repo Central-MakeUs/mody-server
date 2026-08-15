@@ -409,7 +409,7 @@ public class WeeklyChallengeService {
     }
 
     private String shareImageKey(Long groupId, Long groupChallengeId) {
-        return "weekly-challenge-shares/" + groupId + "/" + groupChallengeId + ".jpg";
+        return "weekly-challenge-shares/v2/" + groupId + "/" + groupChallengeId + ".jpg";
     }
 
     public record WeeklyChallengeListResult(List<WeeklyChallengeSummaryResult> challenges) {
