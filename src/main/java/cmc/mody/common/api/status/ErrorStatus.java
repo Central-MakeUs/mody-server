@@ -8,6 +8,7 @@ public enum ErrorStatus implements BaseCode {
     UNAUTHORIZED(401, "COMMON4001", "인증되지 않은 요청입니다."),
     FORBIDDEN(403, "COMMON4002", "접근이 거부되었습니다."),
     VALIDATION_FAILED(400, "COMMON4003", "입력값이 올바르지 않습니다."),
+    METHOD_NOT_ALLOWED(405, "COMMON405", "지원하지 않는 HTTP 메서드입니다."),
     NO_AUTHORIZED(401, "AUTH401", "권한이 없습니다."),
     EMPTY_JWT(401, "AUTH402", "JWT 토큰이 비어있습니다."),
     INVALID_JWT(401, "AUTH403", "유효하지 않은 JWT token입니다."),
