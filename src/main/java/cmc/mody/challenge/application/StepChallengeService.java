@@ -201,7 +201,7 @@ public class StepChallengeService {
                 command.recordedOn()
             )
             .map(existing -> {
-                existing.updateStepCount(command.stepCount());
+                existing.updateStepCountIfGreater(command.stepCount());
                 return existing;
             })
             .orElseGet(() -> stepRecordRepository.save(new StepRecord(

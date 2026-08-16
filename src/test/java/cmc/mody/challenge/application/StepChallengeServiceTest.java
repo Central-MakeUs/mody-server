@@ -251,6 +251,45 @@ class StepChallengeServiceTest {
     }
 
     @Test
+    @DisplayName("같은 날짜에 더 작은 걸음 수가 다시 들어와도 기존 누적 걸음 수를 유지한다.")
+    void keepExistingDailyStepRecordWhenLowerStepCountArrives() {
+        StepChallengeService service = service();
+        LocalDate today = LocalDate.now();
+        GroupChallenge groupChallenge = new GroupChallenge(
+            100L,
+            10L,
+            1L,
+            today.minusDays(1),
+            LocalDate.of(9999, 12, 31)
+        );
+        StepRecord existing = new StepRecord(200L, 100L, 1L, today, 4_000, StepSource.API);
+        givenValidGroupMembership();
+        givenStepChallenges(List.of(challenge(1L, "서울-인천")));
+        given(groupChallengeRepository.findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
+            10L,
+            List.of(1L),
+            GroupChallengeStatus.IN_PROGRESS
+        )).willReturn(Optional.of(groupChallenge));
+        given(challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(1L, ChallengeType.STEP))
+            .willReturn(Optional.of(challenge(1L, "서울-인천")));
+        given(stepChallengeDetailRepository.findByChallengeIdAndDeletedAtIsNull(1L))
+            .willReturn(Optional.of(stepDetail(1L, "인천", 15_000)));
+        given(stepRecordRepository.findByGroupChallengeIdAndMemberIdAndRecordedOnAndDeletedAtIsNull(100L, 1L, today))
+            .willReturn(Optional.of(existing));
+        given(stepRecordRepository.sumStepCountByGroupChallengeId(100L)).willReturn(4_000L);
+
+        StepRecordUpsertResult result = service.upsertDailyStepRecord(
+            1L,
+            10L,
+            new StepRecordUpsertCommand(today, 0)
+        );
+
+        assertThat(existing.getStepCount()).isEqualTo(4_000);
+        then(stepRecordRepository).should(never()).save(any(StepRecord.class));
+        assertThat(result).isEqualTo(new StepRecordUpsertResult(100L, today, 4_000, 4_000, 15_000, false));
+    }
+
+    @Test
     @DisplayName("완료한 걸음수 챌린지 목적지를 걸어간 지역으로 반환한다.")
     void getWalkedRegions() {
         StepChallengeService service = service();
