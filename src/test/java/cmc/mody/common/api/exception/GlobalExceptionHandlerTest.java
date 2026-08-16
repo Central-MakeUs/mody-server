@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,6 +33,21 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody())
             .extracting(ApiResponse::code, ApiResponse::message)
             .containsExactly(ErrorStatus.NOT_FOUND.getCode(), ErrorStatus.NOT_FOUND.getMessage());
+        then(serverErrorAlertService).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void unsupportedHttpMethodReturns405WithoutServerErrorAlert() {
+        GlobalExceptionHandler handler = new GlobalExceptionHandler(serverErrorAlertService);
+
+        ResponseEntity<ApiResponse<Void>> response = handler.handleHttpRequestMethodNotSupportedException(
+            new HttpRequestMethodNotSupportedException("GET")
+        );
+
+        assertThat(response.getStatusCode().value()).isEqualTo(405);
+        assertThat(response.getBody())
+            .extracting(ApiResponse::code, ApiResponse::message)
+            .containsExactly(ErrorStatus.METHOD_NOT_ALLOWED.getCode(), ErrorStatus.METHOD_NOT_ALLOWED.getMessage());
         then(serverErrorAlertService).shouldHaveNoInteractions();
     }
 }
