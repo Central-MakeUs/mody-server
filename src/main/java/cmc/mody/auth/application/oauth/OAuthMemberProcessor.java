@@ -12,6 +12,7 @@ import cmc.mody.member.domain.SocialAccount;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.member.infrastructure.repository.SocialAccountRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +26,7 @@ public class OAuthMemberProcessor {
     private final SocialAccountRepository socialAccountRepository;
     private final GroupMemberRepository groupMemberRepository;
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public OAuthMemberResult ensure(OAuthProfile profile) {
         validate(profile);
         return socialAccountRepository.findByLoginTypeAndProviderUserIdAndDeletedAtIsNull(
