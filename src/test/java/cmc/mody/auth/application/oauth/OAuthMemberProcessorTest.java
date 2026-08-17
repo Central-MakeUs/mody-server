@@ -17,6 +17,7 @@ import cmc.mody.member.domain.Member;
 import cmc.mody.member.domain.SocialAccount;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.member.infrastructure.repository.SocialAccountRepository;
+import jakarta.persistence.LockModeType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,6 +30,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 @ExtendWith(MockitoExtension.class)
 class OAuthMemberProcessorTest {
@@ -49,6 +53,28 @@ class OAuthMemberProcessorTest {
 
     @Captor
     private ArgumentCaptor<SocialAccount> socialAccountCaptor;
+
+    @Test
+    @DisplayName("OAuth 회원 확인은 동시 최초 로그인을 직렬화한다.")
+    void ensureUsesSerializableTransaction() throws NoSuchMethodException {
+        Transactional transactional = OAuthMemberProcessor.class
+            .getDeclaredMethod("ensure", OAuthProfile.class)
+            .getAnnotation(Transactional.class);
+
+        assertThat(transactional).isNotNull();
+        assertThat(transactional.isolation()).isEqualTo(Isolation.SERIALIZABLE);
+    }
+
+    @Test
+    @DisplayName("기존 소셜 계정 조회는 쓰기 잠금을 사용한다.")
+    void socialAccountLookupUsesPessimisticWriteLock() throws NoSuchMethodException {
+        Lock lock = SocialAccountRepository.class
+            .getDeclaredMethod("findByLoginTypeAndProviderUserIdAndDeletedAtIsNull", LoginType.class, String.class)
+            .getAnnotation(Lock.class);
+
+        assertThat(lock).isNotNull();
+        assertThat(lock.value()).isEqualTo(LockModeType.PESSIMISTIC_WRITE);
+    }
 
     @Test
     @DisplayName("메인 진입 조건을 만족하면 가능 상태를 반환한다.")
