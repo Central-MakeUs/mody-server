@@ -29,7 +29,7 @@
 - 개인 정보 입력 완료 여부는 `member.birth_date`와 `member.target_weight_kg` 존재 여부로 판단한다.
 - 그룹 생성 또는 참여를 한 번이라도 완료하면 `member.group_onboarding_completed = true`로 유지한다.
 - 회원은 동시에 최대 4개 그룹에 참여할 수 있다.
-- 그룹은 최대 12명의 활성 멤버를 가질 수 있다.
+- 그룹은 최대 8명의 활성 멤버를 가질 수 있다.
 - 그룹 코드는 6자리이며, `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` 문자 집합으로 생성한다.
 - 그룹별 표시 닉네임과 프로필 이미지는 가입 시점의 `group_member`에 저장한다.
 - 그룹 탈퇴 시 `group_member_status = LEFT`, `left_at`, 공통 soft delete 값을 함께 기록한다.

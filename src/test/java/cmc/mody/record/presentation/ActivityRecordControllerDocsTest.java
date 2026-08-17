@@ -15,6 +15,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
 import static org.springframework.restdocs.request.RequestDocumentation.parameterWithName;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -824,6 +825,23 @@ class ActivityRecordControllerDocsTest {
                             .type(JsonFieldType.ARRAY)
                             .description("기록이 노출된 그룹 id 목록")
                     ))
+                    .build())
+            ));
+    }
+
+    @Test
+    void deleteRecord() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(delete("/api/v1/records/{recordId}", 10L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isOk())
+            .andDo(document("record-delete",
+                resource(ResourceSnippetParameters.builder()
+                    .tag("Feed")
+                    .summary("기록 삭제")
+                    .description("작성자 본인의 기록을 모든 그룹에서 일괄 삭제한다. 연결된 댓글도 함께 삭제된다.")
+                    .responseFields(commonResponseFields())
                     .build())
             ));
     }

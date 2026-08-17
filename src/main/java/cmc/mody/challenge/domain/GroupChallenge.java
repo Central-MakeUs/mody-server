@@ -30,6 +30,9 @@ public class GroupChallenge extends BaseEntity {
     @Column(name = "challenge_id", nullable = false)
     private Long challengeId;
 
+    @Column(name = "global_weekly_challenge_id")
+    private Long globalWeeklyChallengeId;
+
     @Column(name = "starts_on", nullable = false)
     private LocalDate startsOn;
 
@@ -47,9 +50,21 @@ public class GroupChallenge extends BaseEntity {
     private LocalDateTime endedAt;
 
     public GroupChallenge(Long id, Long groupId, Long challengeId, LocalDate startsOn, LocalDate endsOn) {
+        this(id, groupId, challengeId, null, startsOn, endsOn);
+    }
+
+    public GroupChallenge(
+        Long id,
+        Long groupId,
+        Long challengeId,
+        Long globalWeeklyChallengeId,
+        LocalDate startsOn,
+        LocalDate endsOn
+    ) {
         super(id);
         this.groupId = groupId;
         this.challengeId = challengeId;
+        this.globalWeeklyChallengeId = globalWeeklyChallengeId;
         this.startsOn = startsOn;
         this.endsOn = endsOn;
     }
@@ -63,6 +78,11 @@ public class GroupChallenge extends BaseEntity {
         this.groupChallengeStatus = GroupChallengeStatus.COMPLETED;
         this.completedAt = completedAt;
         this.endedAt = completedAt;
+    }
+
+    public void updatePeriod(LocalDate startsOn, LocalDate endsOn) {
+        this.startsOn = startsOn;
+        this.endsOn = endsOn;
     }
 
     public DayOfWeek getDueDayOfWeek() {

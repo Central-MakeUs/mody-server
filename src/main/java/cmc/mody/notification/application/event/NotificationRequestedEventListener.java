@@ -1,6 +1,7 @@
 package cmc.mody.notification.application.event;
 
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.notification.application.BuddyNudgeDedupeKey;
 import cmc.mody.notification.application.NotificationDispatchProperties;
 import cmc.mody.notification.application.NotificationLinkResolver;
 import cmc.mody.notification.application.NotificationPayload;
@@ -69,7 +70,7 @@ public class NotificationRequestedEventListener {
         LocalDateTime scheduledAt
     ) {
         String dedupeKey = createDedupeKey(event, receiverMemberId);
-        if (notificationRepository.existsByDedupeKeyAndDeletedAtIsNull(dedupeKey)) {
+        if (isDuplicated(event, receiverMemberId, dedupeKey)) {
             return;
         }
 
@@ -91,6 +92,25 @@ public class NotificationRequestedEventListener {
         } catch (DataIntegrityViolationException ignored) {
             // 다른 서버나 스레드가 먼저 저장한 경우 중복 알림으로 보고 무시한다.
         }
+    }
+
+    private boolean isDuplicated(NotificationRequestedEvent event, Long receiverMemberId, String dedupeKey) {
+        if (notificationRepository.existsByDedupeKeyAndDeletedAtIsNull(dedupeKey)) {
+            return true;
+        }
+        if (event.type() != NotificationType.BUDDY_NUDGE) {
+            return false;
+        }
+        Map<String, Object> payload = event.payload();
+        String legacyDedupeKey = BuddyNudgeDedupeKey.legacy(
+            NotificationPayload.requireLong(payload, "senderMemberId"),
+            receiverMemberId,
+            String.valueOf(payload.getOrDefault("date", LocalDate.now().toString()))
+        );
+        return notificationRepository.existsByDedupeKeyAndReferenceIdAndDeletedAtIsNull(
+            legacyDedupeKey,
+            NotificationPayload.requireLong(payload, "groupId")
+        );
     }
 
     private String createDedupeKey(NotificationRequestedEvent event, Long receiverMemberId) {
@@ -131,11 +151,10 @@ public class NotificationRequestedEventListener {
                 receiverMemberId.toString(),
                 String.valueOf(payload.getOrDefault("date", today.toString()))
             );
-            case BUDDY_NUDGE -> String.join(":",
-                event.type().name(),
-                "DATE",
-                NotificationPayload.requireLong(payload, "senderMemberId").toString(),
-                receiverMemberId.toString(),
+            case BUDDY_NUDGE -> BuddyNudgeDedupeKey.create(
+                NotificationPayload.requireLong(payload, "groupId"),
+                NotificationPayload.requireLong(payload, "senderMemberId"),
+                receiverMemberId,
                 String.valueOf(payload.getOrDefault("date", today.toString()))
             );
             case STEP_CHALLENGE_COMPLETED, WEEKLY_CHALLENGE_COMPLETED -> String.join(":",

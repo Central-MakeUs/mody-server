@@ -60,7 +60,8 @@
 1. 요청 회원이 그룹에 참여 중인지 확인한다.
 2. 그룹의 `IN_PROGRESS` 상태 걸음수 `group_challenge`를 조회한다.
 3. 해당 group challenge의 `step_record.stepCount`를 합산한다.
-4. 챌린지명, 목표 걸음수, 현재 걸음수를 반환한다.
+4. 챌린지명, 목표 걸음수, 현재 걸음수와 `stepCountFetchFromAt`을 반환한다.
+   `stepCountFetchFromAt`은 현재 `group_challenge.createdAt`의 `LocalDateTime` 값이며, 앱은 이 시각부터 현재까지의 걸음수를 조회한다.
 
 현재 진행 중인 걸음수 챌린지가 없으면 `CHALLENGE303`을 반환한다.
 
@@ -95,6 +96,7 @@ PUT /api/v1/groups/{groupId}/challenges/step/records
 2. `STEP` 타입 챌린지와 `step_challenge_detail`을 조회한다.
 3. `step_challenge_detail.displayOrder` 오름차순으로 반환한다.
 4. 현재 그룹에서 진행 중인 챌린지는 `selected = true`로 표시한다.
+5. 그룹이 과거에 완료한 챌린지는 `completed = true`로 표시한다. 진행 중인 챌린지가 우선이며, 클라이언트는 `selected`, `completed` 순서로 상태를 구분한다.
 
 ### 기여도 순위 조회
 
@@ -110,8 +112,8 @@ PUT /api/v1/groups/{groupId}/challenges/step/records
 2. 변경 대상 `challengeId`가 STEP 타입인지 확인한다.
 3. 현재 진행 중인 챌린지와 같은 `challengeId`면 기록을 초기화하지 않고 현재 상태를 반환한다.
 4. 다른 챌린지로 변경하면 기존 진행 중인 걸음수 group challenge를 `RESET` 처리하고 `endedAt`을 기록한다.
-5. 새 `group_challenge`를 `IN_PROGRESS`로 생성한다.
-6. 새 챌린지 진행률은 0부터 시작한다.
+5. 새 `group_challenge`를 `IN_PROGRESS`로 생성하고 생성 시각을 `stepCountFetchFromAt`으로 반환한다.
+6. 새 챌린지 진행률은 0부터 시작한다. 같은 챌린지를 다시 선택하면 기존 `stepCountFetchFromAt`을 유지한다.
 
 ## 5. 예외 코드
 
@@ -125,13 +127,13 @@ PUT /api/v1/groups/{groupId}/challenges/step/records
 
 ## 6. 테스트 시나리오
 
-- 현재 걸음수 챌린지의 목표/현재 걸음수를 계산한다.
+- 현재 걸음수 챌린지의 목표/현재 걸음수와 걸음수 조회 시작 시각을 반환한다.
 - 같은 날짜의 누적 걸음 수 재전송 시 기존 날짜 기록만 갱신한다.
 - 일일 누적 걸음 수 저장 후 목표에 도달하면 완료 처리한다.
 - 완료/변경 종료된 지역 내역을 조회한다.
 - 변경 가능한 걸음수 챌린지 목록을 노출 순서와 현재 선택 여부로 조회한다.
 - 현재 챌린지 기여도 순위를 회원별 걸음수 합산으로 계산한다.
-- 챌린지 변경 시 기존 진행 챌린지는 `RESET`, 새 챌린지는 `IN_PROGRESS`가 된다.
+- 챌린지 변경 시 기존 진행 챌린지는 `RESET`, 새 챌린지는 `IN_PROGRESS`가 되며 걸음수 조회 시작 시각이 새로 설정된다.
 - 같은 챌린지로 변경 요청하면 기존 진행률을 유지한다.
 - 그룹 미참여 회원은 챌린지 API에 접근할 수 없다.
 - 걸음수 챌린지 마스터 데이터 초기화는 중복 생성하지 않는다.

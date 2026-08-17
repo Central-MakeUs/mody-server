@@ -12,7 +12,25 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface GroupChallengeRepository extends JpaRepository<GroupChallenge, Long> {
     List<GroupChallenge> findByGroupIdAndDeletedAtIsNull(Long groupId);
 
+    boolean existsByGroupIdAndGlobalWeeklyChallengeIdAndDeletedAtIsNull(Long groupId, Long globalWeeklyChallengeId);
+
+    List<GroupChallenge> findByGlobalWeeklyChallengeIdAndDeletedAtIsNull(Long globalWeeklyChallengeId);
+
+    long countByGlobalWeeklyChallengeIdAndDeletedAtIsNull(Long globalWeeklyChallengeId);
+
     Optional<GroupChallenge> findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
+        Long groupId,
+        Collection<Long> challengeIds,
+        GroupChallengeStatus status
+    );
+
+    Optional<GroupChallenge> findFirstByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNullOrderByCompletedAtDescIdDesc(
+        Long groupId,
+        Collection<Long> challengeIds,
+        GroupChallengeStatus status
+    );
+
+    List<GroupChallenge> findAllByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
         Long groupId,
         Collection<Long> challengeIds,
         GroupChallengeStatus status
@@ -29,6 +47,15 @@ public interface GroupChallengeRepository extends JpaRepository<GroupChallenge, 
             Long groupId,
             Collection<Long> challengeIds,
             GroupChallengeStatus status,
+            LocalDate startsOn,
+            LocalDate endsOn
+        );
+
+    List<GroupChallenge>
+        findByGroupIdAndChallengeIdInAndGroupChallengeStatusInAndStartsOnLessThanEqualAndEndsOnGreaterThanEqualAndDeletedAtIsNullOrderByEndsOnAscIdAsc(
+            Long groupId,
+            Collection<Long> challengeIds,
+            Collection<GroupChallengeStatus> statuses,
             LocalDate startsOn,
             LocalDate endsOn
         );

@@ -41,6 +41,8 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
         GroupMemberStatus status
     );
 
+    List<GroupMember> findByGroupIdOrderByJoinedAtAsc(Long groupId);
+
     List<GroupMember> findByGroupMemberStatusAndDeletedAtIsNull(GroupMemberStatus status, Pageable pageable);
 
     @Query("""

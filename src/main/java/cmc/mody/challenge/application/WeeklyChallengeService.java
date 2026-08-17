@@ -3,11 +3,13 @@ package cmc.mody.challenge.application;
 import cmc.mody.challenge.domain.Challenge;
 import cmc.mody.challenge.domain.ChallengeProof;
 import cmc.mody.challenge.domain.ChallengeType;
+import cmc.mody.challenge.domain.GlobalWeeklyChallenge;
 import cmc.mody.challenge.domain.GroupChallenge;
 import cmc.mody.challenge.domain.GroupChallengeStatus;
 import cmc.mody.challenge.infrastructure.repository.ChallengeProofRepository;
 import cmc.mody.challenge.infrastructure.repository.ChallengeRepository;
 import cmc.mody.challenge.infrastructure.repository.GroupChallengeRepository;
+import cmc.mody.challenge.infrastructure.repository.GlobalWeeklyChallengeRepository;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
@@ -25,6 +27,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +46,7 @@ public class WeeklyChallengeService {
     private final ModyGroupRepository modyGroupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final ChallengeRepository challengeRepository;
+    private final GlobalWeeklyChallengeRepository globalWeeklyChallengeRepository;
     private final GroupChallengeRepository groupChallengeRepository;
     private final ChallengeProofRepository challengeProofRepository;
     private final NotificationRequestService notificationRequestService;
@@ -80,7 +85,16 @@ public class WeeklyChallengeService {
     public WeeklyChallengeDetailResult getWeeklyChallengeDetail(Long memberId, Long challengeId) {
         validateMember(memberId);
         Challenge challenge = getWeeklyChallenge(challengeId);
-        return new WeeklyChallengeDetailResult(challenge.getId(), challenge.getTitle(), challenge.getDescription());
+        GlobalWeeklyChallenge globalWeeklyChallenge = globalWeeklyChallengeRepository
+            .findByChallengeIdAndDeletedAtIsNull(challengeId)
+            .orElseThrow(() -> new GeneralException(ErrorStatus.CHALLENGE_NOT_FOUND));
+        int remainingDays = Math.toIntExact(ChronoUnit.DAYS.between(LocalDate.now(), globalWeeklyChallenge.getEndsOn()));
+        return new WeeklyChallengeDetailResult(
+            challenge.getId(),
+            challenge.getTitle(),
+            challenge.getDescription(),
+            remainingDays
+        );
     }
 
     @Transactional(readOnly = true)
@@ -150,6 +164,7 @@ public class WeeklyChallengeService {
     public WeeklyChallengeShareResult shareWeeklyChallenge(Long memberId, Long groupId, Long groupChallengeId) {
         validateGroupMembership(memberId, groupId);
         GroupChallenge groupChallenge = getWeeklyGroupChallenge(groupId, groupChallengeId);
+        Challenge challenge = getWeeklyChallenge(groupChallenge.getChallengeId());
         if (groupChallenge.getGroupChallengeStatus() != GroupChallengeStatus.COMPLETED) {
             throw new GeneralException(ErrorStatus.CHALLENGE_NOT_COMPLETED);
         }
@@ -163,11 +178,16 @@ public class WeeklyChallengeService {
         WeeklyChallengeShareImageGenerator.GridSize gridSize = shareImageGenerator.calculateGridSize(proofs.size());
         String shareImageKey = shareImageKey(groupId, groupChallengeId);
         if (!imageObjectStorage.exists(shareImageKey)) {
-            List<byte[]> sourceImages = proofs.stream()
-                .map(ChallengeProof::getImageKey)
-                .map(imageObjectStorage::read)
+            Map<Long, GroupMember> membersById = getJoinedGroupMembersById(groupId);
+            List<WeeklyChallengeShareImageGenerator.ShareImageSource> sources = proofs.stream()
+                .map(proof -> toShareImageSource(proof, membersById.get(proof.getMemberId())))
                 .toList();
-            byte[] sharedImage = shareImageGenerator.generate(sourceImages, gridSize);
+            byte[] sharedImage = shareImageGenerator.generate(
+                challenge.getTitle(),
+                challenge.getDescription(),
+                sources,
+                gridSize
+            );
             imageObjectStorage.write(shareImageKey, sharedImage, "image/jpeg");
         }
         return new WeeklyChallengeShareResult(
@@ -176,6 +196,50 @@ public class WeeklyChallengeService {
             gridSize.rows(),
             gridSize.columns()
         );
+    }
+
+    private WeeklyChallengeShareImageGenerator.ShareImageSource toShareImageSource(
+        ChallengeProof proof,
+        GroupMember groupMember
+    ) {
+        if (groupMember == null) {
+            throw new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND);
+        }
+        return new WeeklyChallengeShareImageGenerator.ShareImageSource(
+            imageObjectStorage.read(proof.getImageKey()),
+            toGeneratorCropRegion(proof),
+            groupMember.getDisplayNickname(),
+            readProfileImage(groupMember.getDisplayProfileImageKey())
+        );
+    }
+
+    private WeeklyChallengeShareImageGenerator.ImageCropRegion toGeneratorCropRegion(ChallengeProof proof) {
+        if (proof.getCropX() == null
+            || proof.getCropY() == null
+            || proof.getCropWidth() == null
+            || proof.getCropHeight() == null) {
+            return null;
+        }
+        return new WeeklyChallengeShareImageGenerator.ImageCropRegion(
+            proof.getCropX(),
+            proof.getCropY(),
+            proof.getCropWidth(),
+            proof.getCropHeight()
+        );
+    }
+
+    private byte[] readProfileImage(String imageKey) {
+        if (imageKey == null || imageKey.isBlank() || imageKey.startsWith("http://") || imageKey.startsWith("https://")) {
+            return null;
+        }
+        try {
+            if (!imageObjectStorage.exists(imageKey)) {
+                return null;
+            }
+            return imageObjectStorage.read(imageKey);
+        } catch (GeneralException e) {
+            return null;
+        }
     }
 
     private void completeIfAllMembersProved(GroupChallenge groupChallenge, String groupName) {
@@ -208,10 +272,10 @@ public class WeeklyChallengeService {
 
         LocalDate today = LocalDate.now();
         return groupChallengeRepository
-            .findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndStartsOnLessThanEqualAndEndsOnGreaterThanEqualAndDeletedAtIsNullOrderByEndsOnAscIdAsc(
+            .findByGroupIdAndChallengeIdInAndGroupChallengeStatusInAndStartsOnLessThanEqualAndEndsOnGreaterThanEqualAndDeletedAtIsNullOrderByEndsOnAscIdAsc(
                 groupId,
                 weeklyChallengeIds,
-                GroupChallengeStatus.IN_PROGRESS,
+                List.of(GroupChallengeStatus.IN_PROGRESS, GroupChallengeStatus.COMPLETED),
                 today,
                 today
             );
@@ -238,37 +302,40 @@ public class WeeklyChallengeService {
         if (challenge == null) {
             throw new GeneralException(ErrorStatus.CHALLENGE_NOT_FOUND);
         }
+        List<GroupMember> participants = randomizedParticipants(proofs, membersById);
         return new WeeklyChallengeSummaryResult(
             groupChallenge.getId(),
+            challenge.getId(),
             challenge.getTitle(),
             groupChallenge.getDueDayOfWeek().name(),
             groupChallenge.getStartsOn(),
             groupChallenge.getEndsOn(),
             Math.toIntExact(ChronoUnit.DAYS.between(LocalDate.now(), groupChallenge.getEndsOn())),
+            groupChallenge.getGroupChallengeStatus() == GroupChallengeStatus.COMPLETED,
             proofs.size(),
-            representativeParticipantNickname(proofs, membersById),
-            representativeParticipants(proofs, membersById)
+            representativeParticipantNickname(participants),
+            representativeParticipants(participants)
         );
     }
 
-    private String representativeParticipantNickname(List<ChallengeProof> proofs, Map<Long, GroupMember> membersById) {
-        return proofs.stream()
-            .sorted(Comparator.comparing(ChallengeProof::getUploadedAt).thenComparing(ChallengeProof::getId))
+    private List<GroupMember> randomizedParticipants(List<ChallengeProof> proofs, Map<Long, GroupMember> membersById) {
+        List<GroupMember> participants = new ArrayList<>(proofs.stream()
             .map(proof -> membersById.get(proof.getMemberId()))
             .filter(member -> member != null)
+            .toList());
+        Collections.shuffle(participants);
+        return participants;
+    }
+
+    private String representativeParticipantNickname(List<GroupMember> participants) {
+        return participants.stream()
             .map(GroupMember::getDisplayNickname)
             .findFirst()
             .orElse(null);
     }
 
-    private List<WeeklyChallengeParticipantResult> representativeParticipants(
-        List<ChallengeProof> proofs,
-        Map<Long, GroupMember> membersById
-    ) {
-        return proofs.stream()
-            .sorted(Comparator.comparing(ChallengeProof::getUploadedAt).thenComparing(ChallengeProof::getId))
-            .map(proof -> membersById.get(proof.getMemberId()))
-            .filter(member -> member != null)
+    private List<WeeklyChallengeParticipantResult> representativeParticipants(List<GroupMember> participants) {
+        return participants.stream()
             .limit(3)
             .map(member -> new WeeklyChallengeParticipantResult(
                 member.getMemberId(),
@@ -342,7 +409,7 @@ public class WeeklyChallengeService {
     }
 
     private String shareImageKey(Long groupId, Long groupChallengeId) {
-        return "weekly-challenge-shares/" + groupId + "/" + groupChallengeId + ".jpg";
+        return "weekly-challenge-shares/v2/" + groupId + "/" + groupChallengeId + ".jpg";
     }
 
     public record WeeklyChallengeListResult(List<WeeklyChallengeSummaryResult> challenges) {
@@ -350,11 +417,13 @@ public class WeeklyChallengeService {
 
     public record WeeklyChallengeSummaryResult(
         Long groupChallengeId,
+        Long challengeId,
         String title,
         String deadlineDayOfWeek,
         LocalDate startsOn,
         LocalDate endsOn,
         int remainingDays,
+        boolean isComplete,
         int participantCount,
         String randomParticipantNickname,
         List<WeeklyChallengeParticipantResult> participants
@@ -364,7 +433,7 @@ public class WeeklyChallengeService {
     public record WeeklyChallengeParticipantResult(Long memberId, String nickname, String profileImageUrl) {
     }
 
-    public record WeeklyChallengeDetailResult(Long challengeId, String title, String description) {
+    public record WeeklyChallengeDetailResult(Long challengeId, String title, String description, int remainingDays) {
     }
 
     public record WeeklyChallengeProofListResult(List<WeeklyChallengeProofResult> proofs) {

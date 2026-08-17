@@ -9,6 +9,7 @@ import cmc.mody.auth.application.oauth.dto.OAuthMemberResult;
 import cmc.mody.auth.application.oauth.dto.OAuthProfile;
 import cmc.mody.common.domain.Status;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.member.domain.LoginType;
@@ -16,8 +17,11 @@ import cmc.mody.member.domain.Member;
 import cmc.mody.member.domain.SocialAccount;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.member.infrastructure.repository.SocialAccountRepository;
+import jakarta.persistence.LockModeType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +30,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
 @ExtendWith(MockitoExtension.class)
 class OAuthMemberProcessorTest {
@@ -48,6 +55,28 @@ class OAuthMemberProcessorTest {
     private ArgumentCaptor<SocialAccount> socialAccountCaptor;
 
     @Test
+    @DisplayName("OAuth 회원 확인은 동시 최초 로그인을 직렬화한다.")
+    void ensureUsesSerializableTransaction() throws NoSuchMethodException {
+        Transactional transactional = OAuthMemberProcessor.class
+            .getDeclaredMethod("ensure", OAuthProfile.class)
+            .getAnnotation(Transactional.class);
+
+        assertThat(transactional).isNotNull();
+        assertThat(transactional.isolation()).isEqualTo(Isolation.SERIALIZABLE);
+    }
+
+    @Test
+    @DisplayName("기존 소셜 계정 조회는 쓰기 잠금을 사용한다.")
+    void socialAccountLookupUsesPessimisticWriteLock() throws NoSuchMethodException {
+        Lock lock = SocialAccountRepository.class
+            .getDeclaredMethod("findByLoginTypeAndProviderUserIdAndDeletedAtIsNull", LoginType.class, String.class)
+            .getAnnotation(Lock.class);
+
+        assertThat(lock).isNotNull();
+        assertThat(lock.value()).isEqualTo(LockModeType.PESSIMISTIC_WRITE);
+    }
+
+    @Test
     @DisplayName("메인 진입 조건을 만족하면 가능 상태를 반환한다.")
     void ensureExistingMember() {
         OAuthMemberProcessor processor = processor();
@@ -59,11 +88,22 @@ class OAuthMemberProcessorTest {
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
         given(groupMemberRepository.countByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
             .willReturn(1L);
+        GroupMember groupMember = new GroupMember(
+            2L,
+            1L,
+            10L,
+            "민석",
+            "old-profile",
+            LocalDateTime.now()
+        );
+        given(groupMemberRepository.findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(1L, GroupMemberStatus.JOINED))
+            .willReturn(List.of(groupMember));
 
         OAuthMemberResult result = processor.ensure(profile);
 
         assertThat(result).isEqualTo(new OAuthMemberResult(1L, true, true, true));
         assertThat(member.getProfileImageKey()).isEqualTo("kakao-profile");
+        assertThat(groupMember.getDisplayProfileImageKey()).isEqualTo("kakao-profile");
         then(memberRepository).should().findById(1L);
     }
 

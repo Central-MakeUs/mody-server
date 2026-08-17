@@ -15,11 +15,13 @@ import cmc.mody.challenge.application.WeeklyChallengeService.ImageCropRegionResu
 import cmc.mody.challenge.domain.Challenge;
 import cmc.mody.challenge.domain.ChallengeProof;
 import cmc.mody.challenge.domain.ChallengeType;
+import cmc.mody.challenge.domain.GlobalWeeklyChallenge;
 import cmc.mody.challenge.domain.GroupChallenge;
 import cmc.mody.challenge.domain.GroupChallengeStatus;
 import cmc.mody.challenge.infrastructure.repository.ChallengeProofRepository;
 import cmc.mody.challenge.infrastructure.repository.ChallengeRepository;
 import cmc.mody.challenge.infrastructure.repository.GroupChallengeRepository;
+import cmc.mody.challenge.infrastructure.repository.GlobalWeeklyChallengeRepository;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
@@ -65,6 +67,9 @@ class WeeklyChallengeServiceTest {
     private ChallengeRepository challengeRepository;
 
     @Mock
+    private GlobalWeeklyChallengeRepository globalWeeklyChallengeRepository;
+
+    @Mock
     private GroupChallengeRepository groupChallengeRepository;
 
     @Mock
@@ -83,7 +88,7 @@ class WeeklyChallengeServiceTest {
     private ArgumentCaptor<ChallengeProof> proofCaptor;
 
     @Test
-    @DisplayName("이번 주 주간 챌린지는 진행 중인 PHOTO 그룹 챌린지와 인증 참여 현황을 반환한다.")
+    @DisplayName("이번 주 주간 챌린지는 진행 및 완료된 PHOTO 그룹 챌린지와 인증 참여 현황을 반환한다.")
     void getWeeklyChallenges() {
         WeeklyChallengeService service = service();
         GroupChallenge groupChallenge = groupChallenge(100L, 10L, 1L);
@@ -91,7 +96,7 @@ class WeeklyChallengeServiceTest {
         givenValidGroupMembership();
         givenWeeklyChallenges(List.of(challenge(1L, "물 2L 마시기")));
         given(groupChallengeRepository
-            .findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndStartsOnLessThanEqualAndEndsOnGreaterThanEqualAndDeletedAtIsNullOrderByEndsOnAscIdAsc(
+            .findByGroupIdAndChallengeIdInAndGroupChallengeStatusInAndStartsOnLessThanEqualAndEndsOnGreaterThanEqualAndDeletedAtIsNullOrderByEndsOnAscIdAsc(
                 any(),
                 any(),
                 any(),
@@ -106,8 +111,8 @@ class WeeklyChallengeServiceTest {
         WeeklyChallengeListResult result = service.getWeeklyChallenges(1L, 10L);
 
         assertThat(result.challenges())
-            .extracting("groupChallengeId", "title", "participantCount", "randomParticipantNickname")
-            .containsExactly(org.assertj.core.groups.Tuple.tuple(100L, "물 2L 마시기", 1, "친구"));
+            .extracting("groupChallengeId", "title", "isComplete", "participantCount", "randomParticipantNickname")
+            .containsExactly(org.assertj.core.groups.Tuple.tuple(100L, "물 2L 마시기", false, 1, "친구"));
         assertThat(result.challenges().getFirst().startsOn()).isEqualTo(groupChallenge.getStartsOn());
         assertThat(result.challenges().getFirst().endsOn()).isEqualTo(groupChallenge.getEndsOn());
         assertThat(result.challenges().getFirst().remainingDays()).isEqualTo(5);
@@ -121,18 +126,45 @@ class WeeklyChallengeServiceTest {
     }
 
     @Test
+    @DisplayName("완료된 이번 주 주간 챌린지는 목록에 완료 상태로 반환한다.")
+    void getWeeklyChallengesIncludesCompletedChallenge() {
+        WeeklyChallengeService service = service();
+        GroupChallenge groupChallenge = groupChallenge(100L, 10L, 1L);
+        groupChallenge.complete(LocalDateTime.now());
+        givenValidGroupMembership();
+        givenWeeklyChallenges(List.of(challenge(1L, "물 2L 마시기")));
+        given(groupChallengeRepository
+            .findByGroupIdAndChallengeIdInAndGroupChallengeStatusInAndStartsOnLessThanEqualAndEndsOnGreaterThanEqualAndDeletedAtIsNullOrderByEndsOnAscIdAsc(
+                any(), any(), any(), any(), any()
+            ))
+            .willReturn(List.of(groupChallenge));
+        given(challengeProofRepository.findByGroupChallengeIdInAndDeletedAtIsNullOrderByUploadedAtAscIdAsc(List.of(100L)))
+            .willReturn(List.of());
+        givenJoinedMembers();
+
+        WeeklyChallengeListResult result = service.getWeeklyChallenges(1L, 10L);
+
+        assertThat(result.challenges()).singleElement()
+            .extracting("groupChallengeId", "isComplete")
+            .containsExactly(100L, true);
+    }
+
+    @Test
     @DisplayName("주간 챌린지 상세는 PHOTO 타입 챌린지 정보만 반환한다.")
     void getWeeklyChallengeDetail() {
         WeeklyChallengeService service = service();
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
         given(challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(1L, ChallengeType.PHOTO))
             .willReturn(Optional.of(challenge(1L, "물 2L 마시기")));
+        given(globalWeeklyChallengeRepository.findByChallengeIdAndDeletedAtIsNull(1L))
+            .willReturn(Optional.of(new GlobalWeeklyChallenge(10L, 1L, LocalDate.now().minusDays(3), LocalDate.now().plusDays(4))));
 
         WeeklyChallengeService.WeeklyChallengeDetailResult result = service.getWeeklyChallengeDetail(1L, 1L);
 
         assertThat(result.challengeId()).isEqualTo(1L);
         assertThat(result.title()).isEqualTo("물 2L 마시기");
         assertThat(result.description()).isEqualTo("물 2L 마시기 설명");
+        assertThat(result.remainingDays()).isEqualTo(4);
     }
 
     @Test
@@ -217,10 +249,17 @@ class WeeklyChallengeServiceTest {
     }
 
     @Test
-    @DisplayName("마지막 그룹원이 인증하면 주간 챌린지를 완료 처리하고 완료 알림을 요청한다.")
+    @DisplayName("전역 원본에 연결된 그룹 진행 항목도 마지막 그룹원이 인증하면 그룹 단위로 완료 처리하고 알림을 요청한다.")
     void completeWeeklyChallengeWhenAllJoinedMembersProved() {
         WeeklyChallengeService service = service();
-        GroupChallenge groupChallenge = groupChallenge(100L, 10L, 1L);
+        GroupChallenge groupChallenge = new GroupChallenge(
+            100L,
+            10L,
+            1L,
+            900L,
+            LocalDate.now().minusDays(1),
+            LocalDate.now().plusDays(5)
+        );
         givenValidGroupMembership();
         given(groupChallengeRepository.findByIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
             .willReturn(Optional.of(groupChallenge));
@@ -243,6 +282,7 @@ class WeeklyChallengeServiceTest {
         );
 
         assertThat(groupChallenge.getGroupChallengeStatus()).isEqualTo(GroupChallengeStatus.COMPLETED);
+        assertThat(groupChallenge.getGlobalWeeklyChallengeId()).isEqualTo(900L);
         assertThat(groupChallenge.getCompletedAt()).isNotNull();
         then(notificationRequestService).should().requestWeeklyChallengeCompleted(10L, "모디", 100L);
     }
@@ -312,20 +352,21 @@ class WeeklyChallengeServiceTest {
                 proof(1000L, 100L, 1L, "weekly-challenges/1/proof.jpg"),
                 proof(1001L, 100L, 2L, "weekly-challenges/2/proof.jpg")
             ));
+        givenJoinedMembers();
         given(shareImageGenerator.calculateGridSize(2))
             .willReturn(new WeeklyChallengeShareImageGenerator.GridSize(1, 2));
-        given(imageObjectStorage.exists("weekly-challenge-shares/10/100.jpg")).willReturn(false);
+        given(imageObjectStorage.exists("weekly-challenge-shares/v2/10/100.jpg")).willReturn(false);
         given(imageObjectStorage.read("weekly-challenges/1/proof.jpg")).willReturn(new byte[]{1});
         given(imageObjectStorage.read("weekly-challenges/2/proof.jpg")).willReturn(new byte[]{2});
-        given(shareImageGenerator.generate(any(), any())).willReturn(new byte[]{3});
-        given(imageObjectStorage.toUrl("weekly-challenge-shares/10/100.jpg"))
-            .willReturn("https://storage.example.com/weekly-challenge-shares/10/100.jpg");
+        given(shareImageGenerator.generate(any(), any(), any(), any())).willReturn(new byte[]{3});
+        given(imageObjectStorage.toUrl("weekly-challenge-shares/v2/10/100.jpg"))
+            .willReturn("https://storage.example.com/weekly-challenge-shares/v2/10/100.jpg");
 
         WeeklyChallengeService.WeeklyChallengeShareResult result = service.shareWeeklyChallenge(1L, 10L, 100L);
 
-        then(imageObjectStorage).should().write("weekly-challenge-shares/10/100.jpg", new byte[]{3}, "image/jpeg");
+        then(imageObjectStorage).should().write("weekly-challenge-shares/v2/10/100.jpg", new byte[]{3}, "image/jpeg");
         assertThat(result).isEqualTo(new WeeklyChallengeService.WeeklyChallengeShareResult(
-            "https://storage.example.com/weekly-challenge-shares/10/100.jpg",
+            "https://storage.example.com/weekly-challenge-shares/v2/10/100.jpg",
             null,
             1,
             2
@@ -347,9 +388,9 @@ class WeeklyChallengeServiceTest {
             .willReturn(List.of(proof(1000L, 100L, 1L, "weekly-challenges/1/proof.jpg")));
         given(shareImageGenerator.calculateGridSize(1))
             .willReturn(new WeeklyChallengeShareImageGenerator.GridSize(1, 1));
-        given(imageObjectStorage.exists("weekly-challenge-shares/10/100.jpg")).willReturn(true);
-        given(imageObjectStorage.toUrl("weekly-challenge-shares/10/100.jpg"))
-            .willReturn("https://storage.example.com/weekly-challenge-shares/10/100.jpg");
+        given(imageObjectStorage.exists("weekly-challenge-shares/v2/10/100.jpg")).willReturn(true);
+        given(imageObjectStorage.toUrl("weekly-challenge-shares/v2/10/100.jpg"))
+            .willReturn("https://storage.example.com/weekly-challenge-shares/v2/10/100.jpg");
 
         WeeklyChallengeService.WeeklyChallengeShareResult result = service.shareWeeklyChallenge(1L, 10L, 100L);
 
@@ -424,6 +465,7 @@ class WeeklyChallengeServiceTest {
             modyGroupRepository,
             groupMemberRepository,
             challengeRepository,
+            globalWeeklyChallengeRepository,
             groupChallengeRepository,
             challengeProofRepository,
             notificationRequestService,

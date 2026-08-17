@@ -4,6 +4,8 @@ import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
 import cmc.mody.common.upload.ImageUrlResolver;
+import cmc.mody.challenge.application.GlobalWeeklyChallengeService;
+import cmc.mody.challenge.application.StepChallengeService;
 import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.grouping.domain.ModyGroup;
@@ -31,7 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class GroupService {
     private static final int MAX_GROUP_COUNT = 4;
-    private static final int MAX_GROUP_MEMBER_COUNT = 12;
+    private static final int MAX_GROUP_MEMBER_COUNT = 8;
     private static final int GROUP_CODE_LENGTH = 8;
     private static final int MAX_GROUP_CODE_GENERATION_ATTEMPTS = 20;
     private static final char[] GROUP_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".toCharArray();
@@ -40,6 +42,8 @@ public class GroupService {
     private final MemberRepository memberRepository;
     private final ModyGroupRepository modyGroupRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final StepChallengeService stepChallengeService;
+    private final GlobalWeeklyChallengeService globalWeeklyChallengeService;
     private final NotificationRequestService notificationRequestService;
     private final ActivityRecordRepository activityRecordRepository;
     private final ActivityRecordGroupRepository activityRecordGroupRepository;
@@ -65,6 +69,8 @@ public class GroupService {
             command.name()
         ));
         groupMemberRepository.save(newGroupMember(member, group.getId()));
+        stepChallengeService.initializeDefaultStepChallenge(group.getId());
+        globalWeeklyChallengeService.initializeForNewGroup(group.getId());
         member.completeGroupOnboarding();
 
         return new GroupCreateResult(group.getId(), group.getCode(), group.getName());

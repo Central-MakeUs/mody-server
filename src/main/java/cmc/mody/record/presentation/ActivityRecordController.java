@@ -25,6 +25,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -124,6 +125,15 @@ public class ActivityRecordController {
             request.toCommand()
         );
         return ApiResponse.created(RecordCreateResponse.from(result));
+    }
+
+    @DeleteMapping("/records/{recordId}")
+    public ApiResponse<Void> deleteRecord(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long recordId
+    ) {
+        activityRecordService.deleteRecord(memberId, recordId);
+        return ApiResponse.ok();
     }
 
     @PostMapping("/groups/{groupId}/records/{recordId}/comments")

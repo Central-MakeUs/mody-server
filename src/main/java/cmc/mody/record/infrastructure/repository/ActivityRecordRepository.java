@@ -17,6 +17,17 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
           and recordGroup.groupId = :groupId
           and recordGroup.deletedAt is null
           and record.deletedAt is null
+        order by recordGroup.uploadedAt desc, record.id desc
+        """)
+    List<ActivityRecord> findActiveAdminRecordsByGroupId(@Param("groupId") Long groupId);
+
+    @Query("""
+        select record
+        from ActivityRecord record, ActivityRecordGroup recordGroup
+        where recordGroup.recordId = record.id
+          and recordGroup.groupId = :groupId
+          and recordGroup.deletedAt is null
+          and record.deletedAt is null
           and recordGroup.uploadedAt >= :startAt
           and recordGroup.uploadedAt < :endAt
           and exists (
@@ -45,7 +56,39 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
           and record.deletedAt is null
           and recordGroup.uploadedAt >= :startAt
           and recordGroup.uploadedAt < :endAt
-          and (:cursor is null or record.id < :cursor)
+        order by recordGroup.uploadedAt asc, record.id asc
+        """)
+    List<ActivityRecord> findGroupRecordsBetween(
+        @Param("groupId") Long groupId,
+        @Param("startAt") LocalDateTime startAt,
+        @Param("endAt") LocalDateTime endAt
+    );
+
+    @Query("""
+        select record
+        from ActivityRecord record, ActivityRecordGroup recordGroup
+        where recordGroup.recordId = record.id
+          and recordGroup.groupId = :groupId
+          and recordGroup.deletedAt is null
+          and record.deletedAt is null
+          and recordGroup.uploadedAt >= :startAt
+          and recordGroup.uploadedAt < :endAt
+          and (
+              :cursor is null
+              or record.uploadedAt < (
+                  select cursorRecord.uploadedAt
+                  from ActivityRecord cursorRecord
+                  where cursorRecord.id = :cursor
+              )
+              or (
+                  record.uploadedAt = (
+                      select cursorRecord.uploadedAt
+                      from ActivityRecord cursorRecord
+                      where cursorRecord.id = :cursor
+                  )
+                  and record.id < :cursor
+              )
+          )
           and exists (
               select 1
               from GroupMember groupMember
@@ -54,7 +97,7 @@ public interface ActivityRecordRepository extends JpaRepository<ActivityRecord, 
                 and groupMember.groupMemberStatus = :joinedStatus
                 and groupMember.deletedAt is null
           )
-        order by record.id desc
+        order by record.uploadedAt desc, record.id desc
         """)
     List<ActivityRecord> findActiveGroupRecordsByCursor(
         @Param("groupId") Long groupId,

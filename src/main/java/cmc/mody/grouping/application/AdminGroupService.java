@@ -42,9 +42,50 @@ public class AdminGroupService {
             .toList());
     }
 
+    @Transactional(readOnly = true)
+    public AdminGroupDetailResult getGroup(Long groupId) {
+        ModyGroup group = getActiveGroup(groupId);
+        List<AdminGroupMemberResult> members = groupMemberRepository
+            .findByGroupIdAndGroupMemberStatusAndDeletedAtIsNullOrderByJoinedAtAsc(groupId, GroupMemberStatus.JOINED)
+            .stream()
+            .map(member -> new AdminGroupMemberResult(
+                member.getMemberId(),
+                member.getDisplayNickname(),
+                member.getDisplayProfileImageKey(),
+                member.getJoinedAt()
+            ))
+            .toList();
+        return new AdminGroupDetailResult(group.getId(), group.getName(), group.getCode(), members);
+    }
+
+    @Transactional
+    public AdminGroupResult updateGroupName(Long groupId, String name) {
+        ModyGroup group = getActiveGroup(groupId);
+        group.updateName(name.trim());
+        long memberCount = groupMemberRepository.countByGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            groupId,
+            GroupMemberStatus.JOINED
+        );
+        return new AdminGroupResult(group.getId(), group.getName(), group.getCode(), memberCount);
+    }
+
+    private ModyGroup getActiveGroup(Long groupId) {
+        return modyGroupRepository.findById(groupId)
+            .filter(ModyGroup::isActive)
+            .orElseThrow(() -> new cmc.mody.common.api.exception.GeneralException(
+                cmc.mody.common.api.status.ErrorStatus.GROUP_NOT_FOUND
+            ));
+    }
+
     public record AdminGroupListResult(List<AdminGroupResult> groups) {
     }
 
     public record AdminGroupResult(Long groupId, String name, String code, long memberCount) {
+    }
+
+    public record AdminGroupDetailResult(Long groupId, String name, String code, List<AdminGroupMemberResult> members) {
+    }
+
+    public record AdminGroupMemberResult(Long memberId, String nickname, String profileImageKey, java.time.LocalDateTime joinedAt) {
     }
 }

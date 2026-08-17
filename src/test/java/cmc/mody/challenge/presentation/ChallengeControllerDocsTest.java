@@ -19,6 +19,8 @@ import cmc.mody.challenge.application.ChallengeHomeService;
 import cmc.mody.challenge.application.ChallengeHomeService.ChallengeSummaryResult;
 import cmc.mody.challenge.application.ChallengeHomeService.NudgeTargetListResult;
 import cmc.mody.challenge.application.ChallengeHomeService.NudgeTargetResult;
+import cmc.mody.challenge.application.ChallengeHomeService.NudgeResult;
+import cmc.mody.challenge.application.ChallengeHomeService.NudgeButtonStatus;
 import cmc.mody.challenge.application.StepChallengeService;
 import cmc.mody.challenge.application.StepChallengeService.StepChallengeChangeCommand;
 import cmc.mody.challenge.application.StepChallengeService.StepChallengeChangeResult;
@@ -32,6 +34,7 @@ import cmc.mody.challenge.application.StepChallengeService.StepRecordUpsertResul
 import cmc.mody.challenge.application.StepChallengeService.WalkedRegionListResult;
 import cmc.mody.challenge.application.StepChallengeService.WalkedRegionResult;
 import cmc.mody.challenge.application.WeeklyChallengeService;
+import cmc.mody.challenge.domain.GroupChallengeStatus;
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeDetailResult;
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeListResult;
 import cmc.mody.challenge.application.WeeklyChallengeService.WeeklyChallengeProofCreateCommand;
@@ -49,6 +52,7 @@ import cmc.mody.common.config.WebConfig;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -87,6 +91,7 @@ class ChallengeControllerDocsTest {
         - GROUP302: 그룹 없음
         - GROUP306: 그룹 참여 정보 없음
         - CHALLENGE301: 본인 찌르기 등 챌린지 요청값 검증 실패
+        - CHALLENGE308: 오늘 이미 콕찌르기를 보냄
         """;
     private static final String STEP_CHALLENGE_DESCRIPTION = """
         걸음수 챌린지 API는 access token의 회원 id 기준으로 그룹 참여 여부를 검증한다.
@@ -169,7 +174,7 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.allMemberRecordedDays").type(JsonFieldType.NUMBER)
                             .description("모든 구성원이 기록한 일수"),
                         fieldWithPath("result.hasStartedStreak").type(JsonFieldType.BOOLEAN)
-                            .description("현재 참여 중인 모든 구성원이 같은 날짜에 기록한 이력이 한 번이라도 있는지 여부"),
+                            .description("각 기록일 당시 참여 중인 모든 구성원이 같은 날짜에 기록한 이력이 한 번이라도 있는지 여부"),
                         fieldWithPath("result.monthlyExerciseMinutes").type(JsonFieldType.NUMBER)
                             .description("이번달 운동 시간 분"),
                         fieldWithPath("result.monthlyCompletedChallengeCount").type(JsonFieldType.NUMBER)
@@ -183,7 +188,14 @@ class ChallengeControllerDocsTest {
     void getCurrentStepChallenge() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(stepChallengeService.getCurrentStepChallenge(1L, 1L))
-            .willReturn(new StepChallengeStatusResult(1L, "서울-인천", 150_000, 34_000));
+            .willReturn(new StepChallengeStatusResult(
+                1L,
+                "서울-인천",
+                150_000,
+                34_000,
+                LocalDateTime.of(2026, 8, 6, 14, 40),
+                GroupChallengeStatus.IN_PROGRESS
+            ));
 
         mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/step/current", 1L)
                 .header("Authorization", "Bearer access-token"))
@@ -197,7 +209,11 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.groupChallengeId").type(JsonFieldType.NUMBER).description("그룹 챌린지 id"),
                         fieldWithPath("result.title").type(JsonFieldType.STRING).description("챌린지명"),
                         fieldWithPath("result.targetStepCount").type(JsonFieldType.NUMBER).description("목표 걸음수"),
-                        fieldWithPath("result.currentStepCount").type(JsonFieldType.NUMBER).description("현재 걸음수")
+                        fieldWithPath("result.currentStepCount").type(JsonFieldType.NUMBER).description("현재 걸음수"),
+                        fieldWithPath("result.stepCountFetchFromAt").type(JsonFieldType.STRING)
+                            .description("걸음수 조회 시작 시각(ISO-8601)"),
+                        fieldWithPath("result.challengeStatus").type(JsonFieldType.STRING)
+                            .description("챌린지 상태(IN_PROGRESS 또는 COMPLETED)")
                     ))
                     .build())
             ));
@@ -210,11 +226,13 @@ class ChallengeControllerDocsTest {
             .willReturn(new WeeklyChallengeListResult(List.of(
                 new WeeklyChallengeSummaryResult(
                     1L,
+                    10L,
                     "물 2L 마시기",
                     "SUNDAY",
                     LocalDate.of(2026, 8, 3),
                     LocalDate.of(2026, 8, 9),
                     4,
+                    false,
                     3,
                     "민석",
                     List.of(new WeeklyChallengeParticipantResult(
@@ -236,6 +254,8 @@ class ChallengeControllerDocsTest {
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.challenges[].groupChallengeId").type(JsonFieldType.NUMBER)
                             .description("그룹 챌린지 id"),
+                        fieldWithPath("result.challenges[].challengeId").type(JsonFieldType.NUMBER)
+                            .description("주간 챌린지 원본 id"),
                         fieldWithPath("result.challenges[].title").type(JsonFieldType.STRING).description("챌린지명"),
                         fieldWithPath("result.challenges[].deadlineDayOfWeek").type(JsonFieldType.STRING)
                             .description("마감 요일"),
@@ -243,6 +263,8 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.challenges[].endsOn").type(JsonFieldType.STRING).description("마감일"),
                         fieldWithPath("result.challenges[].remainingDays").type(JsonFieldType.NUMBER)
                             .description("마감일까지 남은 일수"),
+                        fieldWithPath("result.challenges[].isComplete").type(JsonFieldType.BOOLEAN)
+                            .description("그룹의 해당 주간 챌린지 완료 여부"),
                         fieldWithPath("result.challenges[].participantCount").type(JsonFieldType.NUMBER)
                             .description("참여 인원"),
                         fieldWithPath("result.challenges[].randomParticipantNickname").type(JsonFieldType.STRING)
@@ -303,7 +325,14 @@ class ChallengeControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(challengeHomeService.getNudgeTargets(1L, 1L))
             .willReturn(new NudgeTargetListResult(List.of(
-                new NudgeTargetResult(2L, "친구", "https://storage.example.com/profiles/member-2.jpg", false)
+                new NudgeTargetResult(
+                    2L,
+                    "친구",
+                    "https://storage.example.com/profiles/member-2.jpg",
+                    false,
+                    true,
+                    NudgeButtonStatus.NUDGED
+                )
             )));
 
         mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/nudges", 1L)
@@ -320,7 +349,11 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.members[].profileImageUrl").type(JsonFieldType.STRING)
                             .description("프로필 이미지"),
                         fieldWithPath("result.members[].recordedToday").type(JsonFieldType.BOOLEAN)
-                            .description("오늘 기록 여부")
+                            .description("오늘 기록 여부"),
+                        fieldWithPath("result.members[].nudgedToday").type(JsonFieldType.BOOLEAN)
+                            .description("오늘 콕찌르기 여부"),
+                        fieldWithPath("result.members[].buttonStatus").type(JsonFieldType.STRING)
+                            .description("버튼 상태: RECORDED(기록 완료), NUDGED(이미 찔렀어요), AVAILABLE(콕찌르기 가능)")
                     ))
                     .build())
             ));
@@ -329,6 +362,8 @@ class ChallengeControllerDocsTest {
     @Test
     void nudgeMember() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(challengeHomeService.nudgeMember(1L, 1L, 2L))
+            .willReturn(new NudgeResult(true, NudgeButtonStatus.NUDGED));
 
         mockMvc.perform(post("/api/v1/groups/{groupId}/challenges/nudges/{memberId}", 1L, 2L)
                 .header("Authorization", "Bearer access-token"))
@@ -338,7 +373,12 @@ class ChallengeControllerDocsTest {
                     .tag("Challenge")
                     .summary("버디 찌르기")
                     .description(CHALLENGE_HOME_DESCRIPTION)
-                    .responseFields(commonResponseFields())
+                    .responseFields(commonResponseFields(
+                        fieldWithPath("result.nudgedToday").type(JsonFieldType.BOOLEAN)
+                            .description("오늘 콕찌르기 완료 여부"),
+                        fieldWithPath("result.buttonStatus").type(JsonFieldType.STRING)
+                            .description("버튼 상태: NUDGED(이미 찔렀어요)")
+                    ))
                     .build())
             ));
     }
@@ -371,8 +411,8 @@ class ChallengeControllerDocsTest {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(stepChallengeService.getStepChallengeOptions(1L, 1L))
             .willReturn(new StepChallengeOptionListResult(List.of(
-                new StepChallengeOptionResult(1L, "서울-인천", "서울", "인천", 60.0, 150_000, true),
-                new StepChallengeOptionResult(2L, "서울-천안", "서울", "천안", 90.0, 200_000, false)
+                new StepChallengeOptionResult(1L, "서울-인천", "서울", "인천", 60.0, 150_000, true, false),
+                new StepChallengeOptionResult(2L, "서울-천안", "서울", "천안", 90.0, 200_000, false, true)
             )));
 
         mockMvc.perform(get("/api/v1/groups/{groupId}/challenges/step/options", 1L)
@@ -392,7 +432,9 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.options[].targetStepCount").type(JsonFieldType.NUMBER)
                             .description("목표 걸음수"),
                         fieldWithPath("result.options[].selected").type(JsonFieldType.BOOLEAN)
-                            .description("현재 진행 중인 챌린지 여부")
+                            .description("현재 진행 중인 챌린지 여부"),
+                        fieldWithPath("result.options[].completed").type(JsonFieldType.BOOLEAN)
+                            .description("그룹이 해당 챌린지를 완료한 이력이 있는지 여부")
                     ))
                     .build())
             ));
@@ -430,7 +472,14 @@ class ChallengeControllerDocsTest {
     void changeStepChallenge() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(stepChallengeService.changeStepChallenge(1L, 1L, new StepChallengeChangeCommand(2L)))
-            .willReturn(new StepChallengeChangeResult(2L, 2L, "서울-천안", 200_000, 0));
+            .willReturn(new StepChallengeChangeResult(
+                2L,
+                2L,
+                "서울-천안",
+                200_000,
+                0,
+                LocalDateTime.of(2026, 8, 6, 14, 40)
+            ));
 
         mockMvc.perform(patch("/api/v1/groups/{groupId}/challenges/step/current", 1L)
                 .header("Authorization", "Bearer access-token")
@@ -454,7 +503,9 @@ class ChallengeControllerDocsTest {
                         fieldWithPath("result.challengeId").type(JsonFieldType.NUMBER).description("챌린지 id"),
                         fieldWithPath("result.title").type(JsonFieldType.STRING).description("챌린지명"),
                         fieldWithPath("result.targetStepCount").type(JsonFieldType.NUMBER).description("목표 걸음수"),
-                        fieldWithPath("result.currentStepCount").type(JsonFieldType.NUMBER).description("현재 걸음수")
+                        fieldWithPath("result.currentStepCount").type(JsonFieldType.NUMBER).description("현재 걸음수"),
+                        fieldWithPath("result.stepCountFetchFromAt").type(JsonFieldType.STRING)
+                            .description("걸음수 조회 시작 시각(ISO-8601)")
                     ))
                     .build())
             ));
@@ -708,7 +759,7 @@ class ChallengeControllerDocsTest {
     void getWeeklyChallengeDetail() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
         given(weeklyChallengeService.getWeeklyChallengeDetail(1L, 1L))
-            .willReturn(new WeeklyChallengeDetailResult(1L, "물 2L 마시기", "하루 동안 물 2L를 마시고 사진으로 인증한다."));
+            .willReturn(new WeeklyChallengeDetailResult(1L, "물 2L 마시기", "하루 동안 물 2L를 마시고 사진으로 인증한다.", 4));
 
         mockMvc.perform(get("/api/v1/weekly-challenges/{challengeId}", 1L)
                 .header("Authorization", "Bearer access-token"))
@@ -721,7 +772,8 @@ class ChallengeControllerDocsTest {
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.challengeId").type(JsonFieldType.NUMBER).description("챌린지 id"),
                         fieldWithPath("result.title").type(JsonFieldType.STRING).description("챌린지명"),
-                        fieldWithPath("result.description").type(JsonFieldType.STRING).description("상세 설명")
+                        fieldWithPath("result.description").type(JsonFieldType.STRING).description("상세 설명"),
+                        fieldWithPath("result.remainingDays").type(JsonFieldType.NUMBER).description("종료일까지 남은 일수")
                     ))
                     .build())
             ));

@@ -2,8 +2,10 @@ package cmc.mody.challenge.presentation;
 
 import cmc.mody.auth.presentation.support.CurrentMember;
 import cmc.mody.challenge.application.ChallengeHomeService;
+import cmc.mody.challenge.application.ChallengeHomeService.NudgeResult;
 import cmc.mody.challenge.application.StepChallengeService;
 import cmc.mody.challenge.application.WeeklyChallengeService;
+import cmc.mody.challenge.domain.GroupChallengeStatus;
 import cmc.mody.common.api.ApiResponse;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.constraints.AssertTrue;
@@ -17,6 +19,7 @@ import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -95,13 +98,13 @@ public class ChallengeController {
     }
 
     @PostMapping("/groups/{groupId}/challenges/nudges/{memberId}")
-    public ApiResponse<Void> nudgeMember(
+    public ApiResponse<NudgeResponse> nudgeMember(
         @Parameter(hidden = true) @CurrentMember Long currentMemberId,
         @PathVariable Long groupId,
         @PathVariable Long memberId
     ) {
-        challengeHomeService.nudgeMember(currentMemberId, groupId, memberId);
-        return ApiResponse.ok();
+        NudgeResult result = challengeHomeService.nudgeMember(currentMemberId, groupId, memberId);
+        return ApiResponse.ok(NudgeResponse.from(result));
     }
 
     @GetMapping("/groups/{groupId}/challenges/step/regions")
@@ -227,14 +230,18 @@ public class ChallengeController {
         Long groupChallengeId,
         String title,
         int targetStepCount,
-        int currentStepCount
+        int currentStepCount,
+        LocalDateTime stepCountFetchFromAt,
+        GroupChallengeStatus challengeStatus
     ) {
         public static StepChallengeStatusResponse from(StepChallengeService.StepChallengeStatusResult result) {
             return new StepChallengeStatusResponse(
                 result.groupChallengeId(),
                 result.title(),
                 result.targetStepCount(),
-                result.currentStepCount()
+                result.currentStepCount(),
+                result.stepCountFetchFromAt(),
+                result.challengeStatus()
             );
         }
     }
@@ -281,11 +288,13 @@ public class ChallengeController {
 
     public record WeeklyChallengeSummaryResponse(
         Long groupChallengeId,
+        Long challengeId,
         String title,
         String deadlineDayOfWeek,
         LocalDate startsOn,
         LocalDate endsOn,
         int remainingDays,
+        boolean isComplete,
         int participantCount,
         String randomParticipantNickname,
         List<WeeklyChallengeParticipantResponse> participants
@@ -293,11 +302,13 @@ public class ChallengeController {
         public static WeeklyChallengeSummaryResponse from(WeeklyChallengeService.WeeklyChallengeSummaryResult result) {
             return new WeeklyChallengeSummaryResponse(
                 result.groupChallengeId(),
+                result.challengeId(),
                 result.title(),
                 result.deadlineDayOfWeek(),
                 result.startsOn(),
                 result.endsOn(),
                 result.remainingDays(),
+                result.isComplete(),
                 result.participantCount(),
                 result.randomParticipantNickname(),
                 result.participants().stream().map(WeeklyChallengeParticipantResponse::from).toList()
@@ -319,14 +330,29 @@ public class ChallengeController {
         }
     }
 
-    public record NudgeTargetResponse(Long memberId, String nickname, String profileImageUrl, boolean recordedToday) {
+    public record NudgeTargetResponse(
+        Long memberId,
+        String nickname,
+        String profileImageUrl,
+        boolean recordedToday,
+        boolean nudgedToday,
+        ChallengeHomeService.NudgeButtonStatus buttonStatus
+    ) {
         public static NudgeTargetResponse from(ChallengeHomeService.NudgeTargetResult result) {
             return new NudgeTargetResponse(
                 result.memberId(),
                 result.nickname(),
                 result.profileImageUrl(),
-                result.recordedToday()
+                result.recordedToday(),
+                result.nudgedToday(),
+                result.buttonStatus()
             );
+        }
+    }
+
+    public record NudgeResponse(boolean nudgedToday, ChallengeHomeService.NudgeButtonStatus buttonStatus) {
+        public static NudgeResponse from(NudgeResult result) {
+            return new NudgeResponse(result.nudgedToday(), result.buttonStatus());
         }
     }
 
@@ -359,7 +385,8 @@ public class ChallengeController {
         String destination,
         double distanceKm,
         int targetStepCount,
-        boolean selected
+        boolean selected,
+        boolean completed
     ) {
         public static StepChallengeOptionResponse from(StepChallengeService.StepChallengeOptionResult result) {
             return new StepChallengeOptionResponse(
@@ -369,7 +396,8 @@ public class ChallengeController {
                 result.destination(),
                 result.distanceKm(),
                 result.targetStepCount(),
-                result.selected()
+                result.selected(),
+                result.completed()
             );
         }
     }
@@ -408,7 +436,8 @@ public class ChallengeController {
         Long challengeId,
         String title,
         int targetStepCount,
-        int currentStepCount
+        int currentStepCount,
+        LocalDateTime stepCountFetchFromAt
     ) {
         public static StepChallengeChangeResponse from(StepChallengeService.StepChallengeChangeResult result) {
             return new StepChallengeChangeResponse(
@@ -416,14 +445,20 @@ public class ChallengeController {
                 result.challengeId(),
                 result.title(),
                 result.targetStepCount(),
-                result.currentStepCount()
+                result.currentStepCount(),
+                result.stepCountFetchFromAt()
             );
         }
     }
 
-    public record WeeklyChallengeDetailResponse(Long challengeId, String title, String description) {
+    public record WeeklyChallengeDetailResponse(Long challengeId, String title, String description, int remainingDays) {
         public static WeeklyChallengeDetailResponse from(WeeklyChallengeService.WeeklyChallengeDetailResult result) {
-            return new WeeklyChallengeDetailResponse(result.challengeId(), result.title(), result.description());
+            return new WeeklyChallengeDetailResponse(
+                result.challengeId(),
+                result.title(),
+                result.description(),
+                result.remainingDays()
+            );
         }
     }
 

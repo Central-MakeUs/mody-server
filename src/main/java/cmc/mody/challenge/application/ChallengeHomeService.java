@@ -12,7 +12,10 @@ import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
+import cmc.mody.notification.application.BuddyNudgeDedupeKey;
 import cmc.mody.notification.application.NotificationRequestService;
+import cmc.mody.notification.domain.NotificationType;
+import cmc.mody.notification.infrastructure.repository.NotificationRepository;
 import cmc.mody.record.domain.ActivityRecord;
 import cmc.mody.record.domain.RecordType;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
@@ -36,6 +39,7 @@ public class ChallengeHomeService {
     private final ActivityRecordRepository activityRecordRepository;
     private final GroupChallengeRepository groupChallengeRepository;
     private final NotificationRequestService notificationRequestService;
+    private final NotificationRepository notificationRepository;
     private final ImageUrlResolver imageUrlResolver;
 
     @Transactional(readOnly = true)
@@ -54,7 +58,7 @@ public class ChallengeHomeService {
 
         int daysTogether = daysTogether(currentMember.getJoinedAt().toLocalDate(), today);
         int allMemberRecordedDays = allMemberRecordedDays(monthlyRecords, joinedMembers);
-        boolean hasStartedStreak = hasStartedStreak(groupId, joinedMembers, today);
+        boolean hasStartedStreak = hasStartedStreak(groupId, today);
         int monthlyExerciseMinutes = monthlyExerciseMinutes(monthlyRecords);
         int monthlyCompletedChallengeCount = Math.toIntExact(groupChallengeRepository
             .countByGroupIdAndGroupChallengeStatusAndCompletedAtGreaterThanEqualAndCompletedAtLessThanAndDeletedAtIsNull(
@@ -78,6 +82,10 @@ public class ChallengeHomeService {
         LocalDate today = LocalDate.now();
         LocalDateTime startAt = today.atStartOfDay();
         LocalDateTime endAt = today.plusDays(1).atStartOfDay();
+        List<GroupMember> targetMembers = getJoinedGroupMembers(groupId)
+            .stream()
+            .filter(groupMember -> !groupMember.getMemberId().equals(memberId))
+            .toList();
         Set<Long> recordedMemberIds = activityRecordRepository.findActiveGroupRecordsBetween(
                 groupId,
                 startAt,
@@ -87,27 +95,35 @@ public class ChallengeHomeService {
             .stream()
             .map(ActivityRecord::getMemberId)
             .collect(Collectors.toSet());
-        List<NudgeTargetResult> members = getJoinedGroupMembers(groupId)
+        Set<Long> nudgedMemberIds = findNudgedMemberIds(memberId, groupId, targetMembers, today, startAt, endAt);
+        List<NudgeTargetResult> members = targetMembers
             .stream()
-            .filter(groupMember -> !groupMember.getMemberId().equals(memberId))
             .map(groupMember -> new NudgeTargetResult(
                 groupMember.getMemberId(),
                 groupMember.getDisplayNickname(),
                 imageUrlResolver.resolve(groupMember.getDisplayProfileImageKey()),
-                recordedMemberIds.contains(groupMember.getMemberId())
+                recordedMemberIds.contains(groupMember.getMemberId()),
+                nudgedMemberIds.contains(groupMember.getMemberId()),
+                resolveNudgeButtonStatus(
+                    recordedMemberIds.contains(groupMember.getMemberId()),
+                    nudgedMemberIds.contains(groupMember.getMemberId())
+                )
             ))
             .toList();
         return new NudgeTargetListResult(members);
     }
 
     @Transactional
-    public void nudgeMember(Long senderMemberId, Long groupId, Long receiverMemberId) {
+    public NudgeResult nudgeMember(Long senderMemberId, Long groupId, Long receiverMemberId) {
         if (senderMemberId.equals(receiverMemberId)) {
             throw new GeneralException(ErrorStatus.CHALLENGE_VALIDATION_FAILED);
         }
         GroupMember sender = validateGroupMembership(senderMemberId, groupId);
         validateMember(receiverMemberId);
         validateGroupMembership(receiverMemberId, groupId);
+        if (hasNudgedToday(senderMemberId, groupId, receiverMemberId, LocalDate.now())) {
+            throw new GeneralException(ErrorStatus.CHALLENGE_NUDGE_ALREADY_SENT);
+        }
 
         notificationRequestService.requestBuddyNudge(
             groupId,
@@ -116,6 +132,59 @@ public class ChallengeHomeService {
             receiverMemberId,
             LocalDate.now().toString()
         );
+        return new NudgeResult(true, NudgeButtonStatus.NUDGED);
+    }
+
+    private boolean hasNudgedToday(Long senderMemberId, Long groupId, Long receiverMemberId, LocalDate today) {
+        String date = today.toString();
+        return notificationRepository.existsByDedupeKeyAndDeletedAtIsNull(
+            BuddyNudgeDedupeKey.create(groupId, senderMemberId, receiverMemberId, date)
+        ) || notificationRepository.existsByDedupeKeyAndReferenceIdAndDeletedAtIsNull(
+            BuddyNudgeDedupeKey.legacy(senderMemberId, receiverMemberId, date),
+            groupId
+        );
+    }
+
+    private NudgeButtonStatus resolveNudgeButtonStatus(boolean recordedToday, boolean nudgedToday) {
+        if (recordedToday) {
+            return NudgeButtonStatus.RECORDED;
+        }
+        if (nudgedToday) {
+            return NudgeButtonStatus.NUDGED;
+        }
+        return NudgeButtonStatus.AVAILABLE;
+    }
+
+    private Set<Long> findNudgedMemberIds(
+        Long senderMemberId,
+        Long groupId,
+        List<GroupMember> targetMembers,
+        LocalDate today,
+        LocalDateTime startAt,
+        LocalDateTime endAt
+    ) {
+        if (targetMembers.isEmpty()) {
+            return Set.of();
+        }
+        String date = today.toString();
+        Set<String> nudgeDedupeKeys = targetMembers.stream()
+            .flatMap(targetMember -> java.util.stream.Stream.of(
+                BuddyNudgeDedupeKey.create(groupId, senderMemberId, targetMember.getMemberId(), date),
+                BuddyNudgeDedupeKey.legacy(senderMemberId, targetMember.getMemberId(), date)
+            ))
+            .collect(Collectors.toSet());
+        return notificationRepository
+            .findByNotificationTypeAndReferenceIdAndReceiverMemberIdInAndCreatedAtGreaterThanEqualAndCreatedAtLessThanAndDeletedAtIsNull(
+                NotificationType.BUDDY_NUDGE,
+                groupId,
+                targetMembers.stream().map(GroupMember::getMemberId).toList(),
+                startAt,
+                endAt
+            )
+            .stream()
+            .filter(notification -> nudgeDedupeKeys.contains(notification.getDedupeKey()))
+            .map(notification -> notification.getReceiverMemberId())
+            .collect(Collectors.toSet());
     }
 
     private GroupMember validateGroupMembership(Long memberId, Long groupId) {
@@ -175,18 +244,46 @@ public class ChallengeHomeService {
             .sum();
     }
 
-    private boolean hasStartedStreak(Long groupId, List<GroupMember> joinedMembers, LocalDate today) {
-        LocalDate historyStart = joinedMembers.stream()
+    private boolean hasStartedStreak(Long groupId, LocalDate today) {
+        List<GroupMember> groupMemberHistory = groupMemberRepository.findByGroupIdOrderByJoinedAtAsc(groupId);
+        LocalDate historyStart = groupMemberHistory.stream()
             .map(groupMember -> groupMember.getJoinedAt().toLocalDate())
             .min(LocalDate::compareTo)
             .orElse(today);
-        List<ActivityRecord> groupRecordHistory = activityRecordRepository.findActiveGroupRecordsBetween(
+        List<ActivityRecord> groupRecordHistory = activityRecordRepository.findGroupRecordsBetween(
             groupId,
             historyStart.atStartOfDay(),
-            today.plusDays(1).atStartOfDay(),
-            GroupMemberStatus.JOINED
+            today.plusDays(1).atStartOfDay()
         );
-        return allMemberRecordedDays(groupRecordHistory, joinedMembers) > 0;
+        Map<LocalDate, Set<Long>> recordedMemberIdsByDate = groupRecordHistory.stream()
+            .collect(Collectors.groupingBy(
+                record -> record.getUploadedAt().toLocalDate(),
+                Collectors.mapping(ActivityRecord::getMemberId, Collectors.toSet())
+            ));
+        return recordedMemberIdsByDate.entrySet().stream()
+            .anyMatch(entry -> allActiveMembersRecordedOn(
+                groupMemberHistory,
+                entry.getKey(),
+                entry.getValue()
+            ));
+    }
+
+    private boolean allActiveMembersRecordedOn(
+        List<GroupMember> groupMemberHistory,
+        LocalDate recordDate,
+        Set<Long> recordedMemberIds
+    ) {
+        Set<Long> activeMemberIds = groupMemberHistory.stream()
+            .filter(groupMember -> isActiveOn(groupMember, recordDate))
+            .map(GroupMember::getMemberId)
+            .collect(Collectors.toSet());
+        return !activeMemberIds.isEmpty() && recordedMemberIds.containsAll(activeMemberIds);
+    }
+
+    private boolean isActiveOn(GroupMember groupMember, LocalDate date) {
+        LocalDate joinedDate = groupMember.getJoinedAt().toLocalDate();
+        LocalDate leftDate = groupMember.getLeftAt() == null ? null : groupMember.getLeftAt().toLocalDate();
+        return !joinedDate.isAfter(date) && (leftDate == null || leftDate.isAfter(date));
     }
 
     public record ChallengeSummaryResult(
@@ -201,6 +298,22 @@ public class ChallengeHomeService {
     public record NudgeTargetListResult(List<NudgeTargetResult> members) {
     }
 
-    public record NudgeTargetResult(Long memberId, String nickname, String profileImageUrl, boolean recordedToday) {
+    public record NudgeTargetResult(
+        Long memberId,
+        String nickname,
+        String profileImageUrl,
+        boolean recordedToday,
+        boolean nudgedToday,
+        NudgeButtonStatus buttonStatus
+    ) {
+    }
+
+    public record NudgeResult(boolean nudgedToday, NudgeButtonStatus buttonStatus) {
+    }
+
+    public enum NudgeButtonStatus {
+        AVAILABLE,
+        NUDGED,
+        RECORDED
     }
 }

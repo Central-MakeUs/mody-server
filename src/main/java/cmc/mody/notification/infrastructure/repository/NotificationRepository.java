@@ -1,7 +1,9 @@
 package cmc.mody.notification.infrastructure.repository;
 
 import cmc.mody.notification.domain.Notification;
+import cmc.mody.notification.domain.NotificationType;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -20,8 +22,23 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
         from Notification notification
         where notification.receiverMemberId = :receiverMemberId
           and notification.deletedAt is null
-          and (:cursor is null or notification.id < :cursor)
-        order by notification.id desc
+          and (
+              :cursor is null
+              or notification.createdAt < (
+                  select cursorNotification.createdAt
+                  from Notification cursorNotification
+                  where cursorNotification.id = :cursor
+              )
+              or (
+                  notification.createdAt = (
+                      select cursorNotification.createdAt
+                      from Notification cursorNotification
+                      where cursorNotification.id = :cursor
+                  )
+                  and notification.id < :cursor
+              )
+          )
+        order by notification.createdAt desc, notification.id desc
         """)
     List<Notification> findByReceiverMemberIdByCursor(
         @Param("receiverMemberId") Long receiverMemberId,
@@ -60,6 +77,16 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     List<Notification> findByCreatedAtBeforeAndDeletedAtIsNull(LocalDateTime createdAt, Pageable pageable);
 
     boolean existsByDedupeKeyAndDeletedAtIsNull(String dedupeKey);
+
+    boolean existsByDedupeKeyAndReferenceIdAndDeletedAtIsNull(String dedupeKey, Long referenceId);
+
+    List<Notification> findByNotificationTypeAndReferenceIdAndReceiverMemberIdInAndCreatedAtGreaterThanEqualAndCreatedAtLessThanAndDeletedAtIsNull(
+        NotificationType notificationType,
+        Long referenceId,
+        Collection<Long> receiverMemberIds,
+        LocalDateTime createdAtStart,
+        LocalDateTime createdAtEnd
+    );
 
     @Query(value = """
         select *
