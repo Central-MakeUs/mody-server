@@ -48,6 +48,11 @@ class WeeklyChallengeShareImageGeneratorTest {
 
         assertThat(image.getWidth()).isEqualTo(1206);
         assertThat(image.getHeight()).isEqualTo(2622);
+        assertDominantColor(image.getRGB(100 * 3, 220 * 3), Color.RED);
+        Color background = new Color(image.getRGB(200 * 3, 115 * 3));
+        assertThat(background.getRed()).isLessThan(30);
+        assertThat(background.getGreen()).isLessThan(30);
+        assertThat(background.getBlue()).isLessThan(30);
     }
 
     @Test

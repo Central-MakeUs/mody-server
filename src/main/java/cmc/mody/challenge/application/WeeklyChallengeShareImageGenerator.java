@@ -37,37 +37,30 @@ public class WeeklyChallengeShareImageGenerator {
     private static final int SCALE = 3;
     private static final int CANVAS_WIDTH = scaled(402);
     private static final int CANVAS_HEIGHT = scaled(874);
-    private static final int OUTER_RADIUS = scaled(20);
-    private static final int OUTER_BORDER_WIDTH = scaled(2);
-    private static final int HEADER_X = scaled(22);
-    private static final int HEADER_Y = scaled(29);
-    private static final int HEADER_WIDTH = scaled(354);
-    private static final int HEADER_HEIGHT = scaled(81);
-    private static final int HEADER_RADIUS = scaled(12);
-    private static final int HEADER_PADDING = scaled(16);
-    private static final int HEADER_TEXT_GAP = scaled(4);
-    private static final int GRID_X = scaled(22);
-    private static final int GRID_Y = scaled(123);
+    private static final int TITLE_CENTER_X = CANVAS_WIDTH / 2;
+    private static final int TITLE_TOP = scaled(88);
+    private static final int TITLE_LINE_HEIGHT = scaled(24);
+    private static final int TITLE_MAX_WIDTH = scaled(354);
+    private static final int GRID_X = scaled(24);
+    private static final int GRID_Y = scaled(125);
     private static final int CELL_SIZE = scaled(172);
     private static final int CELL_GAP = scaled(10);
     private static final int CELL_RADIUS = scaled(12);
     private static final int AVATAR_SIZE = scaled(30);
     private static final int AVATAR_MARGIN = scaled(16);
     private static final int PARTICIPANT_GAP = scaled(4);
-    private static final int TITLE_FONT_SIZE = scaled(18);
-    private static final int DESCRIPTION_FONT_SIZE = scaled(14);
+    private static final int TITLE_FONT_SIZE = scaled(16);
     private static final int NICKNAME_FONT_SIZE = scaled(14);
     private static final String IMAGE_FORMAT = "jpg";
     private static final String FONT_PATH = "/fonts/";
-    private static final Color BACKGROUND_COLOR = new Color(34, 34, 34);
-    private static final Color OUTER_BORDER_COLOR = new Color(159, 159, 159);
-    private static final Color HEADER_COLOR = new Color(255, 252, 235);
-    private static final Color TITLE_COLOR = new Color(17, 17, 17);
-    private static final Color DESCRIPTION_COLOR = new Color(76, 76, 76);
+    private static final String TEMPLATE_PATH = "/images/weekly-challenge-share-template.png";
+    private static final Color BACKGROUND_COLOR = new Color(17, 17, 17);
+    private static final Color TITLE_COLOR = Color.WHITE;
     private static final Color FALLBACK_AVATAR_COLOR = new Color(255, 231, 86);
     private static final Color AVATAR_BORDER_COLOR = new Color(246, 246, 246);
     private static final Font TITLE_FONT = loadFont("Pretendard-SemiBold.otf", Font.BOLD);
     private static final Font MEDIUM_FONT = loadFont("Pretendard-Medium.otf", Font.PLAIN);
+    private static final BufferedImage TEMPLATE_IMAGE = loadTemplateImage();
 
     private static int scaled(int value) {
         return value * SCALE;
@@ -83,7 +76,7 @@ public class WeeklyChallengeShareImageGenerator {
         try {
             configure(graphics);
             drawBackground(graphics);
-            drawHeader(graphics, title, description);
+            drawTitle(graphics, title);
             for (int index = 0; index < sources.size(); index++) {
                 drawTile(graphics, sources.get(index), gridSize, index);
             }
@@ -116,51 +109,18 @@ public class WeeklyChallengeShareImageGenerator {
     }
 
     private void drawBackground(Graphics2D graphics) {
-        graphics.setColor(Color.WHITE);
-        graphics.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        RoundRectangle2D background = new RoundRectangle2D.Double(
-            1,
-            1,
-            CANVAS_WIDTH - 2,
-            CANVAS_HEIGHT - 2,
-            OUTER_RADIUS,
-            OUTER_RADIUS
-        );
         graphics.setColor(BACKGROUND_COLOR);
-        graphics.fill(background);
-        Stroke previousStroke = graphics.getStroke();
-        graphics.setStroke(new BasicStroke(OUTER_BORDER_WIDTH));
-        graphics.setColor(OUTER_BORDER_COLOR);
-        graphics.draw(background);
-        graphics.setStroke(previousStroke);
+        graphics.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        graphics.drawImage(TEMPLATE_IMAGE, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, null);
     }
 
-    private void drawHeader(Graphics2D graphics, String title, String description) {
-        RoundRectangle2D header = new RoundRectangle2D.Double(
-            HEADER_X,
-            HEADER_Y,
-            HEADER_WIDTH,
-            HEADER_HEIGHT,
-            HEADER_RADIUS,
-            HEADER_RADIUS
-        );
-        graphics.setColor(HEADER_COLOR);
-        graphics.fill(header);
-
+    private void drawTitle(Graphics2D graphics, String title) {
         graphics.setColor(TITLE_COLOR);
         graphics.setFont(TITLE_FONT.deriveFont((float) TITLE_FONT_SIZE));
-        int textX = HEADER_X + HEADER_PADDING;
-        int maxTextWidth = HEADER_WIDTH - HEADER_PADDING * 2;
-        int titleTop = HEADER_Y + HEADER_PADDING;
-        graphics.drawString(trimText(graphics, title, maxTextWidth), textX, textBaseline(graphics, titleTop, scaled(25)));
-
-        graphics.setColor(DESCRIPTION_COLOR);
-        graphics.setFont(MEDIUM_FONT.deriveFont((float) DESCRIPTION_FONT_SIZE));
-        graphics.drawString(
-            trimText(graphics, description, maxTextWidth),
-            textX,
-            textBaseline(graphics, titleTop + scaled(25) + HEADER_TEXT_GAP, scaled(20))
-        );
+        String text = trimText(graphics, (title == null ? "" : title) + " 챌린지 완료!", TITLE_MAX_WIDTH);
+        FontMetrics metrics = graphics.getFontMetrics();
+        int textX = TITLE_CENTER_X - metrics.stringWidth(text) / 2;
+        graphics.drawString(text, textX, textBaseline(graphics, TITLE_TOP, TITLE_LINE_HEIGHT));
     }
 
     private void drawTile(Graphics2D graphics, ShareImageSource source, GridSize gridSize, int index) {
@@ -228,7 +188,7 @@ public class WeeklyChallengeShareImageGenerator {
         } else {
             graphics.setColor(FALLBACK_AVATAR_COLOR);
             graphics.fill(avatar);
-            graphics.setColor(TITLE_COLOR);
+            graphics.setColor(Color.BLACK);
             graphics.setFont(TITLE_FONT.deriveFont((float) scaled(13)));
             String initial = initial(source.nickname());
             FontMetrics metrics = graphics.getFontMetrics();
@@ -406,6 +366,21 @@ public class WeeklyChallengeShareImageGenerator {
             return Font.createFont(Font.TRUETYPE_FONT, inputStream);
         } catch (java.awt.FontFormatException | IOException e) {
             return new Font(Font.SANS_SERIF, fallbackStyle, 1);
+        }
+    }
+
+    private static BufferedImage loadTemplateImage() {
+        try (InputStream inputStream = WeeklyChallengeShareImageGenerator.class.getResourceAsStream(TEMPLATE_PATH)) {
+            if (inputStream == null) {
+                throw new IllegalStateException("Weekly challenge share image template is missing.");
+            }
+            BufferedImage image = ImageIO.read(inputStream);
+            if (image == null) {
+                throw new IllegalStateException("Weekly challenge share image template cannot be read.");
+            }
+            return image;
+        } catch (IOException e) {
+            throw new IllegalStateException("Weekly challenge share image template cannot be loaded.", e);
         }
     }
 
