@@ -16,6 +16,7 @@ import cmc.mody.challenge.application.GlobalWeeklyChallengeService.GlobalWeeklyC
 import cmc.mody.challenge.application.GlobalWeeklyChallengeService.GlobalWeeklyChallengeCreateResult;
 import cmc.mody.challenge.application.GlobalWeeklyChallengeService.GlobalWeeklyChallengeListResult;
 import cmc.mody.challenge.application.GlobalWeeklyChallengeService.GlobalWeeklyChallengeResult;
+import cmc.mody.challenge.application.GlobalWeeklyChallengeService.GlobalWeeklyChallengeSyncResult;
 import cmc.mody.common.admin.AdminAccessService;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import java.time.LocalDate;
@@ -45,7 +46,7 @@ class GlobalWeeklyChallengeAdminControllerDocsTest {
     void createGlobalWeeklyChallenge() throws Exception {
         LocalDate startsOn = LocalDate.of(2026, 8, 10);
         LocalDate endsOn = LocalDate.of(2026, 8, 16);
-        given(globalWeeklyChallengeService.create(new GlobalWeeklyChallengeCommand(
+        given(globalWeeklyChallengeService.create("test-global-weekly-create", new GlobalWeeklyChallengeCommand(
             "엘리베이터 안 타고 올라가기", "계단으로 이동한 사진을 인증해주세요.", startsOn, endsOn
         ))).willReturn(new GlobalWeeklyChallengeCreateResult(
             10L, 20L, "엘리베이터 안 타고 올라가기", "계단으로 이동한 사진을 인증해주세요.", startsOn, endsOn, 3
@@ -53,6 +54,7 @@ class GlobalWeeklyChallengeAdminControllerDocsTest {
 
         mockMvc.perform(post("/api/v1/admin/weekly-challenges")
                 .header("X-Admin-Api-Key", "test-admin-key")
+                .header("Idempotency-Key", "test-global-weekly-create")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody()))
             .andExpect(status().isCreated())
@@ -120,6 +122,16 @@ class GlobalWeeklyChallengeAdminControllerDocsTest {
                 .header("X-Admin-Api-Key", "test-admin-key")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(requestBody()))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void syncGlobalWeeklyChallengeGroups() throws Exception {
+        given(globalWeeklyChallengeService.syncGroups(10L))
+            .willReturn(new GlobalWeeklyChallengeSyncResult(10L, 2));
+
+        mockMvc.perform(post("/api/v1/admin/weekly-challenges/{globalWeeklyChallengeId}/sync-groups", 10L)
+                .header("X-Admin-Api-Key", "test-admin-key"))
             .andExpect(status().isOk());
     }
 

@@ -23,6 +23,9 @@ public class GlobalWeeklyChallenge extends BaseEntity {
     @Column(name = "challenge_id", nullable = false, unique = true)
     private Long challengeId;
 
+    @Column(name = "idempotency_key", length = 100, unique = true)
+    private String idempotencyKey;
+
     @Column(name = "starts_on", nullable = false)
     private LocalDate startsOn;
 
@@ -30,8 +33,19 @@ public class GlobalWeeklyChallenge extends BaseEntity {
     private LocalDate endsOn;
 
     public GlobalWeeklyChallenge(Long id, Long challengeId, LocalDate startsOn, LocalDate endsOn) {
+        this(id, challengeId, null, startsOn, endsOn);
+    }
+
+    public GlobalWeeklyChallenge(
+        Long id,
+        Long challengeId,
+        String idempotencyKey,
+        LocalDate startsOn,
+        LocalDate endsOn
+    ) {
         super(id);
         this.challengeId = challengeId;
+        this.idempotencyKey = idempotencyKey;
         this.startsOn = startsOn;
         this.endsOn = endsOn;
     }

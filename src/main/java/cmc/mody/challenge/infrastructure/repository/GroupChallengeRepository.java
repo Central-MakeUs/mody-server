@@ -16,6 +16,10 @@ public interface GroupChallengeRepository extends JpaRepository<GroupChallenge, 
 
     List<GroupChallenge> findByGlobalWeeklyChallengeIdAndDeletedAtIsNull(Long globalWeeklyChallengeId);
 
+    Optional<GroupChallenge> findFirstByChallengeIdAndGlobalWeeklyChallengeIdIsNotNullAndDeletedAtIsNull(
+        Long challengeId
+    );
+
     long countByGlobalWeeklyChallengeIdAndDeletedAtIsNull(Long globalWeeklyChallengeId);
 
     Optional<GroupChallenge> findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
