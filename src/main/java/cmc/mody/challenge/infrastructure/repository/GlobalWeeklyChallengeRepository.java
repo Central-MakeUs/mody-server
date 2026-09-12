@@ -11,6 +11,8 @@ public interface GlobalWeeklyChallengeRepository extends JpaRepository<GlobalWee
 
     Optional<GlobalWeeklyChallenge> findByChallengeIdAndDeletedAtIsNull(Long challengeId);
 
+    Optional<GlobalWeeklyChallenge> findByIdempotencyKeyAndDeletedAtIsNull(String idempotencyKey);
+
     List<GlobalWeeklyChallenge> findByDeletedAtIsNullOrderByStartsOnDescIdDesc();
 
     List<GlobalWeeklyChallenge>

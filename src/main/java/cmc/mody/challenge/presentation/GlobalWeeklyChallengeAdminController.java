@@ -5,6 +5,7 @@ import cmc.mody.challenge.application.GlobalWeeklyChallengeService.GlobalWeeklyC
 import cmc.mody.challenge.application.GlobalWeeklyChallengeService.GlobalWeeklyChallengeCreateResult;
 import cmc.mody.challenge.application.GlobalWeeklyChallengeService.GlobalWeeklyChallengeListResult;
 import cmc.mody.challenge.application.GlobalWeeklyChallengeService.GlobalWeeklyChallengeResult;
+import cmc.mody.challenge.application.GlobalWeeklyChallengeService.GlobalWeeklyChallengeSyncResult;
 import cmc.mody.common.admin.AdminAccessService;
 import cmc.mody.common.api.ApiResponse;
 import jakarta.validation.Valid;
@@ -40,10 +41,13 @@ public class GlobalWeeklyChallengeAdminController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<GlobalWeeklyChallengeCreateResponse> createWeeklyChallenge(
         @RequestHeader(name = ADMIN_API_KEY_HEADER, required = false) String adminApiKey,
+        @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
         @Valid @RequestBody GlobalWeeklyChallengeRequest request
     ) {
         adminAccessService.validate(adminApiKey);
-        return ApiResponse.created(GlobalWeeklyChallengeCreateResponse.from(globalWeeklyChallengeService.create(request.toCommand())));
+        return ApiResponse.created(GlobalWeeklyChallengeCreateResponse.from(
+            globalWeeklyChallengeService.create(idempotencyKey, request.toCommand())
+        ));
     }
 
     @GetMapping
@@ -52,6 +56,17 @@ public class GlobalWeeklyChallengeAdminController {
     ) {
         adminAccessService.validate(adminApiKey);
         return ApiResponse.ok(GlobalWeeklyChallengeListResponse.from(globalWeeklyChallengeService.getAll()));
+    }
+
+    @PostMapping("/{globalWeeklyChallengeId}/sync-groups")
+    public ApiResponse<GlobalWeeklyChallengeSyncResponse> syncGroups(
+        @RequestHeader(name = ADMIN_API_KEY_HEADER, required = false) String adminApiKey,
+        @PathVariable Long globalWeeklyChallengeId
+    ) {
+        adminAccessService.validate(adminApiKey);
+        return ApiResponse.ok(GlobalWeeklyChallengeSyncResponse.from(
+            globalWeeklyChallengeService.syncGroups(globalWeeklyChallengeId)
+        ));
     }
 
     @PutMapping("/{globalWeeklyChallengeId}")
@@ -125,6 +140,12 @@ public class GlobalWeeklyChallengeAdminController {
             return new GlobalWeeklyChallengeListResponse(
                 result.challenges().stream().map(GlobalWeeklyChallengeResponse::from).toList()
             );
+        }
+    }
+
+    public record GlobalWeeklyChallengeSyncResponse(Long globalWeeklyChallengeId, int linkedGroupCount) {
+        private static GlobalWeeklyChallengeSyncResponse from(GlobalWeeklyChallengeSyncResult result) {
+            return new GlobalWeeklyChallengeSyncResponse(result.globalWeeklyChallengeId(), result.linkedGroupCount());
         }
     }
 
