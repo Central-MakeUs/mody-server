@@ -28,6 +28,7 @@
       <a class="brand-mark" href="/admin/challenges">MODY <span>ADMIN</span></a>
       <nav aria-label="관리 메뉴">
         <button class="nav-item active" type="button">챌린지 관리</button>
+        <button class="nav-item" id="global-weekly-nav-button" type="button">전역 주간 챌린지</button>
         <button class="nav-item" id="group-nav-button" type="button">그룹 관리</button>
       </nav>
       <div class="sidebar-footer">
@@ -46,14 +47,14 @@
         <button id="refresh-button" class="secondary-button" type="button">새로고침</button>
       </header>
 
-      <section class="control-bar" aria-label="그룹 선택">
+      <section id="group-controls" class="control-bar" aria-label="그룹 선택">
         <div class="control-label"><span>대상 그룹</span><strong id="group-summary">그룹을 불러오는 중</strong></div>
         <select id="group-id" name="groupId" disabled>
           <option value="">그룹 목록을 불러오는 중입니다.</option>
         </select>
       </section>
 
-      <section class="metrics" aria-label="그룹 운영 지표">
+      <section id="group-metrics" class="metrics" aria-label="그룹 운영 지표">
         <div><span>주간 챌린지</span><strong id="metric-challenge-count">0</strong></div>
         <div><span>진행 중</span><strong id="metric-in-progress-count">0</strong></div>
         <div><span>활동 기록</span><strong id="metric-record-count">0</strong></div>
@@ -100,6 +101,19 @@
           <div class="group-management"><div class="group-list" id="group-list"></div><section id="group-detail" class="group-detail"><p class="empty-state">관리할 그룹을 선택하세요.</p></section></div>
         </section>
       </section>
+      <section id="global-weekly-panel" class="workspace-card tab-panel standalone-panel" role="tabpanel" hidden>
+        <div class="table-toolbar">
+          <div><h2>전역 주간 챌린지</h2><p>한 번 등록하면 활성 그룹에 그룹별 진행 항목이 생성됩니다.</p></div>
+          <button id="new-global-challenge-button" class="primary-button" type="button">전역 챌린지 등록</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>챌린지</th><th>인증 기간</th><th>연결 그룹</th><th class="action-column">관리</th></tr></thead>
+            <tbody id="global-challenge-list"></tbody>
+          </table>
+        </div>
+        <p id="global-challenge-empty" class="empty-state" hidden>등록된 전역 주간 챌린지가 없습니다.</p>
+      </section>
       <p id="workspace-message" class="form-message workspace-message" role="status" aria-live="polite"></p>
     </section>
   </main>
@@ -113,6 +127,18 @@
       <div class="form-grid"><div><label for="starts-on">시작일</label><input id="starts-on" type="date" required></div><div><label for="ends-on">마감일</label><input id="ends-on" type="date" required></div></div>
       <p id="challenge-form-message" class="form-message" role="status"></p>
       <footer class="modal-footer"><button class="secondary-button" value="cancel" type="button" data-close="challenge-dialog">취소</button><button id="save-challenge-button" class="primary-button" type="submit">저장</button></footer>
+    </form>
+  </dialog>
+
+  <dialog id="global-challenge-dialog" class="modal">
+    <form id="global-challenge-form" method="dialog">
+      <header class="modal-header"><div><p class="section-kicker">전역 주간 챌린지</p><h2 id="global-challenge-dialog-title">전역 챌린지 등록</h2></div><button class="close-button" value="cancel" aria-label="닫기">닫기</button></header>
+      <input id="editing-global-challenge-id" type="hidden">
+      <label for="global-challenge-title">챌린지 제목</label><input id="global-challenge-title" maxlength="50" required>
+      <label for="global-challenge-description">인증 안내</label><textarea id="global-challenge-description" maxlength="500" rows="4" required></textarea>
+      <div class="form-grid"><div><label for="global-starts-on">시작일</label><input id="global-starts-on" type="date" required></div><div><label for="global-ends-on">마감일</label><input id="global-ends-on" type="date" required></div></div>
+      <p id="global-challenge-form-message" class="form-message" role="status"></p>
+      <footer class="modal-footer"><button class="secondary-button" value="cancel" type="button" data-close="global-challenge-dialog">취소</button><button class="primary-button" type="submit">저장</button></footer>
     </form>
   </dialog>
 
@@ -132,6 +158,6 @@
     <form method="dialog"><p class="danger-kicker">삭제 확인</p><h2 id="confirm-title">정말 삭제할까요?</h2><p id="confirm-copy"></p><footer class="modal-footer"><button class="secondary-button" value="cancel">취소</button><button id="confirm-delete-button" class="danger-button" value="default">삭제</button></footer></form>
   </dialog>
   <dialog id="image-dialog" class="image-dialog"><header><strong id="image-dialog-title">인증 이미지</strong><button class="close-button" type="button" data-close="image-dialog">닫기</button></header><img id="record-image-preview" alt="활동 기록 인증 이미지"></dialog>
-  <script src="/admin/challenges/app.js" defer></script>
+  <script src="/admin/challenges/app.js?v=20260912" defer></script>
 </body>
 </html>

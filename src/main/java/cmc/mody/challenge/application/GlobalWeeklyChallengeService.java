@@ -14,6 +14,9 @@ import cmc.mody.grouping.domain.ModyGroup;
 import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +32,21 @@ public class GlobalWeeklyChallengeService {
 
     @Transactional
     public GlobalWeeklyChallengeCreateResult create(GlobalWeeklyChallengeCommand command) {
-        Challenge challenge = challengeRepository.save(new Challenge(
+        return create(null, command);
+    }
+
+    @Transactional
+    public GlobalWeeklyChallengeCreateResult create(String idempotencyKey, GlobalWeeklyChallengeCommand command) {
+        String normalizedIdempotencyKey = normalizeIdempotencyKey(idempotencyKey);
+        if (normalizedIdempotencyKey != null) {
+            GlobalWeeklyChallenge existing = globalWeeklyChallengeRepository
+                .findByIdempotencyKeyAndDeletedAtIsNull(normalizedIdempotencyKey)
+                .orElse(null);
+            if (existing != null) {
+                return toCreateResult(existing);
+            }
+        }
+        Challenge sourceChallenge = challengeRepository.save(new Challenge(
             idGenerator.nextId(),
             ChallengeType.PHOTO,
             command.title(),
@@ -37,12 +54,21 @@ public class GlobalWeeklyChallengeService {
         ));
         GlobalWeeklyChallenge globalWeeklyChallenge = globalWeeklyChallengeRepository.save(new GlobalWeeklyChallenge(
             idGenerator.nextId(),
-            challenge.getId(),
+            sourceChallenge.getId(),
+            normalizedIdempotencyKey,
             command.startsOn(),
             command.endsOn()
         ));
-        int linkedGroupCount = linkToActiveGroups(globalWeeklyChallenge);
-        return GlobalWeeklyChallengeCreateResult.from(globalWeeklyChallenge, challenge, linkedGroupCount);
+        int linkedGroupCount = linkToActiveGroups(globalWeeklyChallenge, sourceChallenge);
+        return GlobalWeeklyChallengeCreateResult.from(globalWeeklyChallenge, sourceChallenge, linkedGroupCount);
+    }
+
+    @Transactional
+    public GlobalWeeklyChallengeSyncResult syncGroups(Long globalWeeklyChallengeId) {
+        GlobalWeeklyChallenge globalWeeklyChallenge = getActiveGlobalWeeklyChallenge(globalWeeklyChallengeId);
+        Challenge sourceChallenge = getWeeklyChallenge(globalWeeklyChallenge.getChallengeId());
+        int linkedGroupCount = linkToActiveGroups(globalWeeklyChallenge, sourceChallenge, true);
+        return new GlobalWeeklyChallengeSyncResult(globalWeeklyChallengeId, linkedGroupCount);
     }
 
     @Transactional(readOnly = true)
@@ -59,20 +85,38 @@ public class GlobalWeeklyChallengeService {
     @Transactional
     public GlobalWeeklyChallengeResult update(Long globalWeeklyChallengeId, GlobalWeeklyChallengeCommand command) {
         GlobalWeeklyChallenge globalWeeklyChallenge = getActiveGlobalWeeklyChallenge(globalWeeklyChallengeId);
-        Challenge challenge = getWeeklyChallenge(globalWeeklyChallenge.getChallengeId());
-        challenge.update(command.title(), command.description());
+        Challenge sourceChallenge = getWeeklyChallenge(globalWeeklyChallenge.getChallengeId());
+        sourceChallenge.update(command.title(), command.description());
         globalWeeklyChallenge.updatePeriod(command.startsOn(), command.endsOn());
-        groupChallengeRepository.findByGlobalWeeklyChallengeIdAndDeletedAtIsNull(globalWeeklyChallengeId)
-            .forEach(groupChallenge -> groupChallenge.updatePeriod(command.startsOn(), command.endsOn()));
+        List<GroupChallenge> groupChallenges = groupChallengeRepository
+            .findByGlobalWeeklyChallengeIdAndDeletedAtIsNull(globalWeeklyChallengeId);
+        Map<Long, Challenge> groupChallengesByChallengeId = challengeRepository.findAllById(
+                groupChallenges.stream().map(GroupChallenge::getChallengeId).distinct().toList()
+            ).stream()
+            .collect(Collectors.toMap(Challenge::getId, Function.identity()));
+        groupChallenges.forEach(groupChallenge -> {
+            Challenge challenge = groupChallengesByChallengeId.get(groupChallenge.getChallengeId());
+            if (challenge != null) {
+                challenge.update(command.title(), command.description());
+            }
+            groupChallenge.updatePeriod(command.startsOn(), command.endsOn());
+        });
         return toResult(globalWeeklyChallenge);
     }
 
     @Transactional
     public void delete(Long globalWeeklyChallengeId) {
         GlobalWeeklyChallenge globalWeeklyChallenge = getActiveGlobalWeeklyChallenge(globalWeeklyChallengeId);
-        Challenge challenge = getWeeklyChallenge(globalWeeklyChallenge.getChallengeId());
+        Challenge sourceChallenge = getWeeklyChallenge(globalWeeklyChallenge.getChallengeId());
         globalWeeklyChallenge.delete();
-        challenge.delete();
+        sourceChallenge.delete();
+        groupChallengeRepository.findByGlobalWeeklyChallengeIdAndDeletedAtIsNull(globalWeeklyChallengeId)
+            .stream()
+            .map(GroupChallenge::getChallengeId)
+            .filter(challengeId -> !challengeId.equals(sourceChallenge.getId()))
+            .distinct()
+            .map(this::findWeeklyChallenge)
+            .forEach(Challenge::delete);
     }
 
     @Transactional
@@ -84,30 +128,47 @@ public class GlobalWeeklyChallengeService {
             .filter(GlobalWeeklyChallenge::isActive)
             .filter(globalWeeklyChallenge -> !groupChallengeRepository
                 .existsByGroupIdAndGlobalWeeklyChallengeIdAndDeletedAtIsNull(groupId, globalWeeklyChallenge.getId()))
-            .forEach(globalWeeklyChallenge -> groupChallengeRepository.save(new GroupChallenge(
-                idGenerator.nextId(),
-                groupId,
-                globalWeeklyChallenge.getChallengeId(),
-                globalWeeklyChallenge.getId(),
-                globalWeeklyChallenge.getStartsOn(),
-                globalWeeklyChallenge.getEndsOn()
-            )));
+            .forEach(globalWeeklyChallenge -> {
+                Challenge sourceChallenge = getWeeklyChallenge(globalWeeklyChallenge.getChallengeId());
+                Challenge groupChallengeDefinition = copyChallenge(sourceChallenge);
+                groupChallengeRepository.save(new GroupChallenge(
+                    idGenerator.nextId(),
+                    groupId,
+                    groupChallengeDefinition.getId(),
+                    globalWeeklyChallenge.getId(),
+                    globalWeeklyChallenge.getStartsOn(),
+                    globalWeeklyChallenge.getEndsOn()
+                ));
+            });
     }
 
-    private int linkToActiveGroups(GlobalWeeklyChallenge globalWeeklyChallenge) {
+    private int linkToActiveGroups(GlobalWeeklyChallenge globalWeeklyChallenge, Challenge sourceChallenge) {
+        return linkToActiveGroups(globalWeeklyChallenge, sourceChallenge, false);
+    }
+
+    private int linkToActiveGroups(
+        GlobalWeeklyChallenge globalWeeklyChallenge,
+        Challenge sourceChallenge,
+        boolean skipAlreadyLinkedGroups
+    ) {
         List<ModyGroup> groups = modyGroupRepository.findByDeletedAtIsNullOrderByCreatedAtDesc()
             .stream()
             .filter(ModyGroup::isActive)
+            .filter(group -> !skipAlreadyLinkedGroups || !groupChallengeRepository
+                .existsByGroupIdAndGlobalWeeklyChallengeIdAndDeletedAtIsNull(group.getId(), globalWeeklyChallenge.getId()))
             .toList();
         List<GroupChallenge> groupChallenges = groups.stream()
-            .map(group -> new GroupChallenge(
-                idGenerator.nextId(),
-                group.getId(),
-                globalWeeklyChallenge.getChallengeId(),
-                globalWeeklyChallenge.getId(),
-                globalWeeklyChallenge.getStartsOn(),
-                globalWeeklyChallenge.getEndsOn()
-            ))
+            .map(group -> {
+                Challenge groupChallengeDefinition = copyChallenge(sourceChallenge);
+                return new GroupChallenge(
+                    idGenerator.nextId(),
+                    group.getId(),
+                    groupChallengeDefinition.getId(),
+                    globalWeeklyChallenge.getId(),
+                    globalWeeklyChallenge.getStartsOn(),
+                    globalWeeklyChallenge.getEndsOn()
+                );
+            })
             .toList();
         groupChallengeRepository.saveAll(groupChallenges);
         return groupChallenges.size();
@@ -120,6 +181,15 @@ public class GlobalWeeklyChallengeService {
         return GlobalWeeklyChallengeResult.from(globalWeeklyChallenge, challenge, linkedGroupCount);
     }
 
+    private GlobalWeeklyChallengeCreateResult toCreateResult(GlobalWeeklyChallenge globalWeeklyChallenge) {
+        Challenge challenge = getWeeklyChallenge(globalWeeklyChallenge.getChallengeId());
+        return GlobalWeeklyChallengeCreateResult.from(
+            globalWeeklyChallenge,
+            challenge,
+            (int) groupChallengeRepository.countByGlobalWeeklyChallengeIdAndDeletedAtIsNull(globalWeeklyChallenge.getId())
+        );
+    }
+
     private GlobalWeeklyChallenge getActiveGlobalWeeklyChallenge(Long globalWeeklyChallengeId) {
         return globalWeeklyChallengeRepository.findByIdAndDeletedAtIsNull(globalWeeklyChallengeId)
             .filter(GlobalWeeklyChallenge::isActive)
@@ -130,6 +200,30 @@ public class GlobalWeeklyChallengeService {
         return challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(challengeId, ChallengeType.PHOTO)
             .filter(Challenge::isActive)
             .orElseThrow(() -> new GeneralException(ErrorStatus.CHALLENGE_NOT_FOUND));
+    }
+
+    private Challenge findWeeklyChallenge(Long challengeId) {
+        return challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(challengeId, ChallengeType.PHOTO)
+            .orElseThrow(() -> new GeneralException(ErrorStatus.CHALLENGE_NOT_FOUND));
+    }
+
+    private Challenge copyChallenge(Challenge sourceChallenge) {
+        return challengeRepository.save(new Challenge(
+            idGenerator.nextId(),
+            ChallengeType.PHOTO,
+            sourceChallenge.getTitle(),
+            sourceChallenge.getDescription()
+        ));
+    }
+
+    private String normalizeIdempotencyKey(String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            return null;
+        }
+        if (idempotencyKey.length() > 100) {
+            throw new GeneralException(ErrorStatus.CHALLENGE_VALIDATION_FAILED);
+        }
+        return idempotencyKey;
     }
 
     public record GlobalWeeklyChallengeCommand(
@@ -167,6 +261,9 @@ public class GlobalWeeklyChallengeService {
     }
 
     public record GlobalWeeklyChallengeListResult(List<GlobalWeeklyChallengeResult> challenges) {
+    }
+
+    public record GlobalWeeklyChallengeSyncResult(Long globalWeeklyChallengeId, int linkedGroupCount) {
     }
 
     public record GlobalWeeklyChallengeResult(

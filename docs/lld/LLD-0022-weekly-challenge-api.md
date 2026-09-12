@@ -38,13 +38,13 @@
 ## 3. 데이터 모델
 
 - `challenge`: 사진 챌린지 제목과 설명 메타데이터. `challengeType = PHOTO`.
-- `global_weekly_challenge`: 전역 운영 원본. `challenge_id`, 시작일, 마감일을 소유한다.
+- `global_weekly_challenge`: 전역 운영 원본. 원본 `challenge_id`, 멱등성 키, 시작일, 마감일을 소유한다.
 - `group_challenge`: 그룹에서 특정 기간 동안 진행하는 챌린지 인스턴스. 전역 항목은 `global_weekly_challenge_id`로 원본을 연결하고, 기존 그룹별 항목은 이 값이 `null`인 레거시 데이터로 유지한다.
 - `challenge_proof`: 그룹 챌린지에 대한 회원별 사진 인증 기록.
   - `image_key`: 원본 이미지 key.
   - `crop_x`, `crop_y`, `crop_width`, `crop_height`: 원본 이미지 기준 관심 영역 정규화 좌표. 없으면 null.
 
-운영자는 전역 관리자 API로 원본을 한 번 생성한다. 생성 시 모든 활성 그룹에 연결된 진행 인스턴스를 만들고, 새 그룹 생성 시 진행 중인 원본도 자동으로 연결한다.
+운영자는 전역 관리자 API로 원본을 한 번 생성한다. 생성 시 모든 활성 그룹에 기존 동작과 동일한 별도 `challenge`와 `group_challenge`를 만들고, 각 진행 인스턴스만 원본을 참조한다. 따라서 그룹별 `challengeId`의 기존 고유성 및 모바일 응답 계약을 유지한다. 새 그룹 생성 시 진행 중인 원본도 같은 방식으로 자동 연결한다.
 관리자 API는 `X-Admin-Api-Key` 헤더가 `ADMIN_API_KEY` 환경변수와 일치해야 호출할 수 있다.
 
 ## 4. API 동작
@@ -126,7 +126,7 @@ X-Admin-Api-Key: {ADMIN_API_KEY}
 }
 ```
 
-전역 원본과 사진 챌린지 메타데이터를 생성하고, 모든 활성 그룹에 원본을 참조하는 진행 인스턴스를 생성한다.
+전역 원본과 사진 챌린지 메타데이터를 생성하고, 모든 활성 그룹에 원본을 참조하는 별도 사진 챌린지와 진행 인스턴스를 생성한다. 봇은 같은 승인 요청을 재시도할 때 동일한 `Idempotency-Key` 헤더를 전송해야 한다. 이미 처리된 키이면 새 데이터를 만들지 않고 기존 결과를 반환한다.
 
 ```http
 GET /api/v1/admin/weekly-challenges
@@ -134,7 +134,7 @@ PUT /api/v1/admin/weekly-challenges/{globalWeeklyChallengeId}
 DELETE /api/v1/admin/weekly-challenges/{globalWeeklyChallengeId}
 ```
 
-수정은 원본과 연결된 그룹 진행 인스턴스의 기간에 반영한다. 삭제는 원본과 사진 챌린지 메타데이터를 비활성화하며, 연결된 그룹 인증 데이터는 보존한다. 기존 그룹별 관리자 API는 레거시 그룹별 항목과의 호환성을 위해 유지한다.
+수정은 원본과 연결된 그룹별 사진 챌린지 메타데이터 및 진행 인스턴스의 기간에 반영한다. 삭제는 원본과 연결된 사진 챌린지 메타데이터를 비활성화하며, 연결된 그룹 인증 데이터는 보존한다. 기존 그룹별 관리자 API는 레거시 그룹별 항목과의 호환성을 위해 유지한다.
 
 ## 5. 예외 코드
 

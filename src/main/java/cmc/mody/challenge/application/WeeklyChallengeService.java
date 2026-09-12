@@ -87,7 +87,12 @@ public class WeeklyChallengeService {
         Challenge challenge = getWeeklyChallenge(challengeId);
         GlobalWeeklyChallenge globalWeeklyChallenge = globalWeeklyChallengeRepository
             .findByChallengeIdAndDeletedAtIsNull(challengeId)
-            .orElseThrow(() -> new GeneralException(ErrorStatus.CHALLENGE_NOT_FOUND));
+            .orElseGet(() -> groupChallengeRepository
+                .findFirstByChallengeIdAndGlobalWeeklyChallengeIdIsNotNullAndDeletedAtIsNull(challengeId)
+                .flatMap(groupChallenge -> globalWeeklyChallengeRepository.findByIdAndDeletedAtIsNull(
+                    groupChallenge.getGlobalWeeklyChallengeId()
+                ))
+                .orElseThrow(() -> new GeneralException(ErrorStatus.CHALLENGE_NOT_FOUND)));
         int remainingDays = Math.toIntExact(ChronoUnit.DAYS.between(LocalDate.now(), globalWeeklyChallenge.getEndsOn()));
         return new WeeklyChallengeDetailResult(
             challenge.getId(),

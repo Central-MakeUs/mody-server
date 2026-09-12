@@ -168,6 +168,37 @@ class WeeklyChallengeServiceTest {
     }
 
     @Test
+    @DisplayName("그룹별로 복제된 전역 주간 챌린지도 원본 기간을 기준으로 상세를 반환한다.")
+    void getCopiedGlobalWeeklyChallengeDetail() {
+        WeeklyChallengeService service = service();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(challengeRepository.findByIdAndChallengeTypeAndDeletedAtIsNull(2L, ChallengeType.PHOTO))
+            .willReturn(Optional.of(challenge(2L, "계단 오르기")));
+        given(globalWeeklyChallengeRepository.findByChallengeIdAndDeletedAtIsNull(2L)).willReturn(Optional.empty());
+        given(groupChallengeRepository.findFirstByChallengeIdAndGlobalWeeklyChallengeIdIsNotNullAndDeletedAtIsNull(2L))
+            .willReturn(Optional.of(new GroupChallenge(
+                20L,
+                10L,
+                2L,
+                30L,
+                LocalDate.now().minusDays(3),
+                LocalDate.now().plusDays(4)
+            )));
+        given(globalWeeklyChallengeRepository.findByIdAndDeletedAtIsNull(30L))
+            .willReturn(Optional.of(new GlobalWeeklyChallenge(
+                30L,
+                1L,
+                LocalDate.now().minusDays(3),
+                LocalDate.now().plusDays(4)
+            )));
+
+        WeeklyChallengeService.WeeklyChallengeDetailResult result = service.getWeeklyChallengeDetail(1L, 2L);
+
+        assertThat(result.challengeId()).isEqualTo(2L);
+        assertThat(result.remainingDays()).isEqualTo(4);
+    }
+
+    @Test
     @DisplayName("그룹원 인증 이미지는 이미지 URL과 그룹 내 회원 표시 정보를 함께 반환한다.")
     void getWeeklyChallengeProofs() {
         WeeklyChallengeService service = service();
