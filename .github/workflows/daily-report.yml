@@ -10,6 +10,10 @@ on:
       date:
         description: '집계 날짜 (YYYY-MM-DD, 비우면 어제)'
         required: false
+      dry_run:
+        description: 'Slack에 보내지 않고 지표만 출력'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -40,4 +44,5 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_REPORT_CHANNEL: C0C82K2MKRT
           REPORT_DATE: ${{ inputs.date }}
+          REPORT_DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
         run: python3 scripts/daily-report/daily_report.py
