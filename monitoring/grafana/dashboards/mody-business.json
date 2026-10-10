@@ -1,0 +1,1168 @@
+{
+  "uid": "mody-business",
+  "title": "MODY 비즈니스",
+  "tags": [
+    "mody",
+    "business"
+  ],
+  "timezone": "Asia/Seoul",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5m",
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "editable": true,
+  "panels": [
+    {
+      "type": "row",
+      "title": "요약",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "전체 회원",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS value FROM member WHERE status = 'ACTIVE' AND deleted_at IS NULL",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "오늘 가입",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS value FROM member WHERE status = 'ACTIVE' AND deleted_at IS NULL AND DATE(created_at) = CURDATE()",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "오늘 활동 사용자(DAU)",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(DISTINCT member_id) AS value FROM (\n  SELECT member_id, created_at FROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, created_at FROM weight_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, created_at FROM step_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n) t WHERE DATE(created_at) = CURDATE()",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "활성 그룹",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 1,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS value FROM mody_group WHERE status = 'ACTIVE' AND deleted_at IS NULL",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "row",
+      "title": "사용자",
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "일별 가입 / 탈퇴",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 6,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT UNIX_TIMESTAMP(DATE(created_at)) AS time_sec, COUNT(*) AS '가입'\nFROM member WHERE $__timeFilter(created_at) GROUP BY DATE(created_at)\nUNION ALL\nSELECT UNIX_TIMESTAMP(DATE(deleted_at)) AS time_sec, -COUNT(*) AS '탈퇴'\nFROM member WHERE deleted_at IS NOT NULL AND $__timeFilter(deleted_at) GROUP BY DATE(deleted_at)\nORDER BY 1",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "누적 회원 수",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 6,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT UNIX_TIMESTAMP(d) AS time_sec, total AS '누적 회원'\nFROM (\n  SELECT DATE(created_at) AS d,\n         SUM(COUNT(*)) OVER (ORDER BY DATE(created_at)) AS total\n  FROM member WHERE status = 'ACTIVE' AND deleted_at IS NULL GROUP BY DATE(created_at)\n) t WHERE $__timeFilter(d) ORDER BY 1",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "DAU (기록을 남긴 고유 사용자)",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT UNIX_TIMESTAMP(DATE(created_at)) AS time_sec, COUNT(DISTINCT member_id) AS 'DAU'\nFROM (\n  SELECT member_id, created_at FROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, created_at FROM weight_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, created_at FROM step_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n) t WHERE $__timeFilter(created_at) GROUP BY DATE(created_at) ORDER BY 1",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "piechart",
+      "title": "로그인 수단",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT login_type AS metric, COUNT(*) AS value\nFROM social_account WHERE status = 'ACTIVE' AND deleted_at IS NULL GROUP BY login_type",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": true
+        }
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "type": "piechart",
+      "title": "헬스 연동 상태",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 14,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT health_connection_status AS metric, COUNT(*) AS value\nFROM member WHERE status = 'ACTIVE' AND deleted_at IS NULL GROUP BY health_connection_status",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": true
+        }
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "온보딩 완주율",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(100 * SUM(group_onboarding_completed = 1) / NULLIF(COUNT(*), 0), 1) AS value\nFROM member WHERE status = 'ACTIVE' AND deleted_at IS NULL",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "그룹 가입 회원",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 22,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(DISTINCT member_id) AS value FROM group_member\nWHERE status = 'ACTIVE' AND deleted_at IS NULL AND group_member_status = 'JOINED'",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "그룹당 평균 인원",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 22,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(AVG(cnt), 1) AS value FROM (\n  SELECT group_id, COUNT(*) AS cnt FROM group_member\n  WHERE status = 'ACTIVE' AND deleted_at IS NULL AND group_member_status = 'JOINED' GROUP BY group_id) t",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "7일 내 재방문율",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 22,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(100 * COUNT(DISTINCT CASE WHEN last_at >= NOW() - INTERVAL 7 DAY THEN member_id END)\n  / NULLIF(COUNT(DISTINCT member_id), 0), 1) AS value\nFROM (\n  SELECT member_id, MAX(created_at) AS last_at FROM (\n    SELECT member_id, created_at FROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n    UNION ALL SELECT member_id, created_at FROM weight_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n    UNION ALL SELECT member_id, created_at FROM step_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  ) r GROUP BY member_id) t",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "row",
+      "title": "기록과 챌린지",
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "일별 기록 작성",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT UNIX_TIMESTAMP(DATE(created_at)) AS time_sec,\n  SUM(src = 'activity') AS '활동 기록', SUM(src = 'weight') AS '체중 기록', SUM(src = 'step') AS '걸음수 기록'\nFROM (\n  SELECT created_at, 'activity' AS src FROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT created_at, 'weight' FROM weight_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT created_at, 'step' FROM step_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n) t WHERE $__timeFilter(created_at) GROUP BY DATE(created_at) ORDER BY 1",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "일별 그룹 챌린지 생성 / 완료",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 27,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT UNIX_TIMESTAMP(DATE(created_at)) AS time_sec, COUNT(*) AS '생성'\nFROM group_challenge WHERE status = 'ACTIVE' AND deleted_at IS NULL AND $__timeFilter(created_at)\nGROUP BY DATE(created_at)\nUNION ALL\nSELECT UNIX_TIMESTAMP(DATE(completed_at)) AS time_sec, COUNT(*) AS '완료'\nFROM group_challenge WHERE completed_at IS NOT NULL AND $__timeFilter(completed_at)\nGROUP BY DATE(completed_at) ORDER BY 1",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "챌린지 완주율(기간 내 종료분)",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(100 * SUM(completed_at IS NOT NULL) / NULLIF(COUNT(*), 0), 1) AS value\nFROM group_challenge WHERE ends_on < CURDATE() AND status = 'ACTIVE' AND deleted_at IS NULL",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "진행 중 챌린지",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 35,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS value FROM group_challenge\nWHERE status = 'ACTIVE' AND deleted_at IS NULL AND starts_on <= CURDATE() AND ends_on >= CURDATE()",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "챌린지 인증 제출",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 35,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS value FROM challenge_proof WHERE status = 'ACTIVE' AND deleted_at IS NULL",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "댓글 수",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 35,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS value FROM record_comment WHERE status = 'ACTIVE' AND deleted_at IS NULL",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "table",
+      "title": "인기 챌린지 Top 10",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 39,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT c.title AS '챌린지', c.challenge_type AS '유형', COUNT(*) AS '선택 횟수',\n  ROUND(100 * SUM(gc.completed_at IS NOT NULL) / COUNT(*), 1) AS '완주율(%)'\nFROM group_challenge gc JOIN challenge c ON c.id = gc.challenge_id\nWHERE gc.status = 'ACTIVE' AND gc.deleted_at IS NULL\nGROUP BY c.id, c.title, c.challenge_type ORDER BY COUNT(*) DESC LIMIT 10",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "일별 활동 기록 유형",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 39,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT UNIX_TIMESTAMP(DATE(created_at)) AS time_sec, record_type AS metric, COUNT(*) AS value\nFROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL AND $__timeFilter(created_at)\nGROUP BY DATE(created_at), record_type ORDER BY 1",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "알림",
+      "gridPos": {
+        "x": 0,
+        "y": 47,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "일별 알림 발송",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT UNIX_TIMESTAMP(DATE(created_at)) AS time_sec, delivery_status AS metric, COUNT(*) AS value\nFROM notification WHERE $__timeFilter(created_at) GROUP BY DATE(created_at), delivery_status ORDER BY 1",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "table",
+      "title": "알림 유형별 성과",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 48,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT notification_type AS '유형', COUNT(*) AS '발송',\n  ROUND(100 * SUM(read_at IS NOT NULL) / NULLIF(COUNT(*), 0), 1) AS '읽음률(%)',\n  SUM(delivery_status = 'FAILED') AS '실패'\nFROM notification WHERE $__timeFilter(created_at)\nGROUP BY notification_type ORDER BY COUNT(*) DESC",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    }
+  ]
+}
