@@ -249,7 +249,17 @@
           "refId": "A",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT UNIX_TIMESTAMP(DATE(created_at)) AS time_sec, COUNT(*) AS '가입'\nFROM member WHERE $__timeFilter(created_at) GROUP BY DATE(created_at)\nUNION ALL\nSELECT UNIX_TIMESTAMP(DATE(deleted_at)) AS time_sec, -COUNT(*) AS '탈퇴'\nFROM member WHERE deleted_at IS NOT NULL AND $__timeFilter(deleted_at) GROUP BY DATE(deleted_at)\nORDER BY 1",
+          "rawSql": "SELECT $__timeGroupAlias(created_at, 1d), COUNT(*) AS '가입'\nFROM member WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        },
+        {
+          "refId": "B",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeGroupAlias(deleted_at, 1d), COUNT(*) AS '탈퇴'\nFROM member WHERE deleted_at IS NOT NULL AND $__timeFilter(deleted_at) GROUP BY 1 ORDER BY 1",
           "datasource": {
             "type": "mysql",
             "uid": "mody-mysql"
@@ -302,7 +312,7 @@
           "refId": "A",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT UNIX_TIMESTAMP(d) AS time_sec, total AS '누적 회원'\nFROM (\n  SELECT DATE(created_at) AS d,\n         SUM(COUNT(*)) OVER (ORDER BY DATE(created_at)) AS total\n  FROM member WHERE status = 'ACTIVE' AND deleted_at IS NULL GROUP BY DATE(created_at)\n) t WHERE $__timeFilter(d) ORDER BY 1",
+          "rawSql": "SELECT UNIX_TIMESTAMP(d) AS time, total AS '누적 회원'\nFROM (\n  SELECT DATE(created_at) AS d,\n         SUM(COUNT(*)) OVER (ORDER BY DATE(created_at)) AS total\n  FROM member WHERE status = 'ACTIVE' AND deleted_at IS NULL GROUP BY DATE(created_at)\n) t WHERE $__timeFilter(d) ORDER BY 1",
           "datasource": {
             "type": "mysql",
             "uid": "mody-mysql"
@@ -355,7 +365,7 @@
           "refId": "A",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT UNIX_TIMESTAMP(DATE(created_at)) AS time_sec, COUNT(DISTINCT member_id) AS 'DAU'\nFROM (\n  SELECT member_id, created_at FROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, created_at FROM weight_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, created_at FROM step_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n) t WHERE $__timeFilter(created_at) GROUP BY DATE(created_at) ORDER BY 1",
+          "rawSql": "SELECT $__timeGroupAlias(created_at, 1d), COUNT(DISTINCT member_id) AS 'DAU'\nFROM (\n  SELECT member_id, created_at FROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, created_at FROM weight_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, created_at FROM step_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n) t WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
           "datasource": {
             "type": "mysql",
             "uid": "mody-mysql"
@@ -700,7 +710,7 @@
           "refId": "A",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT UNIX_TIMESTAMP(DATE(created_at)) AS time_sec,\n  SUM(src = 'activity') AS '활동 기록', SUM(src = 'weight') AS '체중 기록', SUM(src = 'step') AS '걸음수 기록'\nFROM (\n  SELECT created_at, 'activity' AS src FROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT created_at, 'weight' FROM weight_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT created_at, 'step' FROM step_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n) t WHERE $__timeFilter(created_at) GROUP BY DATE(created_at) ORDER BY 1",
+          "rawSql": "SELECT $__timeGroupAlias(created_at, 1d),\n  SUM(src = 'activity') AS '활동 기록', SUM(src = 'weight') AS '체중 기록', SUM(src = 'step') AS '걸음수 기록'\nFROM (\n  SELECT created_at, 'activity' AS src FROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT created_at, 'weight' FROM weight_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT created_at, 'step' FROM step_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n) t WHERE $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
           "datasource": {
             "type": "mysql",
             "uid": "mody-mysql"
@@ -753,7 +763,17 @@
           "refId": "A",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT UNIX_TIMESTAMP(DATE(created_at)) AS time_sec, COUNT(*) AS '생성'\nFROM group_challenge WHERE status = 'ACTIVE' AND deleted_at IS NULL AND $__timeFilter(created_at)\nGROUP BY DATE(created_at)\nUNION ALL\nSELECT UNIX_TIMESTAMP(DATE(completed_at)) AS time_sec, COUNT(*) AS '완료'\nFROM group_challenge WHERE completed_at IS NOT NULL AND $__timeFilter(completed_at)\nGROUP BY DATE(completed_at) ORDER BY 1",
+          "rawSql": "SELECT $__timeGroupAlias(created_at, 1d), COUNT(*) AS '생성'\nFROM group_challenge WHERE status = 'ACTIVE' AND deleted_at IS NULL AND $__timeFilter(created_at) GROUP BY 1 ORDER BY 1",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        },
+        {
+          "refId": "B",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__timeGroupAlias(completed_at, 1d), COUNT(*) AS '완료'\nFROM group_challenge WHERE completed_at IS NOT NULL AND $__timeFilter(completed_at) GROUP BY 1 ORDER BY 1",
           "datasource": {
             "type": "mysql",
             "uid": "mody-mysql"
@@ -982,7 +1002,7 @@
     },
     {
       "type": "table",
-      "title": "인기 챌린지 Top 10",
+      "title": "인기 걸음수 챌린지 Top 10",
       "datasource": {
         "type": "mysql",
         "uid": "mody-mysql"
@@ -998,7 +1018,40 @@
           "refId": "A",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT c.title AS '챌린지', c.challenge_type AS '유형', COUNT(*) AS '선택 횟수',\n  ROUND(100 * SUM(gc.completed_at IS NOT NULL) / COUNT(*), 1) AS '완주율(%)'\nFROM group_challenge gc JOIN challenge c ON c.id = gc.challenge_id\nWHERE gc.status = 'ACTIVE' AND gc.deleted_at IS NULL\nGROUP BY c.id, c.title, c.challenge_type ORDER BY COUNT(*) DESC LIMIT 10",
+          "rawSql": "SELECT c.title AS '챌린지', COUNT(*) AS '선택 횟수',\n  ROUND(100 * SUM(gc.completed_at IS NOT NULL) / COUNT(*), 1) AS '완주율(%)'\nFROM group_challenge gc JOIN challenge c ON c.id = gc.challenge_id\nWHERE gc.status = 'ACTIVE' AND gc.deleted_at IS NULL AND c.challenge_type = 'STEP'\nGROUP BY c.id, c.title ORDER BY COUNT(*) DESC LIMIT 10",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          }
+        }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "type": "table",
+      "title": "인기 사진 챌린지 Top 10",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 39,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT c.title AS '챌린지', COUNT(*) AS '선택 횟수',\n  ROUND(100 * SUM(gc.completed_at IS NOT NULL) / COUNT(*), 1) AS '완주율(%)'\nFROM group_challenge gc JOIN challenge c ON c.id = gc.challenge_id\nWHERE gc.status = 'ACTIVE' AND gc.deleted_at IS NULL AND c.challenge_type = 'PHOTO'\nGROUP BY c.id, c.title ORDER BY COUNT(*) DESC LIMIT 10",
           "datasource": {
             "type": "mysql",
             "uid": "mody-mysql"
@@ -1021,9 +1074,9 @@
         "uid": "mody-mysql"
       },
       "gridPos": {
-        "x": 12,
-        "y": 39,
-        "w": 12,
+        "x": 0,
+        "y": 47,
+        "w": 24,
         "h": 8
       },
       "targets": [
@@ -1031,7 +1084,7 @@
           "refId": "A",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT UNIX_TIMESTAMP(DATE(created_at)) AS time_sec, record_type AS metric, COUNT(*) AS value\nFROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL AND $__timeFilter(created_at)\nGROUP BY DATE(created_at), record_type ORDER BY 1",
+          "rawSql": "SELECT $__timeGroupAlias(created_at, 1d), record_type AS metric, COUNT(*) AS value\nFROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL AND $__timeFilter(created_at)\nGROUP BY 1, record_type ORDER BY 1",
           "datasource": {
             "type": "mysql",
             "uid": "mody-mysql"
@@ -1071,7 +1124,7 @@
       "title": "알림",
       "gridPos": {
         "x": 0,
-        "y": 47,
+        "y": 55,
         "w": 24,
         "h": 1
       },
@@ -1087,7 +1140,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 48,
+        "y": 56,
         "w": 12,
         "h": 8
       },
@@ -1096,7 +1149,7 @@
           "refId": "A",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT UNIX_TIMESTAMP(DATE(created_at)) AS time_sec, delivery_status AS metric, COUNT(*) AS value\nFROM notification WHERE $__timeFilter(created_at) GROUP BY DATE(created_at), delivery_status ORDER BY 1",
+          "rawSql": "SELECT $__timeGroupAlias(created_at, 1d), delivery_status AS metric, COUNT(*) AS value\nFROM notification WHERE $__timeFilter(created_at) GROUP BY 1, delivery_status ORDER BY 1",
           "datasource": {
             "type": "mysql",
             "uid": "mody-mysql"
@@ -1140,7 +1193,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 48,
+        "y": 56,
         "w": 12,
         "h": 8
       },
