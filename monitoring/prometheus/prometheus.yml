@@ -6,7 +6,11 @@ global:
     env: prod
 
 scrape_configs:
+  # 운영 서버 CPU가 느려 /actuator/prometheus 렌더링에 10초 이상 걸린다.
+  # 주기를 60초로 늘리고 타임아웃을 넉넉히 준다.
   - job_name: mody-app
+    scrape_interval: 60s
+    scrape_timeout: 45s
     metrics_path: /actuator/prometheus
     static_configs:
       - targets: ["mody-web-blue:8081"]
