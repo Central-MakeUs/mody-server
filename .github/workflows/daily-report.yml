@@ -1,0 +1,48 @@
+name: Daily Report
+
+# 매일 09:00 KST에 전날 지표를 #10_daily_report 로 보낸다.
+# GitHub 스케줄은 몇 분~수십 분 늦게 돌 수 있다.
+on:
+  schedule:
+    - cron: '0 0 * * *'   # 00:00 UTC = 09:00 KST
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '집계 날짜 (YYYY-MM-DD, 비우면 어제)'
+        required: false
+      dry_run:
+        description: 'Slack에 보내지 않고 지표만 출력'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH key
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.PROD_KEY }}" > ~/.ssh/prod_key
+          chmod 600 ~/.ssh/prod_key
+
+      - name: Send report
+        env:
+          TZ: Asia/Seoul
+          MODY_SSH_TARGET: kminseok5167@${{ secrets.PROD_HOST }}
+          MODY_SSH_KEY: /home/runner/.ssh/prod_key
+          REPORT_DB_PASSWORD: ${{ secrets.REPORT_DB_PASSWORD }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_REPORT_CHANNEL: C0C82K2MKRT
+          REPORT_DATE: ${{ inputs.date }}
+          REPORT_DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: python3 scripts/daily-report/daily_report.py
