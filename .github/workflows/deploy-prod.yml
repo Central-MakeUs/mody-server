@@ -5,6 +5,14 @@ on:
   push:
     branches:
       - main
+    # 애플리케이션과 무관한 변경은 운영을 재배포하지 않는다.
+    # 운영 서버는 기동에 3~10분이 걸려 불필요한 재시작 비용이 크다.
+    paths-ignore:
+      - 'docs/**'
+      - 'monitoring/**'
+      - 'scripts/**'
+      - '.github/workflows/**'
+      - '**/*.md'
 
 permissions:
   contents: read
