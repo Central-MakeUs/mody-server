@@ -5,16 +5,15 @@ datasources:
     type: prometheus
     uid: mody-prometheus
     access: proxy
-    url: http://mody-prometheus:9090
+    url: http://prometheus:9090
     isDefault: true
     jsonData:
-      timeInterval: 30s
+      timeInterval: 300s
 
-  # 비즈니스 지표는 운영 MySQL을 직접 조회한다. 읽기 전용 계정을 쓴다.
   - name: MySQL
     type: mysql
     uid: mody-mysql
-    url: mody-mysql:3306
+    url: host.docker.internal:13306
     database: mody
     user: ${GRAFANA_DB_USER}
     secureJsonData:
@@ -22,5 +21,4 @@ datasources:
     jsonData:
       maxOpenConns: 4
       maxIdleConns: 2
-      connMaxLifetime: 14400
       timezone: Asia/Seoul

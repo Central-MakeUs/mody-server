@@ -38,4 +38,4 @@
 | [LLD-0030](LLD-0030-database-migration-versioning.md) | DB 마이그레이션 형상관리 | Accepted | #96 |
 | [LLD-0031](LLD-0031-record-upload-all-groups.md) | 기록 업로드 전체 그룹 노출 | Accepted | #103 |
 | [LLD-0032](LLD-0032-demo-login-provider.md) | 심사용 데모 로그인 Provider | Accepted | #125 |
-| [LLD-0034](LLD-0034-operations-monitoring-dashboard.md) | 운영 모니터링 대시보드 (Grafana) | Review | #213 |
+| [LLD-0034](LLD-0034-operations-monitoring-dashboard.md) | 운영 모니터링 대시보드 (Grafana) | Accepted | #213 |
