@@ -140,12 +140,12 @@ management:
       application: ${spring.application.name}
       env: ${SPRING_PROFILES_ACTIVE:local}
     distribution:
+      # 운영 서버 CPU가 느려 버킷 히스토그램(URI x 버킷)을 켜면 스크랩 렌더링이
+      # 10초를 넘는다. 인스턴스가 하나뿐이라 클라이언트 측 분위수로 충분하다.
       percentiles-histogram:
-        http.server.requests: true
+        http.server.requests: false
       percentiles:
         http.server.requests: 0.5, 0.95, 0.99
-      slo:
-        http.server.requests: 100ms, 300ms, 500ms, 1s, 3s
 
 ---
 
