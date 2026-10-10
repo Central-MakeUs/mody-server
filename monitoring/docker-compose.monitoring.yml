@@ -1,0 +1,103 @@
+# 운영 모니터링 스택. 애플리케이션 compose(docker-compose.yml)와 분리해서 띄운다.
+#   docker compose -f docker-compose.monitoring.yml --env-file monitoring.env up -d
+#
+# 운영 서버 RAM이 964MB라 모든 컨테이너에 메모리 상한을 건다. 상한을 넘으면
+# 해당 컨테이너만 종료되고 애플리케이션은 영향을 받지 않는다.
+# Grafana와 Prometheus는 127.0.0.1에만 바인딩한다. 접근은 SSH 터널로 한다.
+#   ssh -L 3000:localhost:3000 mody-prod
+services:
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: mody-prometheus
+    restart: unless-stopped
+    user: "65534:65534"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --storage.tsdb.retention.size=1GB
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    mem_limit: 256m
+    mem_reservation: 128m
+    networks:
+      - mody-network
+
+  grafana:
+    image: grafana/grafana:11.5.1
+    container_name: mody-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_INSTALL_PLUGINS: ""
+      GRAFANA_DB_USER: ${GRAFANA_DB_USER:-grafana}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:?set GRAFANA_DB_PASSWORD}
+      TZ: Asia/Seoul
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    mem_limit: 256m
+    mem_reservation: 128m
+    networks:
+      - mody-network
+
+  mysqld-exporter:
+    image: prom/mysqld-exporter:v0.16.0
+    container_name: mody-mysqld-exporter
+    restart: unless-stopped
+    command:
+      # 작은 서버라 스크랩이 느리다. 쓰지 않는 수집기는 끈다.
+      - --mysqld.address=mody-mysql:3306
+      - --mysqld.username=${EXPORTER_DB_USER:-exporter}
+      - --no-collect.slave_status
+      - --no-collect.info_schema.innodb_cmp
+      - --no-collect.info_schema.innodb_cmpmem
+      - --no-collect.info_schema.query_response_time
+    environment:
+      MYSQLD_EXPORTER_PASSWORD: ${EXPORTER_DB_PASSWORD:?set EXPORTER_DB_PASSWORD}
+    mem_limit: 64m
+    networks:
+      - mody-network
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: mody-node-exporter
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+      - --collector.disable-defaults
+      - --collector.cpu
+      - --collector.meminfo
+      - --collector.filesystem
+      - --collector.loadavg
+      - --collector.netdev
+      - --collector.diskstats
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    mem_limit: 64m
+    networks:
+      - mody-network
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  mody-network:
+    external: true
+    # 운영 서버의 실제 네트워크 이름(compose 프로젝트 접두사 포함)
+    name: ${MODY_NETWORK:-kminseok5167_mody-network}
