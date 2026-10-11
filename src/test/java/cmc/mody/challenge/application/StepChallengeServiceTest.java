@@ -3,6 +3,7 @@ package cmc.mody.challenge.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -80,8 +81,6 @@ class StepChallengeServiceTest {
     @Captor
     private ArgumentCaptor<GroupChallenge> groupChallengeCaptor;
 
-    @Captor
-    private ArgumentCaptor<StepRecord> stepRecordCaptor;
 
     @Test
     @DisplayName("현재 걸음수 챌린지는 그룹 챌린지와 누적 걸음수를 반환한다.")
@@ -191,10 +190,9 @@ class StepChallengeServiceTest {
             .willReturn(Optional.of(challenge(1L, "서울-인천")));
         given(stepChallengeDetailRepository.findByChallengeIdAndDeletedAtIsNull(1L))
             .willReturn(Optional.of(stepDetail(1L, "인천", 15_000)));
-        given(stepRecordRepository.findByGroupChallengeIdAndMemberIdAndRecordedOnAndDeletedAtIsNull(100L, 1L, today))
-            .willReturn(Optional.empty());
         given(idGenerator.nextId()).willReturn(200L);
-        given(stepRecordRepository.save(any(StepRecord.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(stepRecordRepository.findByGroupChallengeIdAndMemberIdAndRecordedOnAndDeletedAtIsNull(100L, 1L, today))
+            .willReturn(Optional.of(new StepRecord(200L, 100L, 1L, today, 8_200, StepSource.API)));
         given(stepRecordRepository.sumStepCountByGroupChallengeId(100L)).willReturn(15_000L);
 
         StepRecordUpsertResult result = service.upsertDailyStepRecord(
@@ -203,10 +201,8 @@ class StepChallengeServiceTest {
             new StepRecordUpsertCommand(today, 8_200)
         );
 
-        then(stepRecordRepository).should().save(stepRecordCaptor.capture());
-        assertThat(stepRecordCaptor.getValue().getRecordedOn()).isEqualTo(today);
-        assertThat(stepRecordCaptor.getValue().getStepCount()).isEqualTo(8_200);
-        assertThat(stepRecordCaptor.getValue().getStepSource()).isEqualTo(StepSource.API);
+        then(stepRecordRepository).should().upsertDailyStepCount(
+            eq(200L), eq(100L), eq(1L), eq(today), eq(8_200), eq("API"), any(LocalDateTime.class));
         assertThat(groupChallenge.getGroupChallengeStatus()).isEqualTo(GroupChallengeStatus.COMPLETED);
         assertThat(result).isEqualTo(new StepRecordUpsertResult(100L, today, 8_200, 15_000, 15_000, true));
     }
@@ -223,7 +219,7 @@ class StepChallengeServiceTest {
             today.minusDays(1),
             LocalDate.of(9999, 12, 31)
         );
-        StepRecord existing = new StepRecord(200L, 100L, 1L, today, 3_000, StepSource.API);
+        StepRecord existing = new StepRecord(200L, 100L, 1L, today, 8_200, StepSource.API);
         givenValidGroupMembership();
         givenStepChallenges(List.of(challenge(1L, "서울-인천")));
         given(groupChallengeRepository.findByGroupIdAndChallengeIdInAndGroupChallengeStatusAndDeletedAtIsNull(
@@ -245,7 +241,8 @@ class StepChallengeServiceTest {
             new StepRecordUpsertCommand(today, 8_200)
         );
 
-        assertThat(existing.getStepCount()).isEqualTo(8_200);
+        then(stepRecordRepository).should().upsertDailyStepCount(
+            any(), eq(100L), eq(1L), eq(today), eq(8_200), eq("API"), any(LocalDateTime.class));
         then(stepRecordRepository).should(never()).save(any(StepRecord.class));
         assertThat(result).isEqualTo(new StepRecordUpsertResult(100L, today, 8_200, 8_200, 15_000, false));
     }
@@ -284,7 +281,8 @@ class StepChallengeServiceTest {
             new StepRecordUpsertCommand(today, 0)
         );
 
-        assertThat(existing.getStepCount()).isEqualTo(4_000);
+        then(stepRecordRepository).should().upsertDailyStepCount(
+            any(), eq(100L), eq(1L), eq(today), eq(0), eq("API"), any(LocalDateTime.class));
         then(stepRecordRepository).should(never()).save(any(StepRecord.class));
         assertThat(result).isEqualTo(new StepRecordUpsertResult(100L, today, 4_000, 4_000, 15_000, false));
     }
