@@ -12,6 +12,10 @@
   SLACK_BOT_TOKEN        필수 (chat:write)
   SLACK_REPORT_CHANNEL   필수 (채널 ID)
   REPORT_DRY_RUN=1       Slack에 보내지 않고 출력만
+  REPORT_FORCE=1         같은 날짜 리포트를 이미 보냈어도 다시 보낸다
+
+같은 날짜 리포트가 채널에 이미 있으면 보내지 않는다. 모디 봇(09:00 정시 실행)과
+GitHub 예약(예비, 늦게 도는 경우가 많음)이 둘 다 실행해도 한 번만 발송된다.
 """
 import json
 import os
@@ -186,10 +190,31 @@ def builder_url(blocks: list) -> str:
         json.dumps({"blocks": blocks}, ensure_ascii=False, separators=(",", ":")))
 
 
+def report_text(target: date) -> str:
+    """알림·검색에 쓰이는 메시지 본문. 중복 발송 판단의 기준이기도 하다."""
+    return f"MODY 일일 리포트 {target.isoformat()}"
+
+
+def slack_api(method: str, params: dict) -> dict:
+    query = urllib.parse.urlencode(params)
+    req = urllib.request.Request(f"https://slack.com/api/{method}?{query}", headers={
+        "Authorization": f"Bearer {os.environ['SLACK_BOT_TOKEN']}",
+    })
+    return json.load(urllib.request.urlopen(req, timeout=30))
+
+
+def already_posted(target: date) -> bool:
+    """최근 메시지 중 같은 날짜 리포트가 있는지 본다."""
+    res = slack_api("conversations.history", {"channel": os.environ["SLACK_REPORT_CHANNEL"], "limit": 50})
+    if not res.get("ok"):
+        sys.exit(f"Slack 이력 조회 실패: {res.get('error')}")
+    return any(m.get("bot_id") and m.get("text", "") == report_text(target) for m in res.get("messages", []))
+
+
 def post(blocks: list, target: date) -> None:
     body = json.dumps({
         "channel": os.environ["SLACK_REPORT_CHANNEL"],
-        "text": f"MODY 일일 리포트 {target.isoformat()}",
+        "text": report_text(target),
         "blocks": blocks,
         "unfurl_links": False,
     }).encode()
@@ -206,6 +231,10 @@ def main() -> None:
     # 운영 DB와 Slack 모두 KST 기준. 러너는 UTC이므로 TZ=Asia/Seoul로 실행한다.
     target = date.fromisoformat(os.environ["REPORT_DATE"]) if os.environ.get("REPORT_DATE") \
         else date.today() - timedelta(days=1)
+    sending = os.environ.get("REPORT_DRY_RUN") != "1" and os.environ.get("REPORT_PREVIEW") != "1"
+    if sending and os.environ.get("REPORT_FORCE") != "1" and already_posted(target):
+        print(f"report for {target.isoformat()} already posted, skip")
+        return
     values = fetch(build_sql(target, target - timedelta(days=1)))
     blocks = build_blocks(values, target)
     if os.environ.get("REPORT_DRY_RUN") == "1":
