@@ -23,13 +23,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AdminFeedService {
     private static final Set<String> TYPES = Set.of("MEAL", "EXERCISE", "CHALLENGE");
+    private static final Set<String> FILTER_TYPES = Set.of("MEAL", "EXERCISE", "CHALLENGE", "ACTIVITY");
     private static final String ACTIVITY = """
         SELECT r.id, CONCAT('', r.record_type) AS feed_type, r.uploaded_at, r.member_id,
             CASE WHEN m.status = 'ACTIVE' AND m.deleted_at IS NULL THEN m.nickname ELSE '탈퇴한 회원' END AS nickname,
             r.image_key, r.crop_x, r.crop_y, r.crop_width, r.crop_height,
             CASE WHEN r.record_type = 'MEAL' THEN r.menu ELSE r.exercise_name END AS title,
             NULL AS description, r.meal_time, r.exercise_duration_minutes,
-            NULL AS group_challenge_id, NULL AS global_weekly_challenge_id, r.group_id AS legacy_group_id
+            NULL AS group_challenge_id, NULL AS global_weekly_challenge_id, r.group_id AS legacy_group_id,
+            EXISTS (SELECT 1 FROM activity_record_group arg WHERE arg.record_id = r.id
+                AND arg.group_id = :editableGroup AND arg.status = 'ACTIVE' AND arg.deleted_at IS NULL)
+                AS group_record_editable
         FROM activity_record r LEFT JOIN member m ON m.id = r.member_id
         WHERE r.status = 'ACTIVE' AND r.deleted_at IS NULL
         """;
@@ -38,7 +42,8 @@ public class AdminFeedService {
             CASE WHEN m.status = 'ACTIVE' AND m.deleted_at IS NULL THEN m.nickname ELSE '탈퇴한 회원' END AS nickname,
             r.image_key, r.crop_x, r.crop_y, r.crop_width, r.crop_height,
             c.title, c.description, NULL AS meal_time, NULL AS exercise_duration_minutes,
-            gc.id AS group_challenge_id, gc.global_weekly_challenge_id, gc.group_id AS legacy_group_id
+            gc.id AS group_challenge_id, gc.global_weekly_challenge_id, gc.group_id AS legacy_group_id,
+            0 AS group_record_editable
         FROM challenge_proof r
         JOIN group_challenge gc ON gc.id = r.group_challenge_id AND gc.status = 'ACTIVE' AND gc.deleted_at IS NULL
         JOIN challenge c ON c.id = gc.challenge_id AND c.status = 'ACTIVE' AND c.deleted_at IS NULL
@@ -54,17 +59,55 @@ public class AdminFeedService {
 
     public Page list(LocalDate from, LocalDate to, String type, Long memberId, Long groupId,
         Long groupChallengeId, String keyword, String cursor, int size) {
+        return list(from, to, type, memberId, groupId, groupChallengeId, null, keyword, cursor, size);
+    }
+
+    public Page list(LocalDate from, LocalDate to, String type, Long memberId, Long groupId,
+        Long groupChallengeId, Long globalWeeklyChallengeId, String keyword, String cursor, int size) {
+        FilterQuery query = prepare(from, to, type, memberId, groupId, groupChallengeId,
+            globalWeeklyChallengeId, keyword, cursor, size);
+        // Bound each source before UNION: one group-shared activity remains one feed item.
+        String order = " ORDER BY uploaded_at DESC, feed_type DESC, id DESC LIMIT :limit";
+        String sql = "SELECT * FROM (SELECT * FROM (" + query.activity() + order + ") a UNION ALL "
+            + "SELECT * FROM (" + query.proof() + order + ") p) feed" + order;
+        List<Item> rows = jdbc.query(sql, query.params(), (rs, n) -> item(rs));
+        boolean hasMore = rows.size() > size;
+        List<Item> items = hasMore ? rows.subList(0, size) : rows;
+        String next = hasMore ? encode(items.get(items.size() - 1)) : null;
+        return new Page(items, next, hasMore, query.from(), query.to(), "Asia/Seoul");
+    }
+
+    public Summary summary(LocalDate from, LocalDate to, String type, Long memberId, Long groupId,
+        Long groupChallengeId, Long globalWeeklyChallengeId, String keyword) {
+        FilterQuery query = prepare(from, to, type, memberId, groupId, groupChallengeId,
+            globalWeeklyChallengeId, keyword, null, 1);
+        String sql = "SELECT feed_type, COUNT(*) AS amount FROM (" + query.activity()
+            + " UNION ALL " + query.proof() + ") feed GROUP BY feed_type";
+        var counts = new java.util.HashMap<String, Long>();
+        jdbc.query(sql, query.params(), rs -> {
+            counts.put(rs.getString("feed_type"), rs.getLong("amount"));
+        });
+        long meal = counts.getOrDefault("MEAL", 0L), exercise = counts.getOrDefault("EXERCISE", 0L);
+        long challenge = counts.getOrDefault("CHALLENGE", 0L);
+        return new Summary(meal + exercise + challenge, meal, exercise, challenge,
+            query.from(), query.to(), "Asia/Seoul");
+    }
+
+    private FilterQuery prepare(LocalDate from, LocalDate to, String type, Long memberId, Long groupId,
+        Long groupChallengeId, Long globalWeeklyChallengeId, String keyword, String cursor, int size) {
         LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         from = from == null ? today.minusDays(6) : from;
         to = to == null ? today : to;
         if (from.isAfter(to) || ChronoUnit.DAYS.between(from, to) > 365 || size < 1 || size > 100
-            || (type != null && !TYPES.contains(type)) || (memberId != null && memberId <= 0)
+            || (type != null && !FILTER_TYPES.contains(type)) || (memberId != null && memberId <= 0)
             || (groupId != null && groupId <= 0) || (groupChallengeId != null && groupChallengeId <= 0)
+            || (globalWeeklyChallengeId != null && globalWeeklyChallengeId <= 0)
             || (keyword != null && keyword.length() > 100) || to.equals(LocalDate.MAX)) {
             throw new GeneralException(ErrorStatus.BAD_REQUEST);
         }
         var params = new MapSqlParameterSource().addValue("from", from.atStartOfDay())
-            .addValue("until", to.plusDays(1).atStartOfDay()).addValue("limit", size + 1);
+            .addValue("until", to.plusDays(1).atStartOfDay()).addValue("limit", size + 1)
+            .addValue("editableGroup", groupId);
         String common = " AND r.uploaded_at >= :from AND r.uploaded_at < :until";
         if (memberId != null) {
             params.addValue("member", memberId);
@@ -76,6 +119,8 @@ public class AdminFeedService {
             params.addValue("type", type);
             if (type.equals("CHALLENGE")) {
                 activity += " AND 1 = 0";
+            } else if (type.equals("ACTIVITY")) {
+                proof += " AND 1 = 0";
             } else {
                 activity += " AND r.record_type = :type";
                 proof += " AND 1 = 0";
@@ -92,6 +137,11 @@ public class AdminFeedService {
             activity += " AND 1 = 0";
             proof += " AND gc.id = :challenge";
         }
+        if (globalWeeklyChallengeId != null) {
+            params.addValue("globalChallenge", globalWeeklyChallengeId);
+            activity += " AND 1 = 0";
+            proof += " AND gc.global_weekly_challenge_id = :globalChallenge";
+        }
         if (keyword != null && !keyword.isBlank()) {
             params.addValue("search", "%" + keyword.replace("!", "!!").replace("%", "!%")
                 .replace("_", "!_") + "%");
@@ -107,22 +157,14 @@ public class AdminFeedService {
             activity += cursorCondition("CONCAT('', r.record_type)");
             proof += cursorCondition("'CHALLENGE'");
         }
-        // Bound each source before UNION: one group-shared activity remains one feed item.
-        String order = " ORDER BY uploaded_at DESC, feed_type DESC, id DESC LIMIT :limit";
-        String sql = "SELECT * FROM (SELECT * FROM (" + activity + order + ") a UNION ALL "
-            + "SELECT * FROM (" + proof + order + ") p) feed" + order;
-        List<Item> rows = jdbc.query(sql, params, (rs, n) -> item(rs));
-        boolean hasMore = rows.size() > size;
-        List<Item> items = hasMore ? rows.subList(0, size) : rows;
-        String next = hasMore ? encode(items.get(items.size() - 1)) : null;
-        return new Page(items, next, hasMore, from, to, "Asia/Seoul");
+        return new FilterQuery(activity, proof, params, from, to);
     }
 
     public Detail detail(String type, long id) {
         if (!TYPES.contains(type) || id <= 0) {
             throw new GeneralException(ErrorStatus.BAD_REQUEST);
         }
-        var params = new MapSqlParameterSource("id", id).addValue("type", type);
+        var params = new MapSqlParameterSource("id", id).addValue("type", type).addValue("editableGroup", null);
         String sql = type.equals("CHALLENGE") ? PROOF + " AND r.id = :id"
             : ACTIVITY + " AND r.id = :id AND r.record_type = :type";
         List<Item> found = jdbc.query(sql, params, (rs, n) -> item(rs));
@@ -161,7 +203,8 @@ public class AdminFeedService {
             (Integer) rs.getObject("exercise_duration_minutes"), stringId(rs.getObject("group_challenge_id")),
             stringId(rs.getObject("global_weekly_challenge_id")), stringId(rs.getObject("legacy_group_id")),
             new Crop(rs.getBigDecimal("crop_x"), rs.getBigDecimal("crop_y"),
-                rs.getBigDecimal("crop_width"), rs.getBigDecimal("crop_height")));
+                rs.getBigDecimal("crop_width"), rs.getBigDecimal("crop_height")),
+            rs.getBoolean("group_record_editable"));
     }
 
     private static String stringId(Object value) {
@@ -197,11 +240,16 @@ public class AdminFeedService {
     }
 
     private record Cursor(LocalDateTime at, String type, long id) { }
+    private record FilterQuery(String activity, String proof, MapSqlParameterSource params,
+        LocalDate from, LocalDate to) { }
+    public record Summary(long totalCount, long mealCount, long exerciseCount, long challengeCount,
+        LocalDate from, LocalDate to, String timezone) { }
     public record Crop(BigDecimal x, BigDecimal y, BigDecimal width, BigDecimal height) { }
     public record Group(String id, String name) { }
     public record Item(String id, String type, LocalDateTime uploadedAt, String memberId, String nickname,
         String imageUrl, String title, String description, String mealTime, Integer exerciseDurationMinutes,
-        String groupChallengeId, String globalWeeklyChallengeId, String legacyGroupId, Crop crop) { }
+        String groupChallengeId, String globalWeeklyChallengeId, String legacyGroupId, Crop crop,
+        boolean groupRecordEditable) { }
     public record Page(List<Item> items, String nextCursor, boolean hasMore, LocalDate from, LocalDate to,
         String timezone) { }
     public record Detail(Item item, List<Group> groups) { }

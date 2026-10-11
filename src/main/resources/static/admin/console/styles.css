@@ -8,10 +8,79 @@
   --primary-soft: #ffee92;
   --secondary: #6e7cff;
   --secondary-soft: #a8b0ff;
-  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR",
+    sans-serif;
   color: var(--ink);
   background: var(--canvas);
   font-size: 14px;
+}
+.period-presets {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-bottom: 20px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.period-presets button {
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 7px;
+  padding: 7px 12px;
+  color: var(--ink);
+}
+.preset-note {
+  margin-left: auto;
+}
+.filter-state {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 14px 0;
+}
+.filter-state.error {
+  color: #b42318;
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin: 20px 0 30px;
+}
+.summary-grid > div {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 19px 22px;
+}
+.summary-grid > div:first-child {
+  background: #fffbed;
+  border-color: var(--primary-soft);
+}
+.summary-grid span {
+  color: var(--muted);
+  display: block;
+  font-size: 12px;
+}
+.summary-grid strong {
+  display: block;
+  font-size: 28px;
+  margin-top: 9px;
+  letter-spacing: -1px;
+}
+@media (max-width: 650px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 9px;
+  }
+  .summary-grid > div {
+    padding: 16px;
+  }
+  .preset-note {
+    width: 100%;
+    margin-left: 0;
+  }
 }
 * {
   box-sizing: border-box;
@@ -676,6 +745,24 @@ dialog::backdrop {
   }
 }
 @media (max-width: 500px) {
+  .sidebar {
+    flex-wrap: wrap;
+    gap: 14px;
+    padding: 18px 16px;
+  }
+  .sidebar nav {
+    width: 100%;
+    margin-left: 0;
+  }
+  .sidebar nav .nav-item {
+    flex: 1;
+    justify-content: center;
+    white-space: nowrap;
+  }
+  .page-heading {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
   main {
     padding: 25px 16px;
   }

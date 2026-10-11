@@ -51,6 +51,49 @@ class AdminFeedServiceTest {
     }
 
     @Test
+    void summaryCountsAllMatchingRecordsRatherThanTheLoadedPage() {
+        var first = list(null, null, null, null, null, null, 1);
+        assertThat(first.items()).hasSize(1);
+        var total = feed.summary(DAY, DAY, null, null, null, null, null, null);
+        assertThat(total.totalCount()).isEqualTo(3);
+        assertThat(total.mealCount()).isEqualTo(1);
+        assertThat(total.exerciseCount()).isEqualTo(1);
+        assertThat(total.challengeCount()).isEqualTo(1);
+        assertThat(feed.summary(DAY, DAY, null, 10L, 21L, null, null, "샐러드").totalCount()).isEqualTo(1);
+        assertThat(feed.summary(DAY.plusDays(1), DAY.plusDays(1), null, null, null, null, null, null)
+            .totalCount()).isZero();
+    }
+
+    @Test
+    void globalChallengeAndActivityFiltersUseTheSameCriteriaForCountsAndPages() {
+        assertThat(feed.list(DAY, DAY, null, null, null, null, 50L, null, null, 24).items())
+            .extracting(AdminFeedService.Item::type).containsExactly("CHALLENGE");
+        assertThat(feed.summary(DAY, DAY, null, null, null, null, 50L, null).totalCount()).isEqualTo(1);
+        assertThat(feed.summary(DAY, DAY, "ACTIVITY", null, null, null, null, null).totalCount()).isEqualTo(2);
+        assertThat(list("ACTIVITY", null, null, null, null, null, 24).items()).hasSize(2);
+        em.find(GroupChallenge.class, 40L).delete();
+        em.flush();
+        assertThat(feed.summary(DAY, DAY, null, null, null, null, 50L, null).totalCount()).isZero();
+        assertThatThrownBy(() -> feed.summary(DAY, DAY, null, null, null, null, -1L, null))
+            .isInstanceOf(GeneralException.class);
+    }
+
+    @Test
+    void summaryIsNotLimitedToTwentyFourAndLegacyRecordsAreReadOnly() {
+        for (long id = 300; id < 330; id++) {
+            em.persist(activity(id, RecordType.MEAL, AT.minusDays(1)));
+        }
+        em.flush();
+        assertThat(feed.list(DAY.minusDays(1), DAY, null, null, null, null, null, null, 24).items())
+            .hasSize(24);
+        assertThat(feed.summary(DAY.minusDays(1), DAY, null, null, null, null, null, null).totalCount())
+            .isEqualTo(33);
+        assertThat(list("MEAL", null, 21L, null, null, null, 24).items().getFirst().groupRecordEditable()).isTrue();
+        assertThat(list("EXERCISE", null, 99L, null, null, null, 24).items().getFirst().groupRecordEditable())
+            .isFalse();
+    }
+
+    @Test
     void mixedSourcesAndSharedGroupsDoNotDuplicateOrLoseTiedTimestamps() {
         List<String> identities = new ArrayList<>();
         String cursor = null;
