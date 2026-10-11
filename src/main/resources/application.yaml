@@ -1,6 +1,12 @@
+server:
+  # 배포 시 처리 중인 요청을 마치고 내려간다(블루그린 전환 후 이전 색상 종료).
+  shutdown: graceful
+
 spring:
   application:
     name: mody
+  lifecycle:
+    timeout-per-shutdown-phase: ${SHUTDOWN_TIMEOUT:20s}
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
 
@@ -27,6 +33,10 @@ id:
 challenge:
   step-master-data-initializer:
     enabled: ${CHALLENGE_STEP_MASTER_DATA_INITIALIZER_ENABLED:true}
+
+# 블루그린 배포: 호스트가 마운트한 파일의 색상과 server.color가 같은 인스턴스만 스케줄 작업을 실행한다.
+scheduling:
+  active-color-file: ${SCHEDULING_ACTIVE_COLOR_FILE:}
 
 admin:
   api-key: ${ADMIN_API_KEY:}
