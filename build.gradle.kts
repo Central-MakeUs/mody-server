@@ -41,6 +41,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
     implementation("com.google.cloud:google-cloud-storage")
+    implementation("com.google.api-client:google-api-client")
     implementation("com.google.firebase:firebase-admin:9.4.3")
     implementation("com.drewnoakes:metadata-extractor:2.19.0")
     implementation("org.flywaydb:flyway-core")
@@ -122,6 +123,12 @@ val applyOpenApiSecurity by tasks.registering {
             "in" to "header",
             "name" to "X-Admin-Api-Key"
         )
+        securitySchemes["adminSession"] = linkedMapOf(
+            "type" to "apiKey", "in" to "cookie", "name" to "MODY_ADMIN_SESSION"
+        )
+        securitySchemes["adminCsrf"] = linkedMapOf(
+            "type" to "apiKey", "in" to "header", "name" to "X-CSRF-Token"
+        )
 
         @Suppress("UNCHECKED_CAST")
         val paths = spec["paths"] as MutableMap<String, MutableMap<String, MutableMap<String, Any?>>>
@@ -129,7 +136,11 @@ val applyOpenApiSecurity by tasks.registering {
             operations.forEach { (method, operation) ->
                 if (method.lowercase() in setOf("get", "post", "put", "patch", "delete")) {
                     operation["security"] = if (path.startsWith("/api/v1/admin/")) {
-                        listOf(mapOf("adminApiKey" to emptyList<String>()))
+                        val sessionSecurity = linkedMapOf("adminSession" to emptyList<String>())
+                        if (method.lowercase() !in setOf("get", "head")) {
+                            sessionSecurity["adminCsrf"] = emptyList()
+                        }
+                        listOf(mapOf("adminApiKey" to emptyList<String>()), sessionSecurity)
                     } else {
                         listOf(mapOf("bearerAuth" to emptyList<String>()))
                     }
