@@ -27,10 +27,25 @@ public class AdminFeedController {
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
         @RequestParam(required = false) String type, @RequestParam(required = false) Long memberId,
         @RequestParam(required = false) Long groupId, @RequestParam(required = false) Long groupChallengeId,
+        @RequestParam(required = false) Long globalWeeklyChallengeId,
         @RequestParam(required = false) String keyword, @RequestParam(required = false) String cursor,
         @RequestParam(defaultValue = "24") int size) {
         access.validate(key);
-        return ApiResponse.ok(feed.list(from, to, type, memberId, groupId, groupChallengeId, keyword, cursor, size));
+        return ApiResponse.ok(feed.list(from, to, type, memberId, groupId, groupChallengeId,
+            globalWeeklyChallengeId, keyword, cursor, size));
+    }
+
+    @GetMapping("/summary")
+    public ApiResponse<AdminFeedService.Summary> summary(
+        @RequestHeader(value = "X-Admin-Api-Key", required = false) String key,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+        @RequestParam(required = false) String type, @RequestParam(required = false) Long memberId,
+        @RequestParam(required = false) Long groupId, @RequestParam(required = false) Long groupChallengeId,
+        @RequestParam(required = false) Long globalWeeklyChallengeId, @RequestParam(required = false) String keyword) {
+        access.validate(key);
+        return ApiResponse.ok(feed.summary(from, to, type, memberId, groupId, groupChallengeId,
+            globalWeeklyChallengeId, keyword));
     }
 
     @GetMapping("/{type}/{id}")

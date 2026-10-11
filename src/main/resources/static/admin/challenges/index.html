@@ -1,160 +1,435 @@
 <!doctype html>
 <html lang="ko">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex, nofollow">
-  <title>MODY Admin</title>
-  <link rel="stylesheet" href="/admin/challenges/styles.css?v=20261011">
-</head>
-<body>
-  <section id="access-section" class="access-shell" aria-labelledby="access-title">
-    <div class="access-card">
-      <p class="brand-mark">MODY <span>ADMIN</span></p>
-      <h1 id="access-title">운영 콘솔</h1>
-      <p class="access-copy">그룹 챌린지와 활동 기록을 관리합니다.</p>
-      <p>허용된 Google 계정으로 로그인하면 관리 화면을 사용할 수 있습니다.</p>
-      <p id="access-message" class="form-message" role="status" aria-live="polite"></p>
-      <a class="primary-button full" href="/admin?next=challenges">Google 로그인 화면으로</a>
-    </div>
-  </section>
-
-  <main id="workspace" class="app-shell" hidden>
-    <aside class="sidebar">
-      <a class="brand-mark" href="/admin/challenges">MODY <span>ADMIN</span></a>
-      <nav aria-label="관리 메뉴">
-        <a class="nav-item" href="/admin">전체 인증 피드</a>
-        <button class="nav-item active" type="button">챌린지 관리</button>
-        <button class="nav-item" id="global-weekly-nav-button" type="button">전역 주간 챌린지</button>
-        <button class="nav-item" id="group-nav-button" type="button">그룹 관리</button>
-      </nav>
-      <div class="sidebar-footer">
-        <span class="environment-dot"></span> 운영 도구
-        <button id="sign-out-button" class="sign-out" type="button">접속 해제</button>
-      </div>
-    </aside>
-
-    <section class="content">
-      <header class="page-header">
-        <div>
-          <p class="section-kicker">운영 관리</p>
-          <h1>주간 챌린지</h1>
-          <p>그룹별 챌린지와 구성원의 활동 기록을 관리합니다.</p>
-        </div>
-        <button id="refresh-button" class="secondary-button" type="button">새로고침</button>
-      </header>
-
-      <section id="group-controls" class="control-bar" aria-label="그룹 선택">
-        <div class="control-label"><span>대상 그룹</span><strong id="group-summary">그룹을 불러오는 중</strong></div>
-        <select id="group-id" name="groupId" disabled>
-          <option value="">그룹 목록을 불러오는 중입니다.</option>
-        </select>
-      </section>
-
-      <section id="group-metrics" class="metrics" aria-label="그룹 운영 지표">
-        <div><span>주간 챌린지</span><strong id="metric-challenge-count">0</strong></div>
-        <div><span>진행 중</span><strong id="metric-in-progress-count">0</strong></div>
-        <div><span>활동 기록</span><strong id="metric-record-count">0</strong></div>
-        <div><span>참여 멤버</span><strong id="metric-member-count">0</strong></div>
-      </section>
-
-      <section class="workspace-card">
-        <div class="tabs" role="tablist" aria-label="관리 항목">
-          <button class="tab-button active" id="challenge-tab" type="button" role="tab" aria-selected="true">주간 챌린지 <span id="challenge-count">0</span></button>
-          <button class="tab-button" id="record-tab" type="button" role="tab" aria-selected="false">활동 기록 <span id="record-count">0</span></button>
-        </div>
-
-        <section id="challenge-panel" class="tab-panel" role="tabpanel">
-          <div class="table-toolbar">
-            <div><h2>챌린지 목록</h2><p>선택한 그룹에 등록된 주간 사진 챌린지입니다.</p></div>
-            <button id="new-challenge-button" class="primary-button" type="button">챌린지 등록</button>
-          </div>
-          <div class="list-filter"><input id="challenge-search" type="search" placeholder="제목 또는 안내 검색"><select id="challenge-status-filter"><option value="ALL">전체 상태</option><option value="IN_PROGRESS">진행 중</option><option value="COMPLETED">완료</option><option value="RESET">종료</option></select></div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>챌린지</th><th>인증 기간</th><th>상태</th><th class="action-column">관리</th></tr></thead>
-              <tbody id="challenge-list"></tbody>
-            </table>
-          </div>
-          <p id="challenge-empty" class="empty-state" hidden>등록된 주간 챌린지가 없습니다.</p>
-        </section>
-
-        <section id="record-panel" class="tab-panel" role="tabpanel" hidden>
-          <div class="table-toolbar">
-            <div><h2>활동 기록</h2><p>선택한 그룹에 노출된 식사·운동 기록입니다.</p></div>
-          </div>
-          <div class="list-filter"><input id="record-search" type="search" placeholder="작성자, 메뉴, 운동명 검색"><select id="record-type-filter"><option value="ALL">전체 기록</option><option value="MEAL">식사</option><option value="EXERCISE">운동</option></select></div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>이미지</th><th>작성자</th><th>기록</th><th>내용</th><th>등록 시각</th><th class="action-column">관리</th></tr></thead>
-              <tbody id="record-list"></tbody>
-            </table>
-          </div>
-          <p id="record-empty" class="empty-state" hidden>조회할 활동 기록이 없습니다.</p>
-        </section>
-
-        <section id="group-panel" class="tab-panel" role="tabpanel" hidden>
-          <div class="table-toolbar"><div><h2>그룹 관리</h2><p>그룹명, 초대 코드와 참여 멤버를 확인합니다.</p></div></div>
-          <div class="group-management"><div class="group-list" id="group-list"></div><section id="group-detail" class="group-detail"><p class="empty-state">관리할 그룹을 선택하세요.</p></section></div>
-        </section>
-      </section>
-      <section id="global-weekly-panel" class="workspace-card tab-panel standalone-panel" role="tabpanel" hidden>
-        <div class="table-toolbar">
-          <div><h2>전역 주간 챌린지</h2><p>한 번 등록하면 활성 그룹에 그룹별 진행 항목이 생성됩니다.</p></div>
-          <button id="new-global-challenge-button" class="primary-button" type="button">전역 챌린지 등록</button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>챌린지</th><th>인증 기간</th><th>연결 그룹</th><th class="action-column">관리</th></tr></thead>
-            <tbody id="global-challenge-list"></tbody>
-          </table>
-        </div>
-        <p id="global-challenge-empty" class="empty-state" hidden>등록된 전역 주간 챌린지가 없습니다.</p>
-      </section>
-      <p id="workspace-message" class="form-message workspace-message" role="status" aria-live="polite"></p>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>모디 운영 관리</title>
+    <link rel="stylesheet" href="/admin/console/styles.css" />
+    <link rel="stylesheet" href="/admin/challenges/styles.css" />
+    <script src="/admin/challenges/app.js" defer></script>
+  </head>
+  <body>
+    <section id="login" class="management-login" hidden>
+      <a class="brand" href="/admin">mody<span>운영 콘솔</span></a>
+      <h1>관리자 로그인이 필요해요.</h1>
+      <p>허용된 Google 계정으로 로그인하면 관리 화면으로 돌아옵니다.</p>
+      <a class="primary-button" href="/admin?next=challenges"
+        >Google 로그인하기</a
+      >
+      <p id="login-message" class="message" role="status"></p>
     </section>
-  </main>
-
-  <dialog id="challenge-dialog" class="modal">
-    <form id="challenge-form" method="dialog">
-      <header class="modal-header"><div><p class="section-kicker">주간 챌린지</p><h2 id="challenge-dialog-title">챌린지 등록</h2></div><button class="close-button" value="cancel" aria-label="닫기">닫기</button></header>
-      <input id="editing-challenge-id" type="hidden">
-      <label for="challenge-title">챌린지 제목</label><input id="challenge-title" maxlength="50" required>
-      <label for="challenge-description">인증 안내</label><textarea id="challenge-description" maxlength="500" rows="4" required></textarea>
-      <div class="form-grid"><div><label for="starts-on">시작일</label><input id="starts-on" type="date" required></div><div><label for="ends-on">마감일</label><input id="ends-on" type="date" required></div></div>
-      <p id="challenge-form-message" class="form-message" role="status"></p>
-      <footer class="modal-footer"><button class="secondary-button" value="cancel" type="button" data-close="challenge-dialog">취소</button><button id="save-challenge-button" class="primary-button" type="submit">저장</button></footer>
-    </form>
-  </dialog>
-
-  <dialog id="global-challenge-dialog" class="modal">
-    <form id="global-challenge-form" method="dialog">
-      <header class="modal-header"><div><p class="section-kicker">전역 주간 챌린지</p><h2 id="global-challenge-dialog-title">전역 챌린지 등록</h2></div><button class="close-button" value="cancel" aria-label="닫기">닫기</button></header>
-      <input id="editing-global-challenge-id" type="hidden">
-      <label for="global-challenge-title">챌린지 제목</label><input id="global-challenge-title" maxlength="50" required>
-      <label for="global-challenge-description">인증 안내</label><textarea id="global-challenge-description" maxlength="500" rows="4" required></textarea>
-      <div class="form-grid"><div><label for="global-starts-on">시작일</label><input id="global-starts-on" type="date" required></div><div><label for="global-ends-on">마감일</label><input id="global-ends-on" type="date" required></div></div>
-      <p id="global-challenge-form-message" class="form-message" role="status"></p>
-      <footer class="modal-footer"><button class="secondary-button" value="cancel" type="button" data-close="global-challenge-dialog">취소</button><button class="primary-button" type="submit">저장</button></footer>
-    </form>
-  </dialog>
-
-  <dialog id="record-dialog" class="modal">
-    <form id="record-form" method="dialog">
-      <header class="modal-header"><div><p class="section-kicker">활동 기록</p><h2>기록 수정</h2></div><button class="close-button" value="cancel" aria-label="닫기">닫기</button></header>
-      <input id="editing-record-id" type="hidden">
-      <label for="record-type">기록 타입</label><select id="record-type"><option value="MEAL">식사</option><option value="EXERCISE">운동</option></select>
-      <div id="meal-fields"><label for="record-meal-time">식사 시간</label><input id="record-meal-time" type="time"><label for="record-menu">메뉴</label><input id="record-menu" maxlength="100"></div>
-      <div id="exercise-fields" hidden><label for="record-duration">운동 시간(분)</label><input id="record-duration" type="number" min="1" max="1440"><label for="record-exercise-name">운동명</label><input id="record-exercise-name" maxlength="30"></div>
-      <p id="record-form-message" class="form-message" role="status"></p>
-      <footer class="modal-footer"><button class="secondary-button" value="cancel" type="button" data-close="record-dialog">취소</button><button id="save-record-button" class="primary-button" type="submit">저장</button></footer>
-    </form>
-  </dialog>
-
-  <dialog id="confirm-dialog" class="confirm-dialog">
-    <form method="dialog"><p class="danger-kicker">삭제 확인</p><h2 id="confirm-title">정말 삭제할까요?</h2><p id="confirm-copy"></p><footer class="modal-footer"><button class="secondary-button" value="cancel">취소</button><button id="confirm-delete-button" class="danger-button" value="default">삭제</button></footer></form>
-  </dialog>
-  <dialog id="image-dialog" class="image-dialog"><header><strong id="image-dialog-title">인증 이미지</strong><button class="close-button" type="button" data-close="image-dialog">닫기</button></header><img id="record-image-preview" alt="활동 기록 인증 이미지"></dialog>
-  <script src="/admin/challenges/app.js?v=20260912" defer></script>
-</body>
+    <div id="workspace" class="shell" hidden>
+      <aside class="sidebar">
+        <a class="brand" href="/admin">mody<span>운영 콘솔</span></a>
+        <p class="nav-caption">서비스 운영</p>
+        <nav aria-label="관리 메뉴">
+          <a class="nav-item" href="/admin"
+            ><span class="nav-icon">▦</span>전체 인증 피드</a
+          >
+          <button
+            class="nav-item selected"
+            id="weekly-nav"
+            data-view="weekly"
+            type="button"
+          >
+            <span class="nav-icon">☷</span>주간 챌린지
+          </button>
+          <button
+            class="nav-item"
+            id="groups-nav"
+            data-view="groups"
+            type="button"
+          >
+            <span class="nav-icon">◫</span>그룹 관리
+          </button>
+        </nav>
+        <div class="sidebar-note">
+          <span class="live-dot"></span
+          ><span id="sidebar-environment">환경 확인 중</span>
+        </div>
+      </aside>
+      <div class="main-column">
+        <header class="topbar">
+          <span
+            >서비스 운영 <span class="breadcrumb">/</span
+            ><span id="breadcrumb-view">주간 챌린지</span></span
+          >
+          <div class="account">
+            <span id="account-email"></span
+            ><button id="logout" class="text-button" type="button">
+              로그아웃
+            </button>
+          </div>
+        </header>
+        <main>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow" id="view-kicker">WEEKLY CHALLENGES</p>
+              <h1>
+                <span id="page-title">주간 챌린지</span>
+                <span id="environment" class="env-badge"></span>
+              </h1>
+              <p id="page-description">
+                이번 주 인증 현황부터 다음 주 준비까지 한곳에서 관리해요.
+              </p>
+            </div>
+            <button id="refresh" class="secondary-button" type="button">
+              새로고침
+            </button>
+          </div>
+          <p
+            id="workspace-message"
+            class="message"
+            role="status"
+            aria-live="polite"
+          ></p>
+          <p id="viewer-note" class="notice" hidden>
+            조회 전용 계정이에요. 데이터 변경은 권한이 있는 관리자만 할 수
+            있어요.
+          </p>
+          <section id="weekly-view">
+            <section class="feed-guide">
+              <div class="guide-mark">W</div>
+              <div>
+                <strong>전역 챌린지와 그룹 챌린지, 놓치지 않고</strong>
+                <p>
+                  전체 목록에서는 전역 원본과 그룹 개별 챌린지를, 그룹을
+                  선택하면 해당 그룹의 모든 챌린지를 보여줘요.
+                </p>
+              </div>
+              <span class="guide-tag">한국시간 기준</span>
+            </section>
+            <form id="weekly-filters" class="filters">
+              <div class="period-presets">
+                <span>챌린지 기간</span
+                ><button type="button" data-week="-1">지난주</button
+                ><button type="button" data-week="0">이번 주</button
+                ><button type="button" data-week="1">다음 주</button
+                ><button type="button" data-week="all">넓게 보기</button
+                ><span class="preset-note"
+                  >선택 기간과 겹치는 챌린지를 조회해요.</span
+                >
+              </div>
+              <div class="management-filter-row">
+                <label>시작일<input type="date" name="from" required /></label>
+                <label>종료일<input type="date" name="to" required /></label>
+                <label
+                  >조회 그룹<select name="groupId" id="weekly-group">
+                    <option value="">전체 그룹 · 전역 원본</option>
+                  </select></label
+                >
+                <label
+                  >제목 · 인증 안내<input
+                    name="keyword"
+                    maxlength="100"
+                    placeholder="챌린지 검색"
+                /></label>
+                <button type="submit" class="primary-button">조회</button>
+              </div>
+            </form>
+            <p id="weekly-filter-state" class="filter-state" role="status"></p>
+            <section class="summary-grid" aria-label="선택 기간의 챌린지 수">
+              <div>
+                <span>기간 내 챌린지</span><strong id="weekly-total">—</strong>
+              </div>
+              <div>
+                <span>진행 중</span><strong id="weekly-active">—</strong>
+              </div>
+              <div>
+                <span>예정</span><strong id="weekly-upcoming">—</strong>
+              </div>
+              <div>
+                <span>기간 종료</span><strong id="weekly-ended">—</strong>
+              </div>
+            </section>
+            <section class="management-card">
+              <div class="section-heading">
+                <div>
+                  <h2>
+                    챌린지 목록
+                    <span id="weekly-loaded" class="count-label"></span>
+                  </h2>
+                  <p>
+                    인증 수는 해당 챌린지의 인증 기간 내 유효 인증 기준이에요.
+                  </p>
+                </div>
+                <div class="heading-actions">
+                  <button
+                    class="secondary-button"
+                    id="new-group-weekly"
+                    data-write
+                    type="button"
+                  >
+                    그룹 챌린지 등록</button
+                  ><button
+                    class="primary-button"
+                    id="new-global-weekly"
+                    data-write
+                    type="button"
+                  >
+                    전역 챌린지 등록
+                  </button>
+                </div>
+              </div>
+              <div class="type-tabs" aria-label="챌린지 상태">
+                <button
+                  type="button"
+                  data-phase="ALL"
+                  class="active"
+                  aria-pressed="true"
+                >
+                  전체</button
+                ><button type="button" data-phase="ACTIVE" aria-pressed="false">
+                  진행 중</button
+                ><button
+                  type="button"
+                  data-phase="UPCOMING"
+                  aria-pressed="false"
+                >
+                  예정</button
+                ><button type="button" data-phase="ENDED" aria-pressed="false">
+                  기간 종료
+                </button>
+              </div>
+              <p id="weekly-message" class="message" role="status"></p>
+              <div id="weekly-list" class="weekly-list" aria-busy="false"></div>
+              <div class="load-more">
+                <button
+                  id="weekly-more"
+                  class="secondary-button"
+                  type="button"
+                  hidden
+                >
+                  챌린지 더 보기
+                </button>
+              </div>
+            </section>
+          </section>
+          <section id="groups-view" hidden>
+            <div class="group-layout">
+              <section class="management-card group-picker">
+                <div class="section-heading">
+                  <div>
+                    <h2>
+                      운영 그룹
+                      <span id="group-count" class="count-label"></span>
+                    </h2>
+                    <p>그룹명이나 그룹 ID로 검색하세요.</p>
+                  </div>
+                </div>
+                <input
+                  id="group-search"
+                  type="search"
+                  placeholder="그룹명 · 그룹 ID 검색"
+                  aria-label="그룹 검색"
+                />
+                <div id="group-list" class="group-list"></div>
+              </section>
+              <section id="group-detail" class="management-card">
+                <p class="empty-state">왼쪽에서 관리할 그룹을 선택해주세요.</p>
+              </section>
+            </div>
+            <section
+              id="records-panel"
+              class="management-card records-panel"
+              hidden
+            >
+              <div class="section-heading">
+                <div>
+                  <h2>
+                    그룹 활동 기록
+                    <span id="records-count" class="count-label"></span>
+                  </h2>
+                  <p>
+                    식사·운동 기록만 표시해요. 챌린지 인증은 위의 인증 피드에서
+                    확인할 수 있어요.
+                  </p>
+                </div>
+                <a id="group-feed-link" class="secondary-button" href="/admin"
+                  >전체 인증 피드로 보기</a
+                >
+              </div>
+              <form id="record-filters" class="management-filter-row">
+                <label>시작일<input name="from" type="date" required /></label
+                ><label>종료일<input name="to" type="date" required /></label
+                ><label
+                  >기록 종류<select name="type">
+                    <option value="ACTIVITY">식사 + 운동</option>
+                    <option value="MEAL">식사</option>
+                    <option value="EXERCISE">운동</option>
+                  </select></label
+                ><label
+                  >닉네임 · 기록 내용<input
+                    name="keyword"
+                    maxlength="100"
+                    placeholder="기록 검색" /></label
+                ><button type="submit" class="primary-button">조회</button>
+              </form>
+              <p id="records-message" class="message" role="status"></p>
+              <div id="record-list" class="record-list" aria-busy="false"></div>
+              <div class="load-more">
+                <button
+                  id="records-more"
+                  class="secondary-button"
+                  type="button"
+                  hidden
+                >
+                  기록 더 보기
+                </button>
+              </div>
+            </section>
+          </section>
+        </main>
+      </div>
+    </div>
+    <dialog
+      id="challenge-dialog"
+      class="management-dialog"
+      aria-labelledby="challenge-dialog-title"
+    >
+      <form id="challenge-form">
+        <div class="detail-header">
+          <h2 id="challenge-dialog-title">챌린지 등록</h2>
+          <button
+            type="button"
+            class="text-button"
+            data-close="challenge-dialog"
+          >
+            닫기
+          </button>
+        </div>
+        <div class="dialog-content">
+          <p id="challenge-impact" class="notice"></p>
+          <label
+            >챌린지 제목<input name="title" maxlength="50" required /></label
+          ><label
+            >인증 안내<textarea
+              name="description"
+              maxlength="500"
+              rows="4"
+              required
+            ></textarea>
+          </label>
+          <div class="dialog-grid">
+            <label>시작일<input name="startsOn" type="date" required /></label
+            ><label>마감일<input name="endsOn" type="date" required /></label>
+          </div>
+          <p id="challenge-form-message" class="message" role="status"></p>
+        </div>
+        <div class="dialog-footer">
+          <button
+            type="button"
+            class="secondary-button"
+            data-close="challenge-dialog"
+          >
+            취소</button
+          ><button type="submit" class="primary-button" data-write>저장</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog
+      id="record-dialog"
+      class="management-dialog"
+      aria-labelledby="record-dialog-title"
+    >
+      <form id="record-form">
+        <div class="detail-header">
+          <h2 id="record-dialog-title">활동 기록 수정</h2>
+          <button type="button" class="text-button" data-close="record-dialog">
+            닫기
+          </button>
+        </div>
+        <div class="dialog-content">
+          <p class="notice">
+            원본 기록을 수정하므로 공유된 다른 그룹에도 변경 내용이 반영돼요.
+          </p>
+          <label
+            >기록 종류<select name="recordType">
+              <option value="MEAL">식사</option>
+              <option value="EXERCISE">운동</option>
+            </select></label
+          >
+          <div id="meal-fields">
+            <label>식사 시각<input name="mealTime" type="time" /></label
+            ><label>식사 내용<input name="menu" maxlength="100" /></label>
+          </div>
+          <div id="exercise-fields">
+            <label>운동명<input name="exerciseName" maxlength="30" /></label
+            ><label
+              >운동 시간(분)<input
+                name="exerciseDurationMinutes"
+                type="number"
+                min="1"
+                max="1440"
+            /></label>
+          </div>
+          <p id="record-form-message" class="message" role="status"></p>
+        </div>
+        <div class="dialog-footer">
+          <button
+            type="button"
+            class="secondary-button"
+            data-close="record-dialog"
+          >
+            취소</button
+          ><button type="submit" class="primary-button" data-write>저장</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog
+      id="confirm-dialog"
+      class="management-dialog"
+      aria-labelledby="confirm-title"
+    >
+      <div class="detail-header">
+        <h2 id="confirm-title">삭제 전 확인</h2>
+        <button type="button" class="text-button" data-close="confirm-dialog">
+          닫기
+        </button>
+      </div>
+      <div class="dialog-content">
+        <p id="confirm-description"></p>
+        <p id="confirm-message" class="message" role="status"></p>
+      </div>
+      <div class="dialog-footer">
+        <button
+          type="button"
+          class="secondary-button"
+          data-close="confirm-dialog"
+        >
+          취소</button
+        ><button
+          id="confirm-action"
+          type="button"
+          class="danger-button"
+          data-write
+        >
+          삭제
+        </button>
+      </div>
+    </dialog>
+    <dialog
+      id="image-dialog"
+      class="management-dialog image-dialog"
+      aria-labelledby="image-title"
+    >
+      <div class="detail-header">
+        <h2 id="image-title">인증 원본 이미지</h2>
+        <button type="button" class="text-button" data-close="image-dialog">
+          닫기
+        </button>
+      </div>
+      <img id="record-image" alt="인증 원본" />
+      <div class="dialog-footer">
+        <a
+          id="image-original-link"
+          class="secondary-button"
+          target="_blank"
+          rel="noopener noreferrer"
+          >원본 새 창으로 보기</a
+        >
+      </div>
+    </dialog>
+  </body>
 </html>

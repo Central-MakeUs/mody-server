@@ -52,6 +52,8 @@ class AdminAuthIntegrationTest {
     @Test
     void anonymousUsersCannotReadOldOrNewAdminApisButMachineKeyStillWorks() throws Exception {
         mvc.perform(get("/api/v1/admin/feed")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/admin/feed/summary")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/admin/challenge-overview")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/admin/groups")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/admin/groups").header("X-Admin-Api-Key", "machine-test-key"))
             .andExpect(status().isOk());
@@ -70,6 +72,8 @@ class AdminAuthIntegrationTest {
             .andExpect(jsonPath("$.result.role").value("ADMIN"));
         mvc.perform(get("/api/v1/admin/groups").session(session)).andExpect(status().isOk());
         mvc.perform(get("/api/v1/admin/feed").session(session)).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/admin/feed/summary").session(session)).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/admin/challenge-overview").session(session)).andExpect(status().isOk());
         mvc.perform(get("/api/v1/admin/groups").session(session).header("X-Admin-Api-Key", "wrong"))
             .andExpect(status().isForbidden());
     }
