@@ -12,6 +12,7 @@ on:
       - 'monitoring/**'
       - 'scripts/**'
       - '.github/workflows/**'
+      - 'deploy/**'
       - '**/*.md'
 
 permissions:
@@ -41,13 +42,22 @@ jobs:
           docker build -f Dockerfile -t ${{ secrets.DOCKER_REPO }} .
           docker push ${{ secrets.DOCKER_REPO }}
 
-      - name: Deploy to prod server
+      - name: Upload deploy script
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: kminseok5167
+          key: ${{ secrets.PROD_KEY }}
+          source: deploy/prod/deploy.sh
+          target: mody-deploy
+          strip_components: 2
+
+      # 블루그린 배포: 새 색상이 /health 를 통과해야 nginx 를 전환한다. 기동이 최대 10분 걸린다.
+      - name: Blue-green deploy to prod server
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.PROD_HOST }}
           username: kminseok5167
           key: ${{ secrets.PROD_KEY }}
-          script: |
-            docker pull ${{ secrets.DOCKER_REPO }}
-            docker compose up -d
-            docker image prune -f
+          command_timeout: 20m
+          script: bash ~/mody-deploy/deploy.sh deploy
