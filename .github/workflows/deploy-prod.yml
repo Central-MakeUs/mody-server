@@ -1,19 +1,8 @@
 name: CD Prod with Gradle
 
+# 운영 배포는 기동하는 동안(3~10분) 다운타임이 생긴다. 머지와 분리해 트래픽이 적은 시간에 수동으로 실행한다.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    # 애플리케이션과 무관한 변경은 운영을 재배포하지 않는다.
-    # 운영 서버는 기동에 3~10분이 걸려 불필요한 재시작 비용이 크다.
-    paths-ignore:
-      - 'docs/**'
-      - 'monitoring/**'
-      - 'scripts/**'
-      - '.github/workflows/**'
-      - 'deploy/**'
-      - '**/*.md'
 
 permissions:
   contents: read
@@ -52,8 +41,7 @@ jobs:
           target: mody-deploy
           strip_components: 2
 
-      # 블루그린 배포: 새 색상이 /health 를 통과해야 nginx 를 전환한다. 기동이 최대 10분 걸린다.
-      - name: Blue-green deploy to prod server
+      - name: Deploy to prod server
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.PROD_HOST }}
