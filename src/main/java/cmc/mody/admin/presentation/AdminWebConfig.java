@@ -26,7 +26,11 @@ public class AdminWebConfig implements WebMvcConfigurer {
                 jakarta.servlet.http.HttpServletResponse response, Object handler) {
                 response.setHeader("Cache-Control", "no-store");
                 response.setHeader("X-Frame-Options", "DENY");
-                response.setHeader("Referrer-Policy", "no-referrer");
+                String host = request.getServerName();
+                boolean localHttp = !request.isSecure()
+                    && ("localhost".equals(host) || "127.0.0.1".equals(host) || "[::1]".equals(host));
+                response.setHeader("Referrer-Policy", localHttp
+                    ? "no-referrer-when-downgrade" : "strict-origin-when-cross-origin");
                 return true;
             }
         }).addPathPatterns("/admin/**", "/api/v1/admin/**", "/admin").order(-1);
