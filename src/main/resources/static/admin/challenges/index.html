@@ -5,28 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>MODY Admin</title>
-  <link rel="stylesheet" href="/admin/challenges/styles.css?v=20260808">
+  <link rel="stylesheet" href="/admin/challenges/styles.css?v=20261011">
 </head>
 <body>
   <section id="access-section" class="access-shell" aria-labelledby="access-title">
-    <form id="access-form" class="access-card">
+    <div class="access-card">
       <p class="brand-mark">MODY <span>ADMIN</span></p>
       <h1 id="access-title">운영 콘솔</h1>
       <p class="access-copy">그룹 챌린지와 활동 기록을 관리합니다.</p>
-      <label for="admin-key">관리자 API 키</label>
-      <div class="key-field">
-        <input id="admin-key" name="adminKey" type="password" autocomplete="current-password" required>
-        <button id="key-visibility-button" class="field-button" type="button">보기</button>
-      </div>
+      <p>허용된 Google 계정으로 로그인하면 관리 화면을 사용할 수 있습니다.</p>
       <p id="access-message" class="form-message" role="status" aria-live="polite"></p>
-      <button class="primary-button full" type="submit">관리 화면 열기</button>
-    </form>
+      <a class="primary-button full" href="/admin?next=challenges">Google 로그인 화면으로</a>
+    </div>
   </section>
 
   <main id="workspace" class="app-shell" hidden>
     <aside class="sidebar">
       <a class="brand-mark" href="/admin/challenges">MODY <span>ADMIN</span></a>
       <nav aria-label="관리 메뉴">
+        <a class="nav-item" href="/admin">전체 인증 피드</a>
         <button class="nav-item active" type="button">챌린지 관리</button>
         <button class="nav-item" id="global-weekly-nav-button" type="button">전역 주간 챌린지</button>
         <button class="nav-item" id="group-nav-button" type="button">그룹 관리</button>

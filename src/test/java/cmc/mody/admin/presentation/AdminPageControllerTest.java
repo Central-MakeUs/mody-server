@@ -17,6 +17,14 @@ class AdminPageControllerTest {
     private MockMvc mockMvc;
 
     @Test
+    void 인증_피드_페이지를_정적_화면으로_전달한다() throws Exception {
+        mockMvc.perform(get("/admin"))
+            .andExpect(status().isOk())
+            .andExpect(forwardedUrl("/admin/console/index.html"));
+        assertThat(new ClassPathResource("static/admin/console/index.html").exists()).isTrue();
+    }
+
+    @Test
     void 챌린지_관리_페이지를_정적_화면으로_전달한다() throws Exception {
         mockMvc.perform(get("/admin/challenges"))
             .andExpect(status().isOk())
