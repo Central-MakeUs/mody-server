@@ -15,5 +15,7 @@ public enum NotificationType {
     BUDDY_NUDGE,
     STEP_CHALLENGE_COMPLETED,
     WEEKLY_CHALLENGE_COMPLETED,
+    /** 관리자 공지. 푸시로만 보내며 알림 목록(notification 테이블)에는 저장하지 않는다. */
+    ADMIN_ANNOUNCEMENT,
     DEV_TEST
 }

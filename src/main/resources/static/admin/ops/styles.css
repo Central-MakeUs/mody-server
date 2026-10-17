@@ -198,3 +198,29 @@
     flex-direction: row;
   }
 }
+
+.announce-form textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  font: inherit;
+  resize: vertical;
+}
+.announce-actions {
+  align-items: center;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.section-title {
+  font-size: 16px;
+  margin: 28px 0 0;
+}
+.primary-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
