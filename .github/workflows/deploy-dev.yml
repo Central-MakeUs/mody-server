@@ -27,11 +27,12 @@ jobs:
           chmod +x ./gradlew
           ./gradlew clean build openapi3
 
+      # dev 이미지는 :dev 태그로만 올린다. 태그 없이 올리면 prod가 쓰는 :latest를 덮어쓴다.
       - name: Docker build & push to Docker Hub
         run: |
           docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-          docker build -f Dockerfile -t ${{ secrets.DOCKER_REPO }} .
-          docker push ${{ secrets.DOCKER_REPO }}
+          docker build -f Dockerfile -t ${{ secrets.DOCKER_REPO }}:dev .
+          docker push ${{ secrets.DOCKER_REPO }}:dev
 
       - name: Deploy to dev server
         uses: appleboy/ssh-action@master
@@ -39,7 +40,13 @@ jobs:
           host: ${{ secrets.HOST }}
           username: kminseok5167
           key: ${{ secrets.KEY }}
+          command_timeout: 20m
           script: |
-            docker pull ${{ secrets.DOCKER_REPO }}
+            docker compose pull web-blue
             docker compose up -d
+            for i in $(seq 1 120); do
+              curl -fsS -o /dev/null --max-time 5 http://127.0.0.1:8080/health && echo "dev healthy" && break
+              sleep 5
+            done
+            curl -fsS -o /dev/null --max-time 5 http://127.0.0.1:8080/health || { docker logs --tail 80 mody-web-blue; exit 1; }
             docker image prune -f
