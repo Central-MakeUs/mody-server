@@ -1,0 +1,65 @@
+# 로컬 전용 모니터링 스택. 운영 서버에는 아무것도 띄우지 않는다.
+#
+#   1) 터널 실행:  ./tunnel.sh
+#   2) 스택 실행:  docker compose -f docker-compose.local.yml --env-file local.env up -d
+#   3) 접속:       http://localhost:3000
+#
+# 운영 서버(RAM 964MB)에 Prometheus/Grafana를 올렸더니 스왑 쓰래싱으로
+# I/O 대기 76%, load 12까지 올라 애플리케이션이 응답하지 못했다. 그래서 로컬로 뺐다.
+services:
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: mody-local-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:11.5.1
+    container_name: mody-local-grafana
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GRAFANA_DB_USER: ${GRAFANA_DB_USER:-grafana}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:?set GRAFANA_DB_PASSWORD}
+      TZ: Asia/Seoul
+    volumes:
+      - ./provisioning:/etc/grafana/provisioning:ro
+      - ../grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # 운영 MySQL 지표도 터널 너머로 수집한다. exporter 자체는 로컬에서 돈다.
+  mysqld-exporter:
+    image: prom/mysqld-exporter:v0.16.0
+    container_name: mody-local-mysqld-exporter
+    command:
+      - --mysqld.address=host.docker.internal:13306
+      - --mysqld.username=${EXPORTER_DB_USER:-exporter}
+      - --no-collect.slave_status
+      - --no-collect.info_schema.innodb_cmp
+      - --no-collect.info_schema.innodb_cmpmem
+    environment:
+      MYSQLD_EXPORTER_PASSWORD: ${EXPORTER_DB_PASSWORD:?set EXPORTER_DB_PASSWORD}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  prometheus-data:
+  grafana-data:

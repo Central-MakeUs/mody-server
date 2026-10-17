@@ -65,7 +65,25 @@ public class AdminRecordService {
 
     @Transactional
     public void deleteRecord(Long groupId, Long recordId) {
-        ActivityRecord record = getGroupRecord(groupId, recordId);
+        deleteWithShares(getGroupRecord(groupId, recordId));
+    }
+
+    /**
+     * 그룹과 무관하게 기록을 삭제한다(신고 처리). 이미 삭제된 기록이면 아무것도 하지 않고 false를 돌려준다.
+     */
+    @Transactional
+    public boolean deleteRecord(Long recordId) {
+        return activityRecordRepository.findById(recordId)
+            .filter(ActivityRecord::isActive)
+            .map(record -> {
+                deleteWithShares(record);
+                return true;
+            })
+            .orElse(false);
+    }
+
+    private void deleteWithShares(ActivityRecord record) {
+        Long recordId = record.getId();
         recordCommentRepository.findByRecordIdInAndDeletedAtIsNull(List.of(recordId))
             .forEach(RecordComment::delete);
         activityRecordGroupRepository.findByRecordIdAndDeletedAtIsNull(recordId)

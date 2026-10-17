@@ -1,0 +1,25 @@
+# 로컬 Prometheus. 운영 서버는 CPU가 느려 /actuator/prometheus 렌더링에
+# 20초 안팎이 걸린다. 운영에 부담을 주지 않도록 5분 주기로만 긁는다.
+global:
+  scrape_interval: 300s
+  evaluation_interval: 300s
+  external_labels:
+    env: prod
+
+scrape_configs:
+  - job_name: mody-app
+    scrape_interval: 300s
+    scrape_timeout: 60s
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["host.docker.internal:18081"]
+        labels:
+          service: mody-server
+
+  - job_name: mysql
+    scrape_interval: 60s
+    scrape_timeout: 30s
+    static_configs:
+      - targets: ["mysqld-exporter:9104"]
+        labels:
+          service: mody-mysql

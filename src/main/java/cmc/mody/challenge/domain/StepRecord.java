@@ -54,8 +54,4 @@ public class StepRecord extends BaseEntity {
         this.stepCount = stepCount;
         this.stepSource = stepSource;
     }
-
-    public void updateStepCountIfGreater(int stepCount) {
-        this.stepCount = Math.max(this.stepCount, stepCount);
-    }
 }
