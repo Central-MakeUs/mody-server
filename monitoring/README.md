@@ -14,12 +14,10 @@ monitoring/
 
 ## 접속
 
-```bash
-ssh -N -L 3000:127.0.0.1:3000 mody-prod   # 터널을 열어 둔 채로
-open http://localhost:3000                 # Grafana (admin 비밀번호는 서버 ~/monitoring/server/monitoring.env)
-```
+**https://prod-mody.shop/grafana/** (admin 비밀번호는 서버 `~/monitoring/server/monitoring.env`)
 
-Grafana와 Prometheus는 서버의 `127.0.0.1`에만 열려 있어 외부에서 직접 접근할 수 없다.
+- nginx `location /grafana/`가 `127.0.0.1:3000`으로 넘긴다. 익명 접근과 회원가입은 꺼져 있다.
+- Prometheus는 서버의 `127.0.0.1:9090`에만 열려 있다. 필요하면 `ssh -N -L 9090:127.0.0.1:9090 mody-prod`로 본다.
 
 ## 서버 배포
 
