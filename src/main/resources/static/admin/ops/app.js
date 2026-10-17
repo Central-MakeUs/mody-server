@@ -6,6 +6,7 @@ const VIEWS = {
   members: { path: "/admin/members", title: "회원 관리" },
   reports: { path: "/admin/reports", title: "신고 처리" },
   announcements: { path: "/admin/announcements", title: "공지 푸시" },
+  stats: { path: "/admin/stats", title: "통계" },
   audit: { path: "/admin/audit", title: "작업 이력" },
 };
 const LOGIN_LABELS = {
@@ -217,7 +218,7 @@ async function openMember(id) {
     d.recentRecords.forEach((record) => {
       const figure = el("figure");
       const img = el("img");
-      img.alt = record.title ?? "";
+      img.alt = "";
       img.loading = "lazy";
       const src = safeImage(record.imageUrl);
       if (src) img.src = src;
@@ -302,11 +303,14 @@ async function resolveReport(item, action) {
 
 function reportCard(item) {
   const card = el("article", "report-card");
-  const img = el("img");
-  img.alt = item.title ?? "신고된 기록";
-  img.loading = "lazy";
   const src = safeImage(item.imageUrl);
-  if (src) img.src = src;
+  let img = el("div", "no-image", "사진 없음");
+  if (src) {
+    img = el("img");
+    img.alt = item.title ?? "신고된 기록";
+    img.loading = "lazy";
+    img.src = src;
+  }
   const body = el("div");
   const type = item.recordType === "MEAL" ? "식사" : item.recordType === "EXERCISE" ? "운동" : "기록";
   body.append(el("h3", null, `${type} · ${item.title ?? "제목 없음"}`));
@@ -499,6 +503,83 @@ async function loadAnnouncements(reset) {
   }
 }
 
+/* ---------- 통계 ---------- */
+let statsLoading = false;
+
+function pct(value) {
+  return value === null || value === undefined ? "" : `${value}%`;
+}
+
+function heat(value) {
+  if (value === null || value === undefined) return "";
+  const alpha = Math.min(0.85, 0.08 + value / 100);
+  return `rgba(110, 124, 255, ${alpha.toFixed(2)})`;
+}
+
+async function loadStats() {
+  if (statsLoading) return;
+  statsLoading = true;
+  message("#stats-message", "지표를 계산하고 있어요.");
+  try {
+    const stats = await api("/api/v1/admin/stats?weeks=8");
+    $("#s-dau").textContent = num(stats.active.dau);
+    $("#s-wau").textContent = num(stats.active.wau);
+    $("#s-mau").textContent = num(stats.active.mau);
+    $("#s-stick").textContent = `${stats.active.stickinessPercent}%`;
+
+    const max = Math.max(1, ...stats.dailyActive.map((d) => d.count));
+    $("#s-daily").replaceChildren(...stats.dailyActive.map((d, index) => {
+      const bar = el("div", index === stats.dailyActive.length - 1 ? "bar today" : "bar");
+      const fill = el("i");
+      fill.style.height = `${(d.count / max) * 100}%`;
+      bar.title = `${d.date} · ${d.count}명`;
+      bar.append(el("b", null, d.count || ""), fill);
+      if (index % 5 === 0 || index === stats.dailyActive.length - 1) bar.append(el("span", null, d.date.slice(5)));
+      return bar;
+    }));
+
+    const f = stats.funnel;
+    $("#s-funnel-since").textContent = `· ${f.since} 이후 가입자`;
+    const steps = [
+      ["가입", f.signedUp],
+      ["프로필 입력", f.profileCompleted],
+      ["그룹 참여", f.joinedGroup],
+      ["첫 기록", f.firstRecord],
+      ["최근 7일 활동", f.activeLast7Days],
+    ];
+    $("#s-funnel").replaceChildren(...steps.map(([label, value]) => {
+      const row = el("div", "funnel-row");
+      const track = el("div", "funnel-track");
+      const fill = el("i");
+      const ratio = f.signedUp ? (value / f.signedUp) * 100 : 0;
+      fill.style.width = `${ratio}%`;
+      track.append(fill);
+      row.append(el("span", null, label), track, el("strong", null, `${num(value)}명 (${Math.round(ratio)}%)`));
+      return row;
+    }));
+
+    const weeks = stats.cohorts[0]?.retentionPercent.length ?? 0;
+    $("#s-cohort-head").replaceChildren(el("th", null, "가입 주"), el("th", null, "가입자"),
+      ...Array.from({ length: weeks }, (_, k) => el("th", null, `${k}주차`)));
+    $("#s-cohort-rows").replaceChildren(...stats.cohorts.slice().reverse().map((cohort) => {
+      const row = el("tr");
+      row.append(el("td", null, cohort.weekStart), el("td", null, num(cohort.size)));
+      cohort.retentionPercent.forEach((value) => {
+        const cell = el("td", "cell", pct(value));
+        cell.style.background = heat(value);
+        if (value !== null && value >= 45) cell.style.color = "white";
+        row.append(cell);
+      });
+      return row;
+    }));
+    message("#stats-message");
+  } catch (error) {
+    message("#stats-message", error.message, true);
+  } finally {
+    statsLoading = false;
+  }
+}
+
 /* ---------- 작업 이력 ---------- */
 const audit = { cursor: null, loading: false, generation: 0 };
 
@@ -553,6 +634,7 @@ const LOADERS = {
     if (!canWrite()) message("#announce-message", "조회 전용 권한이라 공지를 보낼 수 없어요.");
     loadAnnouncements(true);
   },
+  stats: () => loadStats(),
   audit: () => loadAudit(true),
 };
 
@@ -602,6 +684,7 @@ $("#announce-form").addEventListener("input", (event) => {
 $("#announce-preview").addEventListener("click", previewAnnouncement);
 $("#announce-form").addEventListener("submit", sendAnnouncement);
 $("#announce-more").addEventListener("click", () => loadAnnouncements(false));
+$("#stats-refresh").addEventListener("click", loadStats);
 $("#audit-filters").addEventListener("submit", (event) => {
   event.preventDefault();
   loadAudit(true);

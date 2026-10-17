@@ -809,6 +809,32 @@ dialog::backdrop {
     padding: 28px 24px;
   }
 }
+/* 메뉴가 늘어나 좁은 화면에서 상단 메뉴가 본문 너비를 밀어내지 않도록 가로 스크롤로 둔다. */
+@media (max-width: 850px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sidebar,
+  .main-column {
+    min-width: 0;
+  }
+  .sidebar nav {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .sidebar nav::-webkit-scrollbar {
+    display: none;
+  }
+  .sidebar nav .nav-item {
+    white-space: nowrap;
+  }
+}
+@media (max-width: 500px) {
+  .sidebar nav .nav-item {
+    flex: 0 0 auto;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .feed-card {
     transition: none;

@@ -1,4 +1,8 @@
 /* 회원 · 운영 화면 전용. 공통 레이아웃과 색은 /admin/console/styles.css 를 따른다. */
+.main-column,
+main {
+  min-width: 0;
+}
 .table-wrap {
   background: white;
   border: 1px solid var(--line);
@@ -133,6 +137,24 @@
   .ops-detail {
     padding: 4px 14px 18px;
   }
+  .filter-row {
+    flex-wrap: wrap;
+  }
+  .filter-row > label,
+  .filter-row > .search-label {
+    flex: 1 1 100%;
+  }
+  .filter-row > .primary-button,
+  .filter-row > .secondary-button {
+    flex: 1 1 auto;
+  }
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .page-heading {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
 }
 
 .report-list {
@@ -210,11 +232,33 @@
 .announce-actions {
   align-items: center;
 }
-.check {
-  display: flex;
+.announce-form .filter-row + .filter-row {
+  margin-top: 14px;
+}
+.announce-form .filter-row > label:not(.check) {
+  flex: 1;
+}
+.announce-form .filter-row > label:first-child:has(select) {
+  flex: 0 0 auto;
+}
+label.check {
+  flex-direction: row;
   align-items: center;
   gap: 6px;
   font-size: 13px;
+  color: var(--ink);
+  margin-right: auto;
+  align-self: center;
+}
+.report-card .no-image {
+  width: 120px;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  background: var(--canvas);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 12px;
 }
 .section-title {
   font-size: 16px;
@@ -223,4 +267,87 @@
 .primary-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.small {
+  font-size: 12px;
+}
+.bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 180px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 14px 28px;
+  margin-top: 12px;
+  overflow-x: auto;
+}
+.bar {
+  flex: 1 0 14px;
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+.bar i {
+  display: block;
+  width: 100%;
+  background: var(--secondary-soft);
+  border-radius: 4px 4px 0 0;
+  min-height: 2px;
+}
+.bar.today i {
+  background: var(--secondary);
+}
+.bar b {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.bar span {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.funnel {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.funnel-row {
+  display: grid;
+  grid-template-columns: 150px 1fr 110px;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+}
+.funnel-track {
+  background: var(--canvas);
+  border-radius: 6px;
+  height: 22px;
+  overflow: hidden;
+}
+.funnel-track i {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+}
+.cohort-table td.cell {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 720px) {
+  .funnel-row {
+    grid-template-columns: 100px 1fr 80px;
+  }
 }
