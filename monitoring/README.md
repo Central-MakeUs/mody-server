@@ -1,18 +1,40 @@
 # 모니터링
 
-운영 지표는 **로컬에서** 본다. 운영 서버에는 아무것도 띄우지 않는다.
+운영 지표는 **운영 서버(Oracle A1)에 상주하는 스택**에서 본다(2026-10-17부터).
 
 ```
 monitoring/
 ├── grafana/dashboards/      # 대시보드 2종 (비즈니스, 성능)
-└── local/                   # 로컬 실행용 스택
-    ├── tunnel.sh
-    ├── docker-compose.local.yml
-    ├── prometheus.yml
-    └── provisioning/
+├── server/                  # 운영 서버 상주 스택 (기본)
+│   ├── docker-compose.yml   # Prometheus, Grafana, mysqld-exporter, node-exporter
+│   ├── prometheus.yml       # blue/green 앱, MySQL, 호스트를 15~30초 주기로 수집
+│   └── provisioning/
+└── local/                   # 예전 로컬 실행용 스택 (GCP e2-micro 시절)
 ```
 
-## 왜 로컬인가
+## 접속
+
+```bash
+ssh -N -L 3000:127.0.0.1:3000 mody-prod   # 터널을 열어 둔 채로
+open http://localhost:3000                 # Grafana (admin 비밀번호는 서버 ~/monitoring/server/monitoring.env)
+```
+
+Grafana와 Prometheus는 서버의 `127.0.0.1`에만 열려 있어 외부에서 직접 접근할 수 없다.
+
+## 서버 배포
+
+```bash
+scp -r monitoring/server monitoring/grafana mody-prod:monitoring/
+ssh mody-prod 'cd ~/monitoring/server && docker compose --env-file monitoring.env up -d'
+```
+
+`monitoring.env`는 `monitoring.env.example`을 복사해 서버에서만 채운다. 앱 compose 네트워크 `kminseok5167_mody-network`에 붙어 `mysql`, `mody-web-blue`, `mody-web-green`을 이름으로 수집한다.
+
+## 예전 구성: 로컬 스택
+
+아래는 운영이 GCP e2-micro(964MB)였을 때의 기록이다.
+
+### 왜 로컬이었나
 
 운영 서버는 RAM 964MB에 vCPU 0.25개(버스트)짜리다. Prometheus + Grafana + exporter를
 올렸더니 메모리가 임계점을 넘겨 스왑 쓰래싱이 발생했다.
