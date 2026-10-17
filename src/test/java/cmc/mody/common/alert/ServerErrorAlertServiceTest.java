@@ -90,6 +90,46 @@ class ServerErrorAlertServiceTest {
             .doesNotThrowAnyException();
     }
 
+    @Test
+    void skipActuatorRequests() {
+        ServerErrorAlertService service = service(enabledProperties());
+        given(request.getRequestURI()).willReturn("/actuator/prometheus");
+
+        service.notify(new IllegalStateException("render failed"), request, 500, "COMMON500");
+
+        then(serverErrorAlertSender).should(never()).send(
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.anyString()
+        );
+    }
+
+    @Test
+    void skipClientAbortedConnections() {
+        ServerErrorAlertService service = service(enabledProperties());
+        given(request.getRequestURI()).willReturn("/api/v1/records");
+
+        service.notify(new org.springframework.web.context.request.async.AsyncRequestNotUsableException(
+            "ServletOutputStream failed to write"), request, 500, "COMMON500");
+        service.notify(new IllegalStateException("write failed",
+            new java.io.IOException("Broken pipe")), request, 500, "COMMON500");
+        service.notify(new java.io.UncheckedIOException(new java.io.IOException("Connection reset by peer")),
+            request, 500, "COMMON500");
+
+        then(serverErrorAlertSender).should(never()).send(
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.anyString()
+        );
+    }
+
+    @Test
+    void realServerErrorsAreNotNoise() {
+        ServerErrorAlertService service = service(enabledProperties());
+        given(request.getRequestURI()).willReturn("/api/v1/records");
+
+        assertThat(service.isNoise(new IllegalStateException("boom",
+            new java.io.IOException("disk full")), request)).isFalse();
+    }
+
     private ServerErrorAlertService service(ServerErrorAlertProperties properties) {
         MockEnvironment environment = new MockEnvironment();
         environment.setActiveProfiles("dev");

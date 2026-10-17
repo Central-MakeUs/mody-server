@@ -7,6 +7,7 @@ import cmc.mody.auth.application.token.TokenProvider;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,14 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class ServerErrorAlertService {
     private static final String UNKNOWN = "unknown";
+    private static final String ACTUATOR_PATH = "/actuator";
+    private static final java.util.Set<String> CLIENT_ABORT_EXCEPTIONS = java.util.Set.of(
+        "org.springframework.web.context.request.async.AsyncRequestNotUsableException",
+        "org.apache.catalina.connector.ClientAbortException"
+    );
+    private static final java.util.List<String> CLIENT_ABORT_MESSAGES = java.util.List.of(
+        "broken pipe", "connection reset by peer"
+    );
 
     private final ServerErrorAlertProperties properties;
     private final ServerErrorAlertSender serverErrorAlertSender;
@@ -32,11 +41,59 @@ public class ServerErrorAlertService {
             return;
         }
 
+        if (isNoise(exception, request)) {
+            log.warn("Skip server error alert (actuator or client abort): {} {} - {}",
+                safeMethod(request), safeUri(request), exception.toString());
+            return;
+        }
+
         try {
             ServerErrorAlert alert = buildAlert(exception, request, statusCode, errorCode);
             serverErrorAlertSender.send(properties.getWebhookUrl(), format(alert));
         } catch (Exception alertException) {
             log.warn("Failed to build server error alert: {}", alertException.getMessage());
+        }
+    }
+
+    /**
+     * 서버 장애가 아닌 오류는 Slack에 올리지 않는다(#219).
+     * 관리 포트의 actuator 요청, 클라이언트가 먼저 연결을 끊은 경우가 해당한다.
+     */
+    boolean isNoise(Throwable exception, HttpServletRequest request) {
+        String uri = safeUri(request);
+        if (uri != null && uri.startsWith(ACTUATOR_PATH)) {
+            return true;
+        }
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (CLIENT_ABORT_EXCEPTIONS.contains(cause.getClass().getName())) {
+                return true;
+            }
+            if (cause instanceof IOException && cause.getMessage() != null) {
+                String message = cause.getMessage().toLowerCase(Locale.ROOT);
+                if (CLIENT_ABORT_MESSAGES.stream().anyMatch(message::contains)) {
+                    return true;
+                }
+            }
+            if (cause.getCause() == cause) {
+                break;
+            }
+        }
+        return false;
+    }
+
+    private String safeUri(HttpServletRequest request) {
+        try {
+            return request.getRequestURI();
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    private String safeMethod(HttpServletRequest request) {
+        try {
+            return request.getMethod();
+        } catch (RuntimeException e) {
+            return UNKNOWN;
         }
     }
 

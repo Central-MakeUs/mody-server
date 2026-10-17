@@ -7,8 +7,8 @@
 
 ## Design Documents
 
-- [ADR](docs/adr): 팀 논의 기반의 기술적 의사결정 기록
-- [LLD](docs/lld): 기능 단위 구현 설계와 정책 정리
+- [ADR](docs/adr) (21건): 팀 논의 기반의 기술적 의사결정 기록
+- [LLD](docs/lld) (36건): 기능 단위 구현 설계와 정책 정리
 
 ## How We Build
 
@@ -47,7 +47,65 @@ Issue 생성, Commit 작성, PR 생성은 저장소 전용 스킬을 사용합�
 | API Docs | Swagger, Spring REST Docs |
 | Test | JUnit 5, MockMvc |
 | Build | Gradle |
-| Deploy | GitHub Actions, Docker, GCP Compute Engine |
+| Migration | Flyway |
+| Push | Firebase Cloud Messaging |
+| Storage | Google Cloud Storage (Signed URL 직접 업로드) |
+| Deploy | GitHub Actions, Docker, Nginx (블루그린 무중단 배포) |
+| Infra | Oracle Cloud A1 (prod), GCP Compute Engine (dev) |
+| Observability | Prometheus, Grafana, Slack 알림 |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    App[iOS / Android 앱] -->|HTTPS| Nginx
+    Admin[운영 콘솔] -->|HTTPS| Nginx
+    subgraph Prod[Oracle Cloud A1 · 4 OCPU / 24GB]
+        Nginx --> Blue[mody-web-blue]
+        Nginx -.전환.-> Green[mody-web-green]
+        Blue --> MySQL[(MySQL 8)]
+        Green --> MySQL
+        Prometheus --> Blue
+        Prometheus --> Green
+        Grafana --> Prometheus
+        Grafana --> MySQL
+    end
+    App -->|Signed URL 업로드| GCS[(Google Cloud Storage)]
+    Blue -->|푸시| FCM[Firebase Cloud Messaging]
+    Blue -->|500 알림| Slack
+    MySQL -->|매일 백업| Backup[(GCS 백업 버킷)]
+```
+
+- **배포**: `main`에 머지하면 GitHub Actions가 amd64/arm64 이미지를 빌드하고 블루그린으로 교체합니다.
+  새 색상이 헬스체크를 통과해야 Nginx가 트래픽을 넘기므로 배포 중에도 서비스가 끊기지 않습니다.
+  스케줄 작업은 활성 색상 인스턴스에서만 실행됩니다. ([deploy/prod](deploy/prod))
+- **환경**: `develop` → dev 서버, `main` → prod 서버로 자동 배포됩니다.
+- **비용**: 운영은 Oracle Always Free, 개발은 GCP 무료 등급에서 운영합니다.
+
+## Operations
+
+| 영역 | 내용 |
+| --- | --- |
+| 모니터링 | Prometheus + Grafana 상주. 비즈니스·성능·사용자 지표(DAU/WAU/MAU, 가입 퍼널, 주간 코호트 리텐션) 대시보드 ([monitoring](monitoring)) |
+| 장애 대응 | 500 에러를 Slack으로 알리고, 운영 봇이 원인을 분석해 GitHub 이슈를 자동 생성 |
+| 일일 리포트 | 매일 09시 핵심 지표를 Slack으로 공유 ([scripts/daily-report](scripts/daily-report)) |
+| 운영 콘솔 | Google 로그인 기반 관리 화면. 인증 피드, 챌린지·그룹 관리, 회원 관리, 신고 처리, 공지 푸시, 통계, 작업 이력 |
+| 백업 | MySQL을 매일 GCS로 덤프, 30일 보관 |
+
+## Project Structure
+
+```text
+src/main/java/cmc/mody
+├── auth         # 소셜 로그인(Kakao, Apple, Google), JWT
+├── member       # 회원, 프로필, 체중
+├── grouping     # 그룹, 초대 코드, 구성원
+├── record       # 식사·운동 기록, 댓글
+├── challenge    # 걸음 수·주간 챌린지, 인증, 공유 이미지
+├── notification # 알림 생성·발송(FCM), 리마인더 스케줄러
+├── report       # 기록 신고
+├── admin        # 운영 콘솔 API
+└── common       # 공통 응답·예외, 업로드, ID 생성, 스케줄링
+```
 
 ## Getting Started
 
