@@ -1,7 +1,18 @@
 name: CD Prod with Gradle
 
-# 운영 배포는 기동하는 동안(3~10분) 다운타임이 생긴다. 머지와 분리해 트래픽이 적은 시간에 수동으로 실행한다.
+# 블루그린 무중단 배포. main 머지 시 자동으로, 또는 수동으로 실행한다.
 on:
+  push:
+    branches:
+      - main
+    # 애플리케이션과 무관한 변경은 재배포하지 않는다.
+    paths-ignore:
+      - 'docs/**'
+      - 'monitoring/**'
+      - 'scripts/**'
+      - 'deploy/**'
+      - '.github/workflows/**'
+      - '**/*.md'
   workflow_dispatch:
     inputs:
       deploy:
@@ -44,7 +55,7 @@ jobs:
           docker buildx build -f Dockerfile --platform linux/amd64,linux/arm64 -t ${{ secrets.DOCKER_REPO }} --push .
 
       - name: Upload deploy script
-        if: ${{ inputs.deploy }}
+        if: ${{ github.event_name == 'push' || inputs.deploy }}
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.PROD_HOST }}
@@ -54,8 +65,9 @@ jobs:
           target: mody-deploy
           strip_components: 2
 
-      - name: Deploy to prod server
-        if: ${{ inputs.deploy }}
+      # 새 색상이 /health 를 통과해야 nginx 를 전환한다. 실패하면 기존 색상이 계속 서비스한다.
+      - name: Blue-green deploy to prod server
+        if: ${{ github.event_name == 'push' || inputs.deploy }}
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.PROD_HOST }}
