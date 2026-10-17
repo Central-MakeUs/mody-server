@@ -79,6 +79,15 @@ DB 테이블은 추가하지 않는다.
 7. token이 없거나 검증에 실패하면 회원 정보는 `unknown`으로 남긴다.
 8. Slack webhook client가 메시지를 전송한다.
 
+### 알림 제외 규칙 (#219, 2026-10-17)
+
+서버 장애가 아닌 오류는 Slack으로 보내지 않고 WARN 로그만 남긴다.
+
+- 요청 경로가 `/actuator`로 시작한다(관리 포트의 메트릭 수집 요청).
+- 원인 체인에 클라이언트가 먼저 연결을 끊은 흔적이 있다.
+  - 예외 클래스 `AsyncRequestNotUsableException`, `ClientAbortException`
+  - `IOException` 메시지에 `Broken pipe` 또는 `Connection reset by peer`
+
 ## 6. 예외 / 에러 처리
 
 - Slack webhook URL이 없거나 알림이 비활성화되어 있으면 전송하지 않는다.
