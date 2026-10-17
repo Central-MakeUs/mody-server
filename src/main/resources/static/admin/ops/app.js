@@ -5,6 +5,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const VIEWS = {
   members: { path: "/admin/members", title: "회원 관리" },
   reports: { path: "/admin/reports", title: "신고 처리" },
+  announcements: { path: "/admin/announcements", title: "공지 푸시" },
   audit: { path: "/admin/audit", title: "작업 이력" },
 };
 const LOGIN_LABELS = {
@@ -375,6 +376,129 @@ async function loadReports(reset) {
   }
 }
 
+/* ---------- 공지 푸시 ---------- */
+const announce = { cursor: null, loading: false, generation: 0, key: null, previewed: null, sending: false };
+const TARGET_LABELS = { ALL: "전체", GROUP: "그룹", MEMBERS: "특정 회원" };
+const SEND_STATUS = { QUEUED: ["대기", ""], SENDING: ["보내는 중", ""], SENT: ["완료", "ok"], FAILED: ["실패", "warn"] };
+
+function announceTarget() {
+  const form = $("#announce-form");
+  const targetType = form.elements.targetType.value;
+  const body = { targetType };
+  if (targetType === "GROUP") body.groupId = form.elements.groupId.value.trim();
+  if (targetType === "MEMBERS") {
+    body.memberIds = form.elements.memberIds.value.split(/[\s,]+/).map((v) => v.trim()).filter(Boolean);
+  }
+  return body;
+}
+
+function resetAnnouncePreview() {
+  announce.previewed = null;
+  $("#announce-send").disabled = true;
+  $("#announce-preview-result").textContent = "";
+}
+
+async function previewAnnouncement() {
+  resetAnnouncePreview();
+  const target = announceTarget();
+  try {
+    const preview = await api("/api/v1/admin/announcements/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(target),
+    });
+    announce.previewed = JSON.stringify(target);
+    const where = preview.groupName ? `그룹 "${preview.groupName}"` : TARGET_LABELS[preview.targetType];
+    let text = `${where} · 수신 회원 ${num(preview.recipientCount)}명 · 푸시 받을 기기 ${num(preview.tokenCount)}대`;
+    if (preview.quietHours) text += " · 지금은 야간이라 '야간 발송 허용'을 켜야 보낼 수 있어요.";
+    $("#announce-preview-result").textContent = text;
+    $("#announce-send").disabled = !canWrite() || preview.recipientCount === 0;
+  } catch (error) {
+    $("#announce-preview-result").textContent = error.message;
+  }
+}
+
+async function sendAnnouncement(event) {
+  event.preventDefault();
+  if (announce.sending) return;
+  const form = $("#announce-form");
+  const target = announceTarget();
+  if (announce.previewed !== JSON.stringify(target)) {
+    message("#announce-message", "대상이 바뀌었어요. '대상 확인'을 다시 눌러주세요.", true);
+    return;
+  }
+  const title = form.elements.title.value.trim();
+  const content = form.elements.content.value.trim();
+  if (!title || !content) {
+    message("#announce-message", "제목과 내용을 입력해주세요.", true);
+    return;
+  }
+  if (!window.confirm(`${$("#announce-preview-result").textContent}\n\n"${title}"\n${content}\n\n이대로 보낼까요? 보낸 푸시는 취소할 수 없어요.`)) return;
+  announce.sending = true;
+  announce.key ??= crypto.randomUUID();
+  $("#announce-send").disabled = true;
+  try {
+    const result = await api("/api/v1/admin/announcements", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": announce.key },
+      body: JSON.stringify({ ...target, title, content, allowQuietHours: form.elements.allowQuietHours.checked }),
+    });
+    message("#announce-message", `공지를 보냈어요. 수신 회원 ${num(result.recipientCount)}명.`);
+    announce.key = null;
+    form.reset();
+    syncAnnounceTarget();
+    resetAnnouncePreview();
+    loadAnnouncements(true);
+    setTimeout(() => loadAnnouncements(true), 3000);
+  } catch (error) {
+    message("#announce-message", error.message, true);
+    $("#announce-send").disabled = false;
+  } finally {
+    announce.sending = false;
+  }
+}
+
+function syncAnnounceTarget() {
+  const type = $("#announce-form").elements.targetType.value;
+  document.querySelectorAll("#announce-form [data-target]").forEach((field) => {
+    field.hidden = field.dataset.target !== type;
+  });
+}
+
+async function loadAnnouncements(reset) {
+  if (announce.loading && !reset) return;
+  const generation = reset ? ++announce.generation : announce.generation;
+  announce.loading = true;
+  if (reset) announce.cursor = null;
+  const params = new URLSearchParams({ size: "20" });
+  if (announce.cursor) params.set("cursor", announce.cursor);
+  try {
+    const page = await api(`/api/v1/admin/announcements?${params}`);
+    if (generation !== announce.generation) return;
+    if (reset) $("#announce-rows").replaceChildren();
+    page.items.forEach((item) => {
+      const row = el("tr");
+      const text = el("td");
+      text.append(el("strong", null, item.title), el("div", "muted", item.content));
+      const target = item.targetType === "ALL" ? "전체" : `${TARGET_LABELS[item.targetType]} ${item.targetDetail ?? ""}`;
+      const [label, tone] = SEND_STATUS[item.status] ?? [item.status, ""];
+      const state = el("td");
+      state.append(chip(label, tone));
+      if (item.errorMessage) state.append(el("div", "muted", item.errorMessage));
+      const devices = item.invalidTokenCount ? `${num(item.tokenCount)} (만료 ${num(item.invalidTokenCount)})` : num(item.tokenCount);
+      row.append(el("td", null, fmt(item.createdAt)), text, el("td", null, target), el("td", null, num(item.recipientCount)),
+        el("td", null, devices), state, el("td", null, item.createdBy));
+      $("#announce-rows").append(row);
+    });
+    announce.cursor = page.nextCursor;
+    $("#announce-more").hidden = !page.hasMore;
+  } catch (error) {
+    if (generation === announce.generation) message("#announce-message", error.message, true);
+  } finally {
+    if (generation === announce.generation) announce.loading = false;
+  }
+}
+
 /* ---------- 작업 이력 ---------- */
 const audit = { cursor: null, loading: false, generation: 0 };
 
@@ -424,6 +548,11 @@ const LOADERS = {
     loadReportSummary();
     loadReports(true);
   },
+  announcements: () => {
+    syncAnnounceTarget();
+    if (!canWrite()) message("#announce-message", "조회 전용 권한이라 공지를 보낼 수 없어요.");
+    loadAnnouncements(true);
+  },
   audit: () => loadAudit(true),
 };
 
@@ -463,6 +592,16 @@ document.querySelectorAll("#report-tabs [data-state]").forEach((tab) =>
   }),
 );
 $("#report-more").addEventListener("click", () => loadReports(false));
+$("#announce-form").elements.targetType.addEventListener("change", () => {
+  syncAnnounceTarget();
+  resetAnnouncePreview();
+});
+$("#announce-form").addEventListener("input", (event) => {
+  if (["groupId", "memberIds"].includes(event.target.name)) resetAnnouncePreview();
+});
+$("#announce-preview").addEventListener("click", previewAnnouncement);
+$("#announce-form").addEventListener("submit", sendAnnouncement);
+$("#announce-more").addEventListener("click", () => loadAnnouncements(false));
 $("#audit-filters").addEventListener("submit", (event) => {
   event.preventDefault();
   loadAudit(true);

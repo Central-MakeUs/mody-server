@@ -23,6 +23,7 @@
         <nav id="ops-nav" aria-label="운영 메뉴">
           <a class="nav-item" data-view="members" href="/admin/members"><span class="nav-icon">☺</span>회원 관리</a>
           <a class="nav-item" data-view="reports" href="/admin/reports"><span class="nav-icon">⚑</span>신고 처리</a>
+          <a class="nav-item" data-view="announcements" href="/admin/announcements"><span class="nav-icon">✉</span>공지 푸시</a>
           <a class="nav-item" data-view="audit" href="/admin/audit"><span class="nav-icon">⌘</span>작업 이력</a>
         </nav>
         <div class="sidebar-note">
@@ -110,6 +111,51 @@
             <p id="report-message" class="message" role="status" aria-live="polite"></p>
             <div id="report-list" class="report-list"></div>
             <div class="load-more"><button id="report-more" class="secondary-button" hidden>더 보기</button></div>
+          </section>
+
+          <!-- 공지 푸시 -->
+          <section data-panel="announcements" hidden>
+            <div class="page-heading">
+              <div>
+                <p class="eyebrow">ANNOUNCEMENTS</p>
+                <h1>공지 푸시 <span class="env-badge" data-env></span></h1>
+                <p>전체, 그룹, 특정 회원에게 푸시 알림을 보내요. 앱 알림함에는 남지 않아요.</p>
+              </div>
+            </div>
+            <form id="announce-form" class="filters announce-form">
+              <div class="filter-row">
+                <label>대상
+                  <select name="targetType">
+                    <option value="ALL">전체 활성 회원</option>
+                    <option value="GROUP">그룹</option>
+                    <option value="MEMBERS">특정 회원</option>
+                  </select>
+                </label>
+                <label data-target="GROUP" hidden>그룹 ID<input name="groupId" inputmode="numeric" pattern="[0-9]+" placeholder="그룹 ID" /></label>
+                <label data-target="MEMBERS" class="search-label" hidden>회원 ID (쉼표로 구분, 최대 100명)<input name="memberIds" placeholder="예: 6511893939200, 6469096047616" /></label>
+              </div>
+              <div class="filter-row">
+                <label class="search-label">제목 (최대 50자)<input name="title" maxlength="50" required placeholder="예: 서비스 점검 안내" /></label>
+              </div>
+              <div class="filter-row">
+                <label class="search-label">내용 (최대 200자)<textarea name="content" maxlength="200" rows="3" required placeholder="알림에 보일 내용을 입력하세요"></textarea></label>
+              </div>
+              <div class="filter-row announce-actions">
+                <label class="check"><input type="checkbox" name="allowQuietHours" /> 야간(21시~8시) 발송 허용</label>
+                <button type="button" id="announce-preview" class="secondary-button">대상 확인</button>
+                <button type="submit" id="announce-send" class="primary-button" disabled>보내기</button>
+              </div>
+              <p id="announce-preview-result" class="filter-state" role="status" aria-live="polite"></p>
+            </form>
+            <p id="announce-message" class="message" role="status" aria-live="polite"></p>
+            <h2 class="section-title">발송 이력</h2>
+            <div class="table-wrap">
+              <table class="ops-table">
+                <thead><tr><th>시각</th><th>제목 / 내용</th><th>대상</th><th>수신 회원</th><th>기기</th><th>상태</th><th>보낸 사람</th></tr></thead>
+                <tbody id="announce-rows"></tbody>
+              </table>
+            </div>
+            <div class="load-more"><button id="announce-more" class="secondary-button" hidden>더 보기</button></div>
           </section>
 
           <!-- 작업 이력 -->

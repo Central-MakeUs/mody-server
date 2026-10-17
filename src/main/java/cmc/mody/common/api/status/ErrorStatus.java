@@ -66,6 +66,8 @@ public enum ErrorStatus implements BaseCode {
     UPLOAD_STORAGE_CONFIG_INVALID(500, "UPLOAD303", "업로드 스토리지 설정이 올바르지 않습니다."),
     UPLOAD_PRESIGNED_URL_ISSUE_FAILED(500, "UPLOAD304", "업로드 URL 발급에 실패했습니다."),
     UPLOAD_STORAGE_OPERATION_FAILED(500, "UPLOAD305", "스토리지 이미지 처리에 실패했습니다."),
+    ADMIN_ANNOUNCEMENT_QUIET_HOURS(400, "ADMIN301", "야간(21시~8시)에는 공지를 보낼 수 없습니다. 야간 발송을 허용해 주세요."),
+    ADMIN_ANNOUNCEMENT_NO_RECIPIENT(400, "ADMIN302", "공지를 받을 회원이 없습니다."),
     NOT_FOUND(404, "COMMON404", "리소스를 찾을 수 없습니다.");
 
     private final int httpStatus;

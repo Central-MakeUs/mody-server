@@ -17,8 +17,8 @@
 | 단계 | 기능 | 상태 |
 | --- | --- | --- |
 | 1 | 회원 관리, 작업 이력 | 완료 (#242) |
-| 2 | 신고 처리 | 이 PR |
-| 3 | 공지 푸시 | 예정 |
+| 2 | 신고 처리 | 완료 (#243) |
+| 3 | 공지 푸시 | 이 PR |
 | 4 | 통계 | 예정 |
 
 ## 2. 범위
@@ -78,6 +78,28 @@
 두 처리 모두 대기 신고가 없으면 404다. 처리 후 같은 기록에 새 신고가 들어오면 다시 대기로 보인다.
 처리자는 관리자 이메일(API 키 호출은 `machine`)로 남기며 작업 이력에도 기록된다.
 
+### 공지 푸시
+
+공지는 **푸시로만** 보내고 앱 알림 목록(`notification` 테이블)에는 저장하지 않는다.
+앱 알림 목록 응답에 앱이 모르는 알림 유형이 섞여 목록이 깨지는 일을 막기 위해서다.
+FCM 데이터의 `type`은 `ADMIN_ANNOUNCEMENT`, `referenceType`은 `ANNOUNCEMENT`다.
+
+`POST /api/v1/admin/announcements/preview` `{targetType, groupId?, memberIds?}`
+
+- `targetType`: `ALL`(활성 회원 전체), `GROUP`(활성 그룹의 참여 중인 회원), `MEMBERS`(회원 ID 최대 100명).
+- 응답: 수신 회원 수, 수신 가능한 기기(활성 FCM 토큰) 수, 지금이 야간인지, 그룹명.
+
+`POST /api/v1/admin/announcements` + `Idempotency-Key` 헤더(필수, 최대 64자)
+
+- 본문: 대상 + `title`(최대 50자) + `content`(최대 200자) + `allowQuietHours`.
+- 한국시간 21시~8시에는 `allowQuietHours=true`일 때만 보낸다(`ADMIN301`). 수신 회원이 없으면 `ADMIN302`.
+- 같은 키로 다시 요청하면 새로 보내지 않고 처음 이력을 돌려준다(이중 클릭·재시도 대비).
+- 이력을 `QUEUED`로 저장한 뒤 `AdminAnnouncementDispatcher`가 `notificationExecutor`에서 비동기로 보낸다.
+  발송 시점에 대상 토큰을 다시 조회하고, 저장하지 않는 `Notification` 객체로 기존 FCM 클라이언트를 호출한다.
+  무효 토큰은 비활성화하고 상태를 `SENT`(무효 토큰 수 포함) 또는 `FAILED`(오류 메시지)로 갱신한다.
+
+`GET /api/v1/admin/announcements?cursor=&size=20`: 발송 이력 최신순.
+
 ## 4. 데이터 모델
 
 `V19__add_admin_audit_log.sql`
@@ -104,6 +126,18 @@
 
 인덱스 `(resolution, record_id)`. 기존 활성 신고 유일성(`active_reporter_member_id`, `active_record_id`)은 그대로다.
 
+`V21__add_admin_announcement.sql`: 공지 발송 이력.
+
+| 컬럼 | 타입 | 설명 |
+| --- | --- | --- |
+| `id` | BIGINT PK | Snowflake ID |
+| `title`, `content` | VARCHAR(100), VARCHAR(500) | 제목(최대 50자), 내용(최대 200자) |
+| `target_type`, `target_detail` | VARCHAR(20), VARCHAR(2000) | 대상 종류와 그룹 ID 또는 회원 ID 목록 |
+| `recipient_count`, `token_count`, `invalid_token_count` | INT | 수신 회원, 보낸 기기, 무효 토큰 |
+| `send_status`, `error_message` | VARCHAR(20), VARCHAR(500) | QUEUED, SENDING, SENT, FAILED |
+| `idempotency_key` | VARCHAR(64) UNIQUE | 중복 발송 방지 |
+| `created_by`, `created_at`, `completed_at` | | 보낸 관리자와 시각 |
+
 ## 5. 처리 흐름
 
 - `AdminRequestInterceptor.afterCompletion`이 읽기(GET/HEAD/OPTIONS)가 아닌 요청을 기존 로그와 함께
@@ -125,10 +159,12 @@
 - [x] 운영 MySQL에서 목록·집계 쿼리가 동작한다(읽기 전용 계정으로 확인).
 - [x] 신고 숨김은 기록·댓글·그룹 공유를 함께 삭제하고 대기 신고만 종결한다.
 - [x] 기각은 기록을 유지하고, 조회 전용(VIEWER) 계정은 처리 버튼이 비활성화된다.
+- [x] 공지는 활성 회원의 활성 토큰에만 가고, 알림 목록에 저장되지 않는다.
+- [x] 같은 Idempotency-Key는 한 번만 보내고, 야간에는 명시적으로 허용해야 보낸다.
 
 ## 8. 영향 범위 / 배포
 
-DB 마이그레이션 V19(새 테이블), V20(NULL 허용 컬럼 추가)이다. 블루그린 배포 중 이전 버전은 새 테이블·컬럼을
+DB 마이그레이션 V19(새 테이블), V20(NULL 허용 컬럼 추가), V21(새 테이블)이다. 블루그린 배포 중 이전 버전은 새 테이블·컬럼을
 쓰지 않고, 새 컬럼이 NULL을 허용하므로 이전 버전의 신고 저장도 그대로 동작한다.
 
 ## 9. 미결정 사항
