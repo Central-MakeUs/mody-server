@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>모디 운영 콘솔</title>
+    <link rel="stylesheet" href="/admin/console/styles.css" />
+    <script src="/admin/console/app.js" defer></script>
+  </head>
+  <body>
+    <section id="login" class="login-shell" hidden>
+      <div class="login-intro">
+        <a class="brand" href="/admin">mody<span>운영 콘솔</span></a>
+        <p class="eyebrow">작은 실천이 모이는 곳</p>
+        <h1>모디의 하루를<br />한눈에 살펴보세요.</h1>
+        <p>
+          멤버들의 식사, 운동, 챌린지 인증을 확인하고<br />서비스 운영에 필요한
+          작업을 이어갈 수 있어요.
+        </p>
+        <div class="intro-stack" aria-hidden="true">
+          <span>식사 기록</span><span>운동 기록</span><span>챌린지 인증</span>
+        </div>
+      </div>
+      <div class="login-card">
+        <p class="eyebrow">관리자 전용</p>
+        <h2>운영 콘솔 로그인</h2>
+        <p>허용된 Google 계정으로 로그인해주세요.</p>
+        <div id="google-button"></div>
+        <p
+          id="login-message"
+          class="message"
+          role="status"
+          aria-live="polite"
+        ></p>
+        <div class="login-note">
+          모디 앱 계정과 별도로 관리되는 관리자 전용 공간입니다.<br />권한이
+          없는 계정은 접근할 수 없어요.
+        </div>
+      </div>
+    </section>
+
+    <div id="workspace" class="shell" hidden>
+      <aside class="sidebar">
+        <a class="brand" href="/admin">mody<span>운영 콘솔</span></a>
+        <p class="nav-caption">서비스 운영</p>
+        <nav aria-label="관리 메뉴">
+          <a class="nav-item selected" href="/admin" aria-current="page"
+            ><span class="nav-icon">▦</span>전체 인증 피드</a
+          >
+          <a class="nav-item" id="management-link" href="/admin/challenges"
+            ><span class="nav-icon">☷</span>주간 챌린지</a
+          >
+          <a class="nav-item" href="/admin/challenges?view=groups"
+            ><span class="nav-icon">◫</span>그룹 관리</a
+          >
+        </nav>
+        <p class="nav-caption">회원 · 운영</p>
+        <nav aria-label="운영 메뉴">
+          <a class="nav-item" href="/admin/members"><span class="nav-icon">☺</span>회원 관리</a>
+          <a class="nav-item" href="/admin/reports"><span class="nav-icon">⚑</span>신고 처리</a>
+          <a class="nav-item" href="/admin/announcements"><span class="nav-icon">✉</span>공지 푸시</a>
+          <a class="nav-item" href="/admin/stats"><span class="nav-icon">◔</span>통계</a>
+          <a class="nav-item" href="/admin/audit"><span class="nav-icon">⌘</span>작업 이력</a>
+        </nav>
+        <div class="sidebar-note">
+          <span class="live-dot"></span
+          ><span id="sidebar-environment">환경 확인 중</span>
+        </div>
+      </aside>
+      <div class="main-column">
+        <header class="topbar">
+          <span
+            >서비스 운영 <span class="breadcrumb">/</span> 전체 인증 피드</span
+          >
+          <div class="account">
+            <span id="account-email"></span
+            ><button id="logout" class="text-button">로그아웃</button>
+          </div>
+        </header>
+        <main>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">ACTIVITY FEED</p>
+              <h1>
+                전체 인증 피드 <span id="environment" class="env-badge"></span>
+              </h1>
+              <p>멤버들이 남긴 작은 실천들을 한곳에서 확인해요.</p>
+            </div>
+            <button id="refresh" class="secondary-button">새로고침</button>
+          </div>
+          <section class="feed-guide" aria-label="조회 안내">
+            <div class="guide-mark">M</div>
+            <div>
+              <strong>식사부터 챌린지까지, 최신 인증 순으로</strong>
+              <p>
+                같은 기록이 여러 그룹에 공유되어도 한 번만 표시돼요. 사진을
+                누르면 원본과 상세 정보를 볼 수 있어요.
+              </p>
+            </div>
+            <span class="guide-tag">한국시간 기준</span>
+          </section>
+          <form id="filters" class="filters">
+            <div class="period-presets" aria-label="빠른 기간 선택">
+              <span>빠른 조회</span
+              ><button type="button" data-days="1">오늘</button>
+              <button type="button" data-days="7">최근 7일</button
+              ><button type="button" data-days="30">최근 30일</button>
+              <span class="preset-note">날짜를 바꾸면 바로 적용돼요.</span>
+            </div>
+            <div class="filter-row">
+              <label
+                >조회 시작일<input type="date" name="from" required
+              /></label>
+              <label>조회 종료일<input type="date" name="to" required /></label>
+              <label class="search-label"
+                >닉네임 · 인증 내용<input
+                  name="keyword"
+                  maxlength="100"
+                  placeholder="닉네임 또는 인증 내용을 검색하세요"
+              /></label>
+              <button class="primary-button" type="submit">조회</button>
+            </div>
+            <div class="filter-bottom">
+              <div class="type-tabs" role="group" aria-label="인증 유형">
+                <button
+                  type="button"
+                  data-type=""
+                  class="active"
+                  aria-pressed="true"
+                >
+                  전체
+                </button>
+                <button type="button" data-type="MEAL" aria-pressed="false">
+                  식사
+                </button>
+                <button type="button" data-type="EXERCISE" aria-pressed="false">
+                  운동
+                </button>
+                <button
+                  type="button"
+                  data-type="CHALLENGE"
+                  aria-pressed="false"
+                >
+                  챌린지
+                </button>
+              </div>
+              <details class="advanced">
+                <summary>상세 필터</summary>
+                <div class="advanced-fields">
+                  <label
+                    >회원 ID<input
+                      name="memberId"
+                      inputmode="numeric"
+                      pattern="[0-9]+"
+                      placeholder="회원 ID"
+                  /></label>
+                  <label
+                    >전역 챌린지 ID<input
+                      name="globalWeeklyChallengeId"
+                      inputmode="numeric"
+                      pattern="[0-9]+"
+                      placeholder="전역 챌린지 ID"
+                  /></label>
+                  <label
+                    >그룹 ID<input
+                      name="groupId"
+                      inputmode="numeric"
+                      pattern="[0-9]+"
+                      placeholder="그룹 ID"
+                  /></label>
+                  <label
+                    >그룹 챌린지 ID<input
+                      name="groupChallengeId"
+                      inputmode="numeric"
+                      pattern="[0-9]+"
+                      placeholder="그룹 챌린지 ID"
+                  /></label>
+                </div>
+              </details>
+            </div>
+          </form>
+          <p
+            id="filter-state"
+            class="filter-state"
+            role="status"
+            aria-live="polite"
+          ></p>
+          <section
+            class="summary-grid"
+            aria-label="조회 조건에 해당하는 전체 인증 수"
+          >
+            <div>
+              <span>조회 결과 전체</span><strong id="total-count">—</strong>
+            </div>
+            <div><span>식사 인증</span><strong id="meal-count">—</strong></div>
+            <div>
+              <span>운동 인증</span><strong id="exercise-count">—</strong>
+            </div>
+            <div>
+              <span>챌린지 인증</span><strong id="challenge-count">—</strong>
+            </div>
+          </section>
+          <div class="feed-heading">
+            <h2>인증 내역 <span id="loaded-count">0</span></h2>
+            <span>최신순 · 사진 인증</span>
+          </div>
+          <p id="feed-message" class="message" role="status" aria-live="polite">
+            인증을 불러오고 있어요.
+          </p>
+          <div id="feed" class="feed-grid" aria-busy="true"></div>
+          <div class="load-more">
+            <button id="more" class="secondary-button" hidden>
+              인증 더 보기
+            </button>
+          </div>
+          <p class="scope-note">
+            사진이 있는 식사 · 운동 · 챌린지 인증을 조회합니다. 걸음수 기록은
+            포함하지 않습니다.
+          </p>
+        </main>
+      </div>
+    </div>
+    <dialog id="detail" aria-labelledby="detail-title">
+      <div class="detail-header">
+        <h2 id="detail-title">인증 상세</h2>
+        <button id="close-detail" class="text-button" aria-label="상세 닫기">
+          닫기
+        </button>
+      </div>
+      <div class="detail-body">
+        <div class="detail-photo">
+          <img id="detail-image" alt="인증 원본 이미지" /><a
+            id="original-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            >원본 새 창으로 보기</a
+          >
+        </div>
+        <div id="detail-info"></div>
+      </div>
+    </dialog>
+    <noscript>관리 콘솔을 사용하려면 JavaScript를 활성화해주세요.</noscript>
+  </body>
+</html>

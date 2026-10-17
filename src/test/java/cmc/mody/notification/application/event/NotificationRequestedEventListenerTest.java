@@ -1,7 +1,8 @@
 package cmc.mody.notification.application.event;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -12,17 +13,14 @@ import cmc.mody.notification.application.NotificationLinkResolver;
 import cmc.mody.notification.application.NotificationRecipientResolver;
 import cmc.mody.notification.application.NotificationTemplate;
 import cmc.mody.notification.application.NotificationTemplateRenderer;
-import cmc.mody.notification.domain.Notification;
-import cmc.mody.notification.domain.NotificationDeliveryStatus;
 import cmc.mody.notification.domain.NotificationType;
 import cmc.mody.notification.infrastructure.repository.NotificationRepository;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -43,9 +41,6 @@ class NotificationRequestedEventListenerTest {
     @Mock
     private NotificationRepository notificationRepository;
 
-    @Captor
-    private ArgumentCaptor<Notification> notificationCaptor;
-
     @Test
     @DisplayName("알림 요청 이벤트를 notification outbox row로 저장한다.")
     void createNotifications() {
@@ -61,14 +56,11 @@ class NotificationRequestedEventListenerTest {
 
         listener.createNotifications(event);
 
-        then(notificationRepository).should().save(notificationCaptor.capture());
-        Notification notification = notificationCaptor.getValue();
-        assertThat(notification.getId()).isEqualTo(100L);
-        assertThat(notification.getReceiverMemberId()).isEqualTo(1L);
-        assertThat(notification.getNotificationType()).isEqualTo(NotificationType.COMMENT_CREATED);
-        assertThat(notification.getLink()).isEqualTo("/records/10");
-        assertThat(notification.getDeliveryStatus()).isEqualTo(NotificationDeliveryStatus.PENDING);
-        assertThat(notification.getDedupeKey()).isEqualTo("COMMENT_CREATED:RECORD:10:1");
+        then(notificationRepository).should().insertIfDedupeKeyAbsent(
+            eq(100L), eq(1L), eq("COMMENT_CREATED"), eq("댓글"), eq("댓글이 달렸어요"), eq(null),
+            eq("RECORD"), eq(10L), eq("/records/10"), any(LocalDateTime.class), eq(3),
+            eq("COMMENT_CREATED:RECORD:10:1")
+        );
     }
 
     @Test
@@ -84,7 +76,9 @@ class NotificationRequestedEventListenerTest {
 
         listener.createNotifications(event);
 
-        then(notificationRepository).should(never()).save(any(Notification.class));
+        then(notificationRepository).should(never()).insertIfDedupeKeyAbsent(
+            any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), any()
+        );
     }
 
     @Test
@@ -113,9 +107,12 @@ class NotificationRequestedEventListenerTest {
 
         listener.createNotifications(event);
 
-        then(notificationRepository).should().save(notificationCaptor.capture());
-        assertThat(notificationCaptor.getValue().getDedupeKey())
-            .isEqualTo("GROUP_RECORD_STREAK_RISK:DATE:10:1:2026-07-04");
+        then(notificationRepository).should().insertIfDedupeKeyAbsent(
+            eq(101L), eq(1L), eq("GROUP_RECORD_STREAK_RISK"), eq("민석님 어디가셨나요 ㅠㅠ"),
+            eq("오늘 기록하지 않으면 그룹 연속 기록이 깨져요!"), eq(null), eq("GROUP"), eq(10L),
+            eq("/groups/10/home"), any(LocalDateTime.class), eq(3),
+            eq("GROUP_RECORD_STREAK_RISK:DATE:10:1:2026-07-04")
+        );
     }
 
     private NotificationRequestedEventListener listener() {

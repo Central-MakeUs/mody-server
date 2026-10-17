@@ -1,0 +1,192 @@
+# LLD-0037: 관리 화면 회원 · 운영 메뉴
+
+| 항목 | 값 |
+| --- | --- |
+| 상태 | Accepted |
+| Issue | #241 |
+| 관련 ADR | - |
+| 작성자 | Claude |
+| 작성일 | 2026-10-17 |
+
+## 1. 목적 / 배경
+
+운영 서버를 Oracle A1(4 OCPU / 24GB)로 옮겨 관리 화면에 집계 조회를 더해도 부담이 없어졌다.
+회원 문의 대응, 신고 처리, 공지, 지표 확인을 DB 직접 조회나 Grafana 없이 관리 화면에서 할 수 있게 한다.
+기능은 단계별 PR로 나눠 넣는다. 각 PR이 이 문서의 해당 절을 채운다.
+
+| 단계 | 기능 | 상태 |
+| --- | --- | --- |
+| 1 | 회원 관리, 작업 이력 | 완료 (#242) |
+| 2 | 신고 처리 | 완료 (#243) |
+| 3 | 공지 푸시 | 완료 (#244) |
+| 4 | 통계 | 이 PR |
+
+## 2. 범위
+
+- 새 화면 `/admin/ops/index.html` 하나에서 경로(`/admin/members`, `/admin/audit` 등)로 탭을 고른다.
+  기존 콘솔 스타일을 그대로 쓰고 표·상세 패널 스타일만 `ops/styles.css`에 더한다.
+- 로그인은 기존 `/admin` 콘솔에 맡긴다. 세션이 없으면 `/admin?next=<경로>`로 보내고,
+  콘솔은 허용된 경로 목록에 있을 때만 로그인 후 돌려보낸다.
+- 회원 정지, 데이터 내보내기는 포함하지 않는다.
+
+## 3. 인터페이스 / API
+
+모든 API는 기존 관리자 인증(세션 + CSRF 또는 `X-Admin-Api-Key`)을 따른다.
+
+### 회원
+
+`GET /api/v1/admin/members`
+
+- `keyword`: 닉네임 부분 일치. 숫자만이면 회원 ID 일치도 함께 찾는다. `%`, `_`는 문자로 검색. 최대 100자.
+- `state`: `ALL`(기본), `ACTIVE`, `WITHDRAWN`. `loginType`: `KAKAO`, `APPLE`, `GOOGLE`, `ANDROIDTEST`, `IOSTEST`.
+- `size`: 기본 30, 최대 100. `cursor`: 가입 시각·ID 내림차순 키셋 커서.
+- 항목: `id`(문자열), 닉네임, 프로필 이미지 URL, 가입 경로 목록, 가입·탈퇴 시각, 활성 여부,
+  참여 중인 그룹 수, 유효 활동 기록 수, 최근 기록 시각.
+
+`GET /api/v1/admin/members/summary`: 전체, 활성, 탈퇴, 오늘 가입, 최근 7일 가입, 최근 7일 탈퇴(한국시간).
+
+`GET /api/v1/admin/members/{id}`: 기본 정보(생년월일, 목표 체중, 건강 앱 연동, 그룹 온보딩),
+가입 경로와 연결 시각, 그룹 이력(최대 50), 활동 수(식사·운동·챌린지 인증·댓글·걸음 일수·누적 걸음),
+한 신고·받은 신고 수, 푸시 기기(플랫폼·수신 여부·최근 접속), 최근 기록 12건, 유효 로그인 세션 수. 없으면 404.
+
+토큰 값, FCM 토큰, 소셜 제공자 식별자는 응답에 넣지 않는다.
+
+### 작업 이력
+
+`GET /api/v1/admin/audit-logs?actor=&cursor=&size=50`: 최신순 키셋 페이지.
+
+### 신고 처리
+
+신고는 활동 기록(`activity_record`) 단위로 묶어 보여준다.
+
+`GET /api/v1/admin/reports?state=PENDING|RESOLVED|ALL&cursor=&size=20`
+
+- `PENDING`(기본)은 처리 대기 신고가 1건 이상인 기록, `RESOLVED`는 모두 처리된 기록이다.
+- 정렬은 최근 신고 시각·기록 ID 내림차순 키셋이다.
+- 항목: 기록 ID·종류·제목·이미지·업로드 시각·게시 여부, 작성자(탈퇴 시 `탈퇴한 회원`),
+  신고 수·대기 수, 첫/최근 신고 시각, 처리 시각, 처리 결과, 최근 신고자 최대 5명.
+
+`GET /api/v1/admin/reports/summary`: 처리 대기 기록 수와 신고 수, 최근 7일 숨김·기각 수.
+
+`POST /api/v1/admin/reports/records/{recordId}/hide`
+
+- 기록을 삭제 처리한다. 댓글과 모든 그룹 공유도 함께 삭제된다(그룹 관리의 기록 삭제와 같은 로직).
+- 대기 중인 신고를 `HIDDEN`으로 종결한다. 기록이 이미 삭제됐어도 신고는 종결한다.
+
+`POST /api/v1/admin/reports/records/{recordId}/dismiss`: 기록은 두고 대기 신고를 `DISMISSED`로 종결한다.
+
+두 처리 모두 대기 신고가 없으면 404다. 처리 후 같은 기록에 새 신고가 들어오면 다시 대기로 보인다.
+처리자는 관리자 이메일(API 키 호출은 `machine`)로 남기며 작업 이력에도 기록된다.
+
+### 공지 푸시
+
+공지는 **푸시로만** 보내고 앱 알림 목록(`notification` 테이블)에는 저장하지 않는다.
+앱 알림 목록 응답에 앱이 모르는 알림 유형이 섞여 목록이 깨지는 일을 막기 위해서다.
+FCM 데이터의 `type`은 `ADMIN_ANNOUNCEMENT`, `referenceType`은 `ANNOUNCEMENT`다.
+
+`POST /api/v1/admin/announcements/preview` `{targetType, groupId?, memberIds?}`
+
+- `targetType`: `ALL`(활성 회원 전체), `GROUP`(활성 그룹의 참여 중인 회원), `MEMBERS`(회원 ID 최대 100명).
+- 응답: 수신 회원 수, 수신 가능한 기기(활성 FCM 토큰) 수, 지금이 야간인지, 그룹명.
+
+`POST /api/v1/admin/announcements` + `Idempotency-Key` 헤더(필수, 최대 64자)
+
+- 본문: 대상 + `title`(최대 50자) + `content`(최대 200자) + `allowQuietHours`.
+- 한국시간 21시~8시에는 `allowQuietHours=true`일 때만 보낸다(`ADMIN301`). 수신 회원이 없으면 `ADMIN302`.
+- 같은 키로 다시 요청하면 새로 보내지 않고 처음 이력을 돌려준다(이중 클릭·재시도 대비).
+- 이력을 `QUEUED`로 저장한 뒤 `AdminAnnouncementDispatcher`가 `notificationExecutor`에서 비동기로 보낸다.
+  발송 시점에 대상 토큰을 다시 조회하고, 저장하지 않는 `Notification` 객체로 기존 FCM 클라이언트를 호출한다.
+  무효 토큰은 비활성화하고 상태를 `SENT`(무효 토큰 수 포함) 또는 `FAILED`(오류 메시지)로 갱신한다.
+
+`GET /api/v1/admin/announcements?cursor=&size=20`: 발송 이력 최신순.
+
+### 통계
+
+`GET /api/v1/admin/stats?weeks=8` (1~26)
+
+- 활동: 식사·운동 기록 업로드, 챌린지 인증, 댓글 작성. 자동 동기화되는 걸음 수는 제외한다. 날짜는 한국시간.
+- `active`: DAU(오늘), WAU(최근 7일), MAU(최근 30일), DAU/MAU(%).
+- `dailyActive`: 최근 30일 일별 활성 사용자.
+- `funnel`: 최근 30일 가입자 중 프로필 입력(생년월일·목표 체중), 그룹 참여(이력 포함), 첫 기록(기록·인증),
+  최근 7일 활동까지 도달한 수.
+- `cohorts`: 가입 주(월요일 시작)별 가입자 수와 k주차(가입일+7k일 ~ +7k+6일) 활동 비율(0~7주차).
+  코호트의 모든 회원이 해당 주차를 다 지나지 않았으면 null이다.
+- 날짜 함수가 MySQL과 테스트용 H2에서 달라, 회원·활동 날짜(`CAST(... AS DATE)`)만 조회하고 집계는 메모리에서 한다.
+  최근 60일 활동이 801행(2026-10-17 운영) 수준이라 충분하다. 데이터가 커지면 일별 집계 테이블을 검토한다.
+
+## 4. 데이터 모델
+
+`V19__add_admin_audit_log.sql`
+
+| 컬럼 | 타입 | 설명 |
+| --- | --- | --- |
+| `id` | BIGINT PK | Snowflake ID |
+| `actor_admin_id` | BIGINT NULL | 관리자 계정 ID. API 키 호출은 NULL |
+| `actor_label` | VARCHAR(320) | 관리자 이메일 또는 `machine` |
+| `http_method` | VARCHAR(10) | POST, PUT, PATCH, DELETE |
+| `request_path` | VARCHAR(500) | 요청 경로(쿼리 문자열 제외, 500자 절단) |
+| `status_code` | INT | 응답 상태 |
+| `created_at` | DATETIME(6) | 기록 시각 |
+
+인덱스 `(created_at, id)`. 엔티티 `AdminAuditLog`는 스키마 검증(`ddl-auto: validate`)과 테스트용이다.
+
+`V20__add_record_report_resolution.sql`: `record_report`에 처리 결과 컬럼을 더한다(모두 NULL 허용).
+
+| 컬럼 | 타입 | 설명 |
+| --- | --- | --- |
+| `resolution` | VARCHAR(20) NULL | NULL 대기, `HIDDEN`, `DISMISSED` |
+| `resolved_at` | DATETIME(6) NULL | 처리 시각 |
+| `resolved_by` | VARCHAR(320) NULL | 처리한 관리자 이메일 또는 `machine` |
+
+인덱스 `(resolution, record_id)`. 기존 활성 신고 유일성(`active_reporter_member_id`, `active_record_id`)은 그대로다.
+
+`V21__add_admin_announcement.sql`: 공지 발송 이력.
+
+| 컬럼 | 타입 | 설명 |
+| --- | --- | --- |
+| `id` | BIGINT PK | Snowflake ID |
+| `title`, `content` | VARCHAR(100), VARCHAR(500) | 제목(최대 50자), 내용(최대 200자) |
+| `target_type`, `target_detail` | VARCHAR(20), VARCHAR(2000) | 대상 종류와 그룹 ID 또는 회원 ID 목록 |
+| `recipient_count`, `token_count`, `invalid_token_count` | INT | 수신 회원, 보낸 기기, 무효 토큰 |
+| `send_status`, `error_message` | VARCHAR(20), VARCHAR(500) | QUEUED, SENDING, SENT, FAILED |
+| `idempotency_key` | VARCHAR(64) UNIQUE | 중복 발송 방지 |
+| `created_by`, `created_at`, `completed_at` | | 보낸 관리자와 시각 |
+
+## 5. 처리 흐름
+
+- `AdminRequestInterceptor.afterCompletion`이 읽기(GET/HEAD/OPTIONS)가 아닌 요청을 기존 로그와 함께
+  `AdminAuditService.record`로 저장한다. 저장 실패는 경고 로그만 남기고 원 요청 결과를 바꾸지 않는다.
+- 회원 목록은 페이지 1회 + 페이지 회원들의 가입 경로 일괄 조회 1회다. 항목별 집계는 상관 서브쿼리로
+  페이지 크기(최대 100) 안에서만 실행한다.
+- 화면은 이전 요청 결과가 늦게 와도 새 결과를 덮지 않도록 세대 번호를 확인한다.
+
+## 6. 예외 / 에러 처리
+
+잘못된 상태·가입 경로·커서·크기는 400, 없는 회원은 404(`MEMBER302`).
+
+## 7. 인수조건
+
+- [x] 상태·가입 경로·검색어 필터와 키셋 페이지가 중복 없이 동작한다.
+- [x] `%`, `_` 검색이 와일드카드로 해석되지 않는다.
+- [x] 상세 응답에 토큰·소셜 식별자가 없다.
+- [x] 변경 요청이 작업 이력에 남고, 실행자로 거를 수 있다.
+- [x] 운영 MySQL에서 목록·집계 쿼리가 동작한다(읽기 전용 계정으로 확인).
+- [x] 신고 숨김은 기록·댓글·그룹 공유를 함께 삭제하고 대기 신고만 종결한다.
+- [x] 기각은 기록을 유지하고, 조회 전용(VIEWER) 계정은 처리 버튼이 비활성화된다.
+- [x] 공지는 활성 회원의 활성 토큰에만 가고, 알림 목록에 저장되지 않는다.
+- [x] 같은 Idempotency-Key는 한 번만 보내고, 야간에는 명시적으로 허용해야 보낸다.
+- [x] DAU/WAU/MAU, 퍼널, 코호트 리텐션이 고정 시각 기준 테스트와 일치하고, 끝나지 않은 주차는 비운다.
+- [x] 데스크톱·좁은 화면(헤드리스 Chrome 1440px/600px)에서 메뉴와 표가 화면을 넘지 않는다.
+
+## 8. 영향 범위 / 배포
+
+DB 마이그레이션 V19(새 테이블), V20(NULL 허용 컬럼 추가), V21(새 테이블)이다. 블루그린 배포 중 이전 버전은 새 테이블·컬럼을
+쓰지 않고, 새 컬럼이 NULL을 허용하므로 이전 버전의 신고 저장도 그대로 동작한다.
+
+## 9. 미결정 사항
+
+- 작업 이력 보관 기간. 지금은 삭제하지 않는다.
+
+## 10. 참고
+
+- [LLD-0035](LLD-0035-admin-console.md), [LLD-0036](LLD-0036-admin-management-renewal.md)

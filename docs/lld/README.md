@@ -38,3 +38,7 @@
 | [LLD-0030](LLD-0030-database-migration-versioning.md) | DB 마이그레이션 형상관리 | Accepted | #96 |
 | [LLD-0031](LLD-0031-record-upload-all-groups.md) | 기록 업로드 전체 그룹 노출 | Accepted | #103 |
 | [LLD-0032](LLD-0032-demo-login-provider.md) | 심사용 데모 로그인 Provider | Accepted | #125 |
+| [LLD-0034](LLD-0034-operations-monitoring-dashboard.md) | 운영 모니터링 대시보드 (Grafana) | Accepted | #213 |
+| [LLD-0035](LLD-0035-admin-console.md) | 관리자 Google 로그인 및 전체 인증 피드 | Accepted | #223 |
+| [LLD-0036](LLD-0036-admin-management-renewal.md) | 관리자 관리 화면 리뉴얼 및 인증·챌린지 현황 | Review | #229 |
+| [LLD-0037](LLD-0037-admin-operations-menu.md) | 관리 화면 회원 · 운영 메뉴 | Accepted | #241 |

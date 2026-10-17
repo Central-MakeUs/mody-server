@@ -194,24 +194,22 @@ public class StepChallengeService {
             throw new GeneralException(ErrorStatus.CHALLENGE_VALIDATION_FAILED);
         }
 
+        stepRecordRepository.upsertDailyStepCount(
+            idGenerator.nextId(),
+            groupChallenge.getId(),
+            memberId,
+            command.recordedOn(),
+            command.stepCount(),
+            StepSource.API.name(),
+            LocalDateTime.now()
+        );
         StepRecord stepRecord = stepRecordRepository
             .findByGroupChallengeIdAndMemberIdAndRecordedOnAndDeletedAtIsNull(
                 groupChallenge.getId(),
                 memberId,
                 command.recordedOn()
             )
-            .map(existing -> {
-                existing.updateStepCountIfGreater(command.stepCount());
-                return existing;
-            })
-            .orElseGet(() -> stepRecordRepository.save(new StepRecord(
-                idGenerator.nextId(),
-                groupChallenge.getId(),
-                memberId,
-                command.recordedOn(),
-                command.stepCount(),
-                StepSource.API
-            )));
+            .orElseThrow(() -> new IllegalStateException("저장한 걸음 수 기록을 찾을 수 없습니다."));
 
         Challenge challenge = getStepChallenge(groupChallenge.getChallengeId());
         StepChallengeDetail detail = getStepChallengeDetail(challenge.getId());

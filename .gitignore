@@ -48,3 +48,8 @@ out/
 src/main/resources/application-local.yaml
 src/main/resources/application-dev.yaml
 src/main/resources/application-prod.yaml
+
+# 모니터링 비밀값
+monitoring/monitoring.env
+monitoring/local/local.env
+monitoring/server/monitoring.env

@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>모디 운영 콘솔</title>
+    <link rel="stylesheet" href="/admin/console/styles.css" />
+    <link rel="stylesheet" href="/admin/ops/styles.css" />
+    <script src="/admin/ops/app.js" defer></script>
+  </head>
+  <body>
+    <div id="workspace" class="shell" hidden>
+      <aside class="sidebar">
+        <a class="brand" href="/admin">mody<span>운영 콘솔</span></a>
+        <p class="nav-caption">서비스 운영</p>
+        <nav aria-label="관리 메뉴">
+          <a class="nav-item" href="/admin"><span class="nav-icon">▦</span>전체 인증 피드</a>
+          <a class="nav-item" href="/admin/challenges"><span class="nav-icon">☷</span>주간 챌린지</a>
+          <a class="nav-item" href="/admin/challenges?view=groups"><span class="nav-icon">◫</span>그룹 관리</a>
+        </nav>
+        <p class="nav-caption">회원 · 운영</p>
+        <nav id="ops-nav" aria-label="운영 메뉴">
+          <a class="nav-item" data-view="members" href="/admin/members"><span class="nav-icon">☺</span>회원 관리</a>
+          <a class="nav-item" data-view="reports" href="/admin/reports"><span class="nav-icon">⚑</span>신고 처리</a>
+          <a class="nav-item" data-view="announcements" href="/admin/announcements"><span class="nav-icon">✉</span>공지 푸시</a>
+          <a class="nav-item" data-view="stats" href="/admin/stats"><span class="nav-icon">◔</span>통계</a>
+          <a class="nav-item" data-view="audit" href="/admin/audit"><span class="nav-icon">⌘</span>작업 이력</a>
+        </nav>
+        <div class="sidebar-note">
+          <span class="live-dot"></span><span id="sidebar-environment">환경 확인 중</span>
+        </div>
+      </aside>
+      <div class="main-column">
+        <header class="topbar">
+          <span>회원 · 운영 <span class="breadcrumb">/</span> <span id="crumb"></span></span>
+          <div class="account">
+            <span id="account-email"></span><button id="logout" class="text-button">로그아웃</button>
+          </div>
+        </header>
+        <main>
+          <!-- 회원 관리 -->
+          <section data-panel="members" hidden>
+            <div class="page-heading">
+              <div>
+                <p class="eyebrow">MEMBERS</p>
+                <h1>회원 관리 <span class="env-badge" data-env></span></h1>
+                <p>가입 경로, 그룹, 활동량을 한눈에 보고 회원별 상세를 확인해요.</p>
+              </div>
+            </div>
+            <section class="summary-grid" aria-label="회원 집계">
+              <div><span>전체 회원</span><strong id="m-total">—</strong></div>
+              <div><span>활성 회원</span><strong id="m-active">—</strong></div>
+              <div><span>최근 7일 가입</span><strong id="m-joined">—</strong></div>
+              <div><span>최근 7일 탈퇴</span><strong id="m-withdrawn">—</strong></div>
+            </section>
+            <form id="member-filters" class="filters">
+              <div class="filter-row">
+                <label class="search-label">닉네임 · 회원 ID<input name="keyword" maxlength="100" placeholder="닉네임 또는 회원 ID" /></label>
+                <label>상태
+                  <select name="state">
+                    <option value="ALL">전체</option>
+                    <option value="ACTIVE">활성</option>
+                    <option value="WITHDRAWN">탈퇴</option>
+                  </select>
+                </label>
+                <label>가입 경로
+                  <select name="loginType">
+                    <option value="">전체</option>
+                    <option value="KAKAO">카카오</option>
+                    <option value="APPLE">애플</option>
+                    <option value="GOOGLE">구글</option>
+                    <option value="ANDROIDTEST">심사용(안드로이드)</option>
+                    <option value="IOSTEST">심사용(iOS)</option>
+                  </select>
+                </label>
+                <button class="primary-button" type="submit">조회</button>
+              </div>
+            </form>
+            <p id="member-message" class="message" role="status" aria-live="polite"></p>
+            <div class="table-wrap">
+              <table class="ops-table">
+                <thead>
+                  <tr><th>회원</th><th>가입 경로</th><th>가입일</th><th>그룹</th><th>기록</th><th>최근 기록</th><th>상태</th></tr>
+                </thead>
+                <tbody id="member-rows"></tbody>
+              </table>
+            </div>
+            <div class="load-more"><button id="member-more" class="secondary-button" hidden>더 보기</button></div>
+          </section>
+
+          <!-- 신고 처리 -->
+          <section data-panel="reports" hidden>
+            <div class="page-heading">
+              <div>
+                <p class="eyebrow">REPORTS</p>
+                <h1>신고 처리 <span class="env-badge" data-env></span></h1>
+                <p>신고된 기록을 확인하고 숨기거나 기각해요. 숨기면 기록과 댓글, 그룹 공유가 함께 삭제돼요.</p>
+              </div>
+            </div>
+            <section class="summary-grid" aria-label="신고 집계">
+              <div><span>처리 대기 기록</span><strong id="r-pending-records">—</strong></div>
+              <div><span>처리 대기 신고</span><strong id="r-pending-reports">—</strong></div>
+              <div><span>최근 7일 숨김</span><strong id="r-hidden">—</strong></div>
+              <div><span>최근 7일 기각</span><strong id="r-dismissed">—</strong></div>
+            </section>
+            <div class="type-tabs" id="report-tabs" role="group" aria-label="처리 상태">
+              <button type="button" data-state="PENDING" class="active" aria-pressed="true">처리 대기</button>
+              <button type="button" data-state="RESOLVED" aria-pressed="false">처리 완료</button>
+              <button type="button" data-state="ALL" aria-pressed="false">전체</button>
+            </div>
+            <p id="report-message" class="message" role="status" aria-live="polite"></p>
+            <div id="report-list" class="report-list"></div>
+            <div class="load-more"><button id="report-more" class="secondary-button" hidden>더 보기</button></div>
+          </section>
+
+          <!-- 공지 푸시 -->
+          <section data-panel="announcements" hidden>
+            <div class="page-heading">
+              <div>
+                <p class="eyebrow">ANNOUNCEMENTS</p>
+                <h1>공지 푸시 <span class="env-badge" data-env></span></h1>
+                <p>전체, 그룹, 특정 회원에게 푸시 알림을 보내요. 앱 알림함에는 남지 않아요.</p>
+              </div>
+            </div>
+            <form id="announce-form" class="filters announce-form">
+              <div class="filter-row">
+                <label>대상
+                  <select name="targetType">
+                    <option value="ALL">전체 활성 회원</option>
+                    <option value="GROUP">그룹</option>
+                    <option value="MEMBERS">특정 회원</option>
+                  </select>
+                </label>
+                <label data-target="GROUP" hidden>그룹 ID<input name="groupId" inputmode="numeric" pattern="[0-9]+" placeholder="그룹 ID" /></label>
+                <label data-target="MEMBERS" class="search-label" hidden>회원 ID (쉼표로 구분, 최대 100명)<input name="memberIds" placeholder="예: 6511893939200, 6469096047616" /></label>
+              </div>
+              <div class="filter-row">
+                <label class="search-label">제목 (최대 50자)<input name="title" maxlength="50" required placeholder="예: 서비스 점검 안내" /></label>
+              </div>
+              <div class="filter-row">
+                <label class="search-label">내용 (최대 200자)<textarea name="content" maxlength="200" rows="3" required placeholder="알림에 보일 내용을 입력하세요"></textarea></label>
+              </div>
+              <div class="filter-row announce-actions">
+                <label class="check"><input type="checkbox" name="allowQuietHours" /> 야간(21시~8시) 발송 허용</label>
+                <button type="button" id="announce-preview" class="secondary-button">대상 확인</button>
+                <button type="submit" id="announce-send" class="primary-button" disabled>보내기</button>
+              </div>
+              <p id="announce-preview-result" class="filter-state" role="status" aria-live="polite"></p>
+            </form>
+            <p id="announce-message" class="message" role="status" aria-live="polite"></p>
+            <h2 class="section-title">발송 이력</h2>
+            <div class="table-wrap">
+              <table class="ops-table">
+                <thead><tr><th>시각</th><th>제목 / 내용</th><th>대상</th><th>수신 회원</th><th>기기</th><th>상태</th><th>보낸 사람</th></tr></thead>
+                <tbody id="announce-rows"></tbody>
+              </table>
+            </div>
+            <div class="load-more"><button id="announce-more" class="secondary-button" hidden>더 보기</button></div>
+          </section>
+
+          <!-- 통계 -->
+          <section data-panel="stats" hidden>
+            <div class="page-heading">
+              <div>
+                <p class="eyebrow">METRICS</p>
+                <h1>통계 <span class="env-badge" data-env></span></h1>
+                <p>활동은 식사·운동 기록, 챌린지 인증, 댓글이에요. 걸음 수 자동 동기화는 포함하지 않아요. 한국시간 기준.</p>
+              </div>
+              <button id="stats-refresh" class="secondary-button">새로고침</button>
+            </div>
+            <p id="stats-message" class="message" role="status" aria-live="polite"></p>
+            <section class="summary-grid" aria-label="활성 사용자">
+              <div><span>DAU (오늘)</span><strong id="s-dau">—</strong></div>
+              <div><span>WAU (최근 7일)</span><strong id="s-wau">—</strong></div>
+              <div><span>MAU (최근 30일)</span><strong id="s-mau">—</strong></div>
+              <div><span>DAU / MAU</span><strong id="s-stick">—</strong></div>
+            </section>
+            <h2 class="section-title">일별 활성 사용자 (최근 30일)</h2>
+            <div id="s-daily" class="bar-chart" role="img" aria-label="일별 활성 사용자 막대 그래프"></div>
+            <h2 class="section-title">가입 퍼널 <span id="s-funnel-since" class="muted"></span></h2>
+            <div id="s-funnel" class="funnel"></div>
+            <h2 class="section-title">주간 코호트 리텐션</h2>
+            <p class="muted small">가입 주(월요일 시작)별로, 가입일 기준 k주차(가입일+7k일 ~ +7k+6일)에 활동한 회원 비율이에요. 아직 끝나지 않은 주차는 비워둬요.</p>
+            <div class="table-wrap">
+              <table class="ops-table cohort-table">
+                <thead><tr id="s-cohort-head"></tr></thead>
+                <tbody id="s-cohort-rows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- 작업 이력 -->
+          <section data-panel="audit" hidden>
+            <div class="page-heading">
+              <div>
+                <p class="eyebrow">AUDIT LOG</p>
+                <h1>작업 이력 <span class="env-badge" data-env></span></h1>
+                <p>관리 화면과 관리자 API로 실행한 변경 작업을 시간순으로 확인해요.</p>
+              </div>
+            </div>
+            <form id="audit-filters" class="filters">
+              <div class="filter-row">
+                <label class="search-label">실행자<input name="actor" maxlength="320" placeholder="관리자 이메일 또는 machine" /></label>
+                <button class="primary-button" type="submit">조회</button>
+              </div>
+            </form>
+            <p id="audit-message" class="message" role="status" aria-live="polite"></p>
+            <div class="table-wrap">
+              <table class="ops-table">
+                <thead><tr><th>시각</th><th>실행자</th><th>작업</th><th>경로</th><th>결과</th></tr></thead>
+                <tbody id="audit-rows"></tbody>
+              </table>
+            </div>
+            <div class="load-more"><button id="audit-more" class="secondary-button" hidden>더 보기</button></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <dialog id="member-detail" aria-labelledby="member-detail-title">
+      <div class="detail-header">
+        <h2 id="member-detail-title">회원 상세</h2>
+        <button class="text-button" data-close aria-label="상세 닫기">닫기</button>
+      </div>
+      <div id="member-detail-body" class="ops-detail"></div>
+    </dialog>
+    <noscript>관리 콘솔을 사용하려면 JavaScript를 활성화해주세요.</noscript>
+  </body>
+</html>

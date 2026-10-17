@@ -15,7 +15,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -74,24 +73,20 @@ public class NotificationRequestedEventListener {
             return;
         }
 
-        try {
-            notificationRepository.save(new Notification(
-                idGenerator.nextId(),
-                receiverMemberId,
-                event.type(),
-                template.title(),
-                template.content(),
-                event.imageKey(),
-                event.referenceType(),
-                event.referenceId(),
-                linkResolver.resolve(event),
-                scheduledAt,
-                dispatchProperties.getMaxRetry(),
-                dedupeKey
-            ));
-        } catch (DataIntegrityViolationException ignored) {
-            // 다른 서버나 스레드가 먼저 저장한 경우 중복 알림으로 보고 무시한다.
-        }
+        notificationRepository.insertIfDedupeKeyAbsent(
+            idGenerator.nextId(),
+            receiverMemberId,
+            event.type().name(),
+            template.title(),
+            template.content(),
+            event.imageKey(),
+            event.referenceType(),
+            event.referenceId(),
+            linkResolver.resolve(event),
+            scheduledAt,
+            dispatchProperties.getMaxRetry(),
+            dedupeKey
+        );
     }
 
     private boolean isDuplicated(NotificationRequestedEvent event, Long receiverMemberId, String dedupeKey) {

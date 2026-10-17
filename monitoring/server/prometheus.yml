@@ -1,0 +1,32 @@
+# 운영 서버 상주 Prometheus. 블루그린 두 색상을 모두 긁고, 정지한 쪽은 down 으로 남는다.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    env: prod
+
+scrape_configs:
+  - job_name: mody-app
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["mody-web-blue:8081"]
+        labels:
+          service: mody-server
+          color: blue
+      - targets: ["mody-web-green:8081"]
+        labels:
+          service: mody-server
+          color: green
+
+  - job_name: mysql
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["mysqld-exporter:9104"]
+        labels:
+          service: mody-mysql
+
+  - job_name: node
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          service: mody-host
