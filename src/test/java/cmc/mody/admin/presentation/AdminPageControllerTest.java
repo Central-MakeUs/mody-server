@@ -48,4 +48,15 @@ class AdminPageControllerTest {
 
         assertThat(new ClassPathResource("static/admin/challenges/index.html").exists()).isTrue();
     }
+
+    @Test
+    void 회원_운영_페이지들은_하나의_정적_화면으로_전달한다() throws Exception {
+        for (String path : new String[] {"/admin/members", "/admin/audit"}) {
+            mockMvc.perform(get(path))
+                .andExpect(status().isOk())
+                .andExpect(forwardedUrl("/admin/ops/index.html"));
+        }
+        assertThat(new ClassPathResource("static/admin/ops/index.html").exists()).isTrue();
+        assertThat(new ClassPathResource("static/admin/ops/app.js").exists()).isTrue();
+    }
 }

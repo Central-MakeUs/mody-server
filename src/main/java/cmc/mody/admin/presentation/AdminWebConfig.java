@@ -1,5 +1,6 @@
 package cmc.mody.admin.presentation;
 
+import cmc.mody.admin.application.AdminAuditService;
 import cmc.mody.admin.application.AdminSessionService;
 import cmc.mody.common.admin.AdminAccessService;
 import lombok.RequiredArgsConstructor;
@@ -13,11 +14,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class AdminWebConfig implements WebMvcConfigurer {
     private final ObjectProvider<AdminSessionService> sessions;
     private final ObjectProvider<AdminAccessService> access;
+    private final ObjectProvider<AdminAuditService> audit;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         sessions.ifAvailable(service -> registry
-            .addInterceptor(new AdminRequestInterceptor(service, access.getObject()))
+            .addInterceptor(new AdminRequestInterceptor(service, access.getObject(), audit.getObject()))
             .addPathPatterns("/api/v1/admin/**")
             .excludePathPatterns("/api/v1/admin/auth/**"));
         registry.addInterceptor(new org.springframework.web.servlet.HandlerInterceptor() {

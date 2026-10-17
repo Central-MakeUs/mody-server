@@ -76,8 +76,15 @@ function showWorkspace() {
   $("#login").hidden = true;
   $("#workspace").hidden = false;
   $("#account-email").textContent = admin.email;
-  if (new URLSearchParams(location.search).get("next") === "challenges") {
+  const next = new URLSearchParams(location.search).get("next");
+  if (next === "challenges") {
     location.assign("/admin/challenges");
+    return;
+  }
+  // 회원 · 운영 화면에서 로그인하러 온 경우 원래 화면으로 돌려보낸다(허용된 경로만).
+  if (["/admin/members", "/admin/reports", "/admin/announcements", "/admin/stats", "/admin/audit"]
+    .includes(next)) {
+    location.assign(next);
     return;
   }
   reload();

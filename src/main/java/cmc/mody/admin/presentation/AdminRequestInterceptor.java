@@ -1,5 +1,6 @@
 package cmc.mody.admin.presentation;
 
+import cmc.mody.admin.application.AdminAuditService;
 import cmc.mody.admin.application.AdminSessionService;
 import cmc.mody.admin.domain.AdminAccount;
 import cmc.mody.common.admin.AdminAccessService;
@@ -18,6 +19,7 @@ public class AdminRequestInterceptor implements HandlerInterceptor {
     private static final Set<String> READ_METHODS = Set.of("GET", "HEAD", "OPTIONS");
     private final AdminSessionService sessions;
     private final AdminAccessService access;
+    private final AdminAuditService audit;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
@@ -48,6 +50,7 @@ public class AdminRequestInterceptor implements HandlerInterceptor {
             log.info("admin operation actor={} method={} path={} status={}",
                 account == null ? "machine" : account.getId(), request.getMethod(),
                 request.getRequestURI(), response.getStatus());
+            audit.record(account, request.getMethod(), request.getRequestURI(), response.getStatus());
         }
     }
 }
