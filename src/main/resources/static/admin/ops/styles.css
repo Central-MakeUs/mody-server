@@ -1,0 +1,136 @@
+/* 회원 · 운영 화면 전용. 공통 레이아웃과 색은 /admin/console/styles.css 를 따른다. */
+.table-wrap {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow-x: auto;
+  margin-top: 14px;
+}
+.ops-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.ops-table th {
+  background: #fafbfc;
+  color: var(--muted);
+  font-weight: 600;
+  text-align: left;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.ops-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+.ops-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.ops-table tbody tr.clickable {
+  cursor: pointer;
+}
+.ops-table tbody tr.clickable:hover {
+  background: #fffbed;
+}
+.ops-table .muted,
+.ops-detail .muted {
+  color: var(--muted);
+}
+.member-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 160px;
+}
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  object-fit: cover;
+  flex: none;
+}
+.chip {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 11px;
+  background: #eef0ff;
+  color: #4b56c8;
+  margin: 1px 3px 1px 0;
+  white-space: nowrap;
+}
+.chip.ok {
+  background: #e7f6ec;
+  color: #2c7a4b;
+}
+.chip.off {
+  background: #f1f2f4;
+  color: #808a91;
+}
+.chip.warn {
+  background: #fdecea;
+  color: #b45749;
+}
+.ops-detail {
+  padding: 4px 24px 24px;
+}
+.ops-detail section {
+  margin-top: 20px;
+}
+.ops-detail h3 {
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+.kv {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+.kv > div {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.kv span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+.kv strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+  word-break: break-all;
+}
+.thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+.thumbs figure {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.thumbs img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--canvas);
+}
+.filters select {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 10px;
+  font: inherit;
+  background: white;
+}
+@media (max-width: 720px) {
+  .ops-detail {
+    padding: 4px 14px 18px;
+  }
+}
