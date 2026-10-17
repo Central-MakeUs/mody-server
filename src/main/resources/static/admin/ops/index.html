@@ -24,6 +24,7 @@
           <a class="nav-item" data-view="members" href="/admin/members"><span class="nav-icon">☺</span>회원 관리</a>
           <a class="nav-item" data-view="reports" href="/admin/reports"><span class="nav-icon">⚑</span>신고 처리</a>
           <a class="nav-item" data-view="announcements" href="/admin/announcements"><span class="nav-icon">✉</span>공지 푸시</a>
+          <a class="nav-item" data-view="stats" href="/admin/stats"><span class="nav-icon">◔</span>통계</a>
           <a class="nav-item" data-view="audit" href="/admin/audit"><span class="nav-icon">⌘</span>작업 이력</a>
         </nav>
         <div class="sidebar-note">
@@ -156,6 +157,37 @@
               </table>
             </div>
             <div class="load-more"><button id="announce-more" class="secondary-button" hidden>더 보기</button></div>
+          </section>
+
+          <!-- 통계 -->
+          <section data-panel="stats" hidden>
+            <div class="page-heading">
+              <div>
+                <p class="eyebrow">METRICS</p>
+                <h1>통계 <span class="env-badge" data-env></span></h1>
+                <p>활동은 식사·운동 기록, 챌린지 인증, 댓글이에요. 걸음 수 자동 동기화는 포함하지 않아요. 한국시간 기준.</p>
+              </div>
+              <button id="stats-refresh" class="secondary-button">새로고침</button>
+            </div>
+            <p id="stats-message" class="message" role="status" aria-live="polite"></p>
+            <section class="summary-grid" aria-label="활성 사용자">
+              <div><span>DAU (오늘)</span><strong id="s-dau">—</strong></div>
+              <div><span>WAU (최근 7일)</span><strong id="s-wau">—</strong></div>
+              <div><span>MAU (최근 30일)</span><strong id="s-mau">—</strong></div>
+              <div><span>DAU / MAU</span><strong id="s-stick">—</strong></div>
+            </section>
+            <h2 class="section-title">일별 활성 사용자 (최근 30일)</h2>
+            <div id="s-daily" class="bar-chart" role="img" aria-label="일별 활성 사용자 막대 그래프"></div>
+            <h2 class="section-title">가입 퍼널 <span id="s-funnel-since" class="muted"></span></h2>
+            <div id="s-funnel" class="funnel"></div>
+            <h2 class="section-title">주간 코호트 리텐션</h2>
+            <p class="muted small">가입 주(월요일 시작)별로, 가입일 기준 k주차(가입일+7k일 ~ +7k+6일)에 활동한 회원 비율이에요. 아직 끝나지 않은 주차는 비워둬요.</p>
+            <div class="table-wrap">
+              <table class="ops-table cohort-table">
+                <thead><tr id="s-cohort-head"></tr></thead>
+                <tbody id="s-cohort-rows"></tbody>
+              </table>
+            </div>
           </section>
 
           <!-- 작업 이력 -->

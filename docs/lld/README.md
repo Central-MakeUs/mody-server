@@ -41,4 +41,4 @@
 | [LLD-0034](LLD-0034-operations-monitoring-dashboard.md) | 운영 모니터링 대시보드 (Grafana) | Accepted | #213 |
 | [LLD-0035](LLD-0035-admin-console.md) | 관리자 Google 로그인 및 전체 인증 피드 | Accepted | #223 |
 | [LLD-0036](LLD-0036-admin-management-renewal.md) | 관리자 관리 화면 리뉴얼 및 인증·챌린지 현황 | Review | #229 |
-| [LLD-0037](LLD-0037-admin-operations-menu.md) | 관리 화면 회원 · 운영 메뉴 | Review | #241 |
+| [LLD-0037](LLD-0037-admin-operations-menu.md) | 관리 화면 회원 · 운영 메뉴 | Accepted | #241 |
