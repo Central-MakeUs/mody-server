@@ -22,6 +22,7 @@
         <p class="nav-caption">회원 · 운영</p>
         <nav id="ops-nav" aria-label="운영 메뉴">
           <a class="nav-item" data-view="members" href="/admin/members"><span class="nav-icon">☺</span>회원 관리</a>
+          <a class="nav-item" data-view="reports" href="/admin/reports"><span class="nav-icon">⚑</span>신고 처리</a>
           <a class="nav-item" data-view="audit" href="/admin/audit"><span class="nav-icon">⌘</span>작업 이력</a>
         </nav>
         <div class="sidebar-note">
@@ -84,6 +85,31 @@
               </table>
             </div>
             <div class="load-more"><button id="member-more" class="secondary-button" hidden>더 보기</button></div>
+          </section>
+
+          <!-- 신고 처리 -->
+          <section data-panel="reports" hidden>
+            <div class="page-heading">
+              <div>
+                <p class="eyebrow">REPORTS</p>
+                <h1>신고 처리 <span class="env-badge" data-env></span></h1>
+                <p>신고된 기록을 확인하고 숨기거나 기각해요. 숨기면 기록과 댓글, 그룹 공유가 함께 삭제돼요.</p>
+              </div>
+            </div>
+            <section class="summary-grid" aria-label="신고 집계">
+              <div><span>처리 대기 기록</span><strong id="r-pending-records">—</strong></div>
+              <div><span>처리 대기 신고</span><strong id="r-pending-reports">—</strong></div>
+              <div><span>최근 7일 숨김</span><strong id="r-hidden">—</strong></div>
+              <div><span>최근 7일 기각</span><strong id="r-dismissed">—</strong></div>
+            </section>
+            <div class="type-tabs" id="report-tabs" role="group" aria-label="처리 상태">
+              <button type="button" data-state="PENDING" class="active" aria-pressed="true">처리 대기</button>
+              <button type="button" data-state="RESOLVED" aria-pressed="false">처리 완료</button>
+              <button type="button" data-state="ALL" aria-pressed="false">전체</button>
+            </div>
+            <p id="report-message" class="message" role="status" aria-live="polite"></p>
+            <div id="report-list" class="report-list"></div>
+            <div class="load-more"><button id="report-more" class="secondary-button" hidden>더 보기</button></div>
           </section>
 
           <!-- 작업 이력 -->

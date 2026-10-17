@@ -4,6 +4,7 @@
 const $ = (selector, root = document) => root.querySelector(selector);
 const VIEWS = {
   members: { path: "/admin/members", title: "회원 관리" },
+  reports: { path: "/admin/reports", title: "신고 처리" },
   audit: { path: "/admin/audit", title: "작업 이력" },
 };
 const LOGIN_LABELS = {
@@ -256,6 +257,124 @@ async function openMember(id) {
   }
 }
 
+/* ---------- 신고 처리 ---------- */
+const reports = { cursor: null, loading: false, generation: 0, state: "PENDING", busy: false };
+const RESOLUTION_LABELS = { HIDDEN: "숨김", DISMISSED: "기각" };
+
+function canWrite() {
+  return admin?.role !== "VIEWER";
+}
+
+async function loadReportSummary() {
+  try {
+    const summary = await api("/api/v1/admin/reports/summary");
+    $("#r-pending-records").textContent = num(summary.pendingRecords);
+    $("#r-pending-reports").textContent = num(summary.pendingReports);
+    $("#r-hidden").textContent = num(summary.hiddenLast7Days);
+    $("#r-dismissed").textContent = num(summary.dismissedLast7Days);
+  } catch (error) {
+    message("#report-message", `집계를 불러오지 못했어요. ${error.message}`, true);
+  }
+}
+
+async function resolveReport(item, action) {
+  if (reports.busy) return;
+  const label = action === "hide" ? "숨김" : "기각";
+  const warning = action === "hide"
+    ? "이 기록을 숨기면 기록, 댓글, 모든 그룹 공유가 삭제돼요. 되돌릴 수 없어요."
+    : "신고를 기각하면 기록은 그대로 두고 신고만 처리 완료돼요.";
+  if (!window.confirm(`${warning}\n\n기록 ID ${item.recordId}을(를) ${label} 처리할까요?`)) return;
+  reports.busy = true;
+  try {
+    const result = await api(`/api/v1/admin/reports/records/${encodeURIComponent(item.recordId)}/${action}`, {
+      method: "POST",
+    });
+    message("#report-message", `기록 ${result.recordId}: 신고 ${result.resolvedReports}건을 ${label} 처리했어요.`);
+    loadReportSummary();
+    loadReports(true);
+  } catch (error) {
+    message("#report-message", error.message, true);
+  } finally {
+    reports.busy = false;
+  }
+}
+
+function reportCard(item) {
+  const card = el("article", "report-card");
+  const img = el("img");
+  img.alt = item.title ?? "신고된 기록";
+  img.loading = "lazy";
+  const src = safeImage(item.imageUrl);
+  if (src) img.src = src;
+  const body = el("div");
+  const type = item.recordType === "MEAL" ? "식사" : item.recordType === "EXERCISE" ? "운동" : "기록";
+  body.append(el("h3", null, `${type} · ${item.title ?? "제목 없음"}`));
+  const author = el("p");
+  author.append("작성자 ");
+  if (item.authorId) {
+    const link = el("a", null, `${item.authorNickname} (ID ${item.authorId})`);
+    link.href = "#";
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      openMember(item.authorId);
+    });
+    author.append(link);
+  } else {
+    author.append("알 수 없음");
+  }
+  author.append(el("span", "muted", ` · 업로드 ${fmt(item.uploadedAt)}`));
+  const state = el("p");
+  state.append(
+    chip(`신고 ${num(item.reportCount)}건`, "warn"),
+    item.pendingCount > 0 ? chip(`대기 ${num(item.pendingCount)}`, "") : chip(RESOLUTION_LABELS[item.resolution] ?? "처리 완료", "ok"),
+    item.recordActive ? chip("게시 중", "ok") : chip("삭제됨", "off"),
+  );
+  const when = el("p", "muted",
+    `첫 신고 ${fmt(item.firstReportedAt)} · 최근 신고 ${fmt(item.lastReportedAt)}${item.resolvedAt ? ` · 처리 ${fmt(item.resolvedAt)}` : ""}`);
+  const who = el("p", "muted", `신고자: ${item.reporters.map((r) => r.nickname).join(", ")}${item.reportCount > item.reporters.length ? " 외" : ""}`);
+  body.append(author, state, when, who);
+  const actions = el("div", "report-actions");
+  if (item.pendingCount > 0) {
+    const hide = el("button", "danger-button", "숨김");
+    hide.type = "button";
+    const dismiss = el("button", "secondary-button", "기각");
+    dismiss.type = "button";
+    hide.disabled = dismiss.disabled = !canWrite();
+    if (!canWrite()) hide.title = dismiss.title = "조회 전용 권한이에요.";
+    hide.addEventListener("click", () => resolveReport(item, "hide"));
+    dismiss.addEventListener("click", () => resolveReport(item, "dismiss"));
+    actions.append(hide, dismiss);
+  }
+  card.append(img, body, actions);
+  return card;
+}
+
+async function loadReports(reset) {
+  if (reports.loading && !reset) return;
+  const generation = reset ? ++reports.generation : reports.generation;
+  reports.loading = true;
+  if (reset) {
+    reports.cursor = null;
+    $("#report-list").replaceChildren();
+  }
+  const params = new URLSearchParams({ size: "20", state: reports.state });
+  if (reports.cursor) params.set("cursor", reports.cursor);
+  try {
+    const page = await api(`/api/v1/admin/reports?${params}`);
+    if (generation !== reports.generation) return;
+    page.items.forEach((item) => $("#report-list").append(reportCard(item)));
+    reports.cursor = page.nextCursor;
+    $("#report-more").hidden = !page.hasMore;
+    if (!$("#report-list").children.length) {
+      message("#report-message", reports.state === "PENDING" ? "처리할 신고가 없어요." : "해당하는 신고가 없어요.");
+    }
+  } catch (error) {
+    if (generation === reports.generation) message("#report-message", error.message, true);
+  } finally {
+    if (generation === reports.generation) reports.loading = false;
+  }
+}
+
 /* ---------- 작업 이력 ---------- */
 const audit = { cursor: null, loading: false, generation: 0 };
 
@@ -301,6 +420,10 @@ const LOADERS = {
     loadMemberSummary();
     loadMembers(true);
   },
+  reports: () => {
+    loadReportSummary();
+    loadReports(true);
+  },
   audit: () => loadAudit(true),
 };
 
@@ -327,6 +450,19 @@ $("#member-filters").addEventListener("change", (event) => {
   if (event.target.tagName === "SELECT") loadMembers(true);
 });
 $("#member-more").addEventListener("click", () => loadMembers(false));
+document.querySelectorAll("#report-tabs [data-state]").forEach((tab) =>
+  tab.addEventListener("click", () => {
+    reports.state = tab.dataset.state;
+    document.querySelectorAll("#report-tabs [data-state]").forEach((other) => {
+      const active = other === tab;
+      other.classList.toggle("active", active);
+      other.setAttribute("aria-pressed", String(active));
+    });
+    message("#report-message");
+    loadReports(true);
+  }),
+);
+$("#report-more").addEventListener("click", () => loadReports(false));
 $("#audit-filters").addEventListener("submit", (event) => {
   event.preventDefault();
   loadAudit(true);

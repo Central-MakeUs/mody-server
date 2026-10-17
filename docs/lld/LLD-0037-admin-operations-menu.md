@@ -16,8 +16,8 @@
 
 | 단계 | 기능 | 상태 |
 | --- | --- | --- |
-| 1 | 회원 관리, 작업 이력 | 이 PR |
-| 2 | 신고 처리 | 예정 |
+| 1 | 회원 관리, 작업 이력 | 완료 (#242) |
+| 2 | 신고 처리 | 이 PR |
 | 3 | 공지 푸시 | 예정 |
 | 4 | 통계 | 예정 |
 
@@ -55,6 +55,29 @@
 
 `GET /api/v1/admin/audit-logs?actor=&cursor=&size=50`: 최신순 키셋 페이지.
 
+### 신고 처리
+
+신고는 활동 기록(`activity_record`) 단위로 묶어 보여준다.
+
+`GET /api/v1/admin/reports?state=PENDING|RESOLVED|ALL&cursor=&size=20`
+
+- `PENDING`(기본)은 처리 대기 신고가 1건 이상인 기록, `RESOLVED`는 모두 처리된 기록이다.
+- 정렬은 최근 신고 시각·기록 ID 내림차순 키셋이다.
+- 항목: 기록 ID·종류·제목·이미지·업로드 시각·게시 여부, 작성자(탈퇴 시 `탈퇴한 회원`),
+  신고 수·대기 수, 첫/최근 신고 시각, 처리 시각, 처리 결과, 최근 신고자 최대 5명.
+
+`GET /api/v1/admin/reports/summary`: 처리 대기 기록 수와 신고 수, 최근 7일 숨김·기각 수.
+
+`POST /api/v1/admin/reports/records/{recordId}/hide`
+
+- 기록을 삭제 처리한다. 댓글과 모든 그룹 공유도 함께 삭제된다(그룹 관리의 기록 삭제와 같은 로직).
+- 대기 중인 신고를 `HIDDEN`으로 종결한다. 기록이 이미 삭제됐어도 신고는 종결한다.
+
+`POST /api/v1/admin/reports/records/{recordId}/dismiss`: 기록은 두고 대기 신고를 `DISMISSED`로 종결한다.
+
+두 처리 모두 대기 신고가 없으면 404다. 처리 후 같은 기록에 새 신고가 들어오면 다시 대기로 보인다.
+처리자는 관리자 이메일(API 키 호출은 `machine`)로 남기며 작업 이력에도 기록된다.
+
 ## 4. 데이터 모델
 
 `V19__add_admin_audit_log.sql`
@@ -70,6 +93,16 @@
 | `created_at` | DATETIME(6) | 기록 시각 |
 
 인덱스 `(created_at, id)`. 엔티티 `AdminAuditLog`는 스키마 검증(`ddl-auto: validate`)과 테스트용이다.
+
+`V20__add_record_report_resolution.sql`: `record_report`에 처리 결과 컬럼을 더한다(모두 NULL 허용).
+
+| 컬럼 | 타입 | 설명 |
+| --- | --- | --- |
+| `resolution` | VARCHAR(20) NULL | NULL 대기, `HIDDEN`, `DISMISSED` |
+| `resolved_at` | DATETIME(6) NULL | 처리 시각 |
+| `resolved_by` | VARCHAR(320) NULL | 처리한 관리자 이메일 또는 `machine` |
+
+인덱스 `(resolution, record_id)`. 기존 활성 신고 유일성(`active_reporter_member_id`, `active_record_id`)은 그대로다.
 
 ## 5. 처리 흐름
 
@@ -90,10 +123,13 @@
 - [x] 상세 응답에 토큰·소셜 식별자가 없다.
 - [x] 변경 요청이 작업 이력에 남고, 실행자로 거를 수 있다.
 - [x] 운영 MySQL에서 목록·집계 쿼리가 동작한다(읽기 전용 계정으로 확인).
+- [x] 신고 숨김은 기록·댓글·그룹 공유를 함께 삭제하고 대기 신고만 종결한다.
+- [x] 기각은 기록을 유지하고, 조회 전용(VIEWER) 계정은 처리 버튼이 비활성화된다.
 
 ## 8. 영향 범위 / 배포
 
-DB 마이그레이션 V19(새 테이블)를 추가한다. 블루그린 배포 중 이전 버전은 이 테이블을 쓰지 않으므로 하위 호환이다.
+DB 마이그레이션 V19(새 테이블), V20(NULL 허용 컬럼 추가)이다. 블루그린 배포 중 이전 버전은 새 테이블·컬럼을
+쓰지 않고, 새 컬럼이 NULL을 허용하므로 이전 버전의 신고 저장도 그대로 동작한다.
 
 ## 9. 미결정 사항
 
