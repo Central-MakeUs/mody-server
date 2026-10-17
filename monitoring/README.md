@@ -4,7 +4,7 @@
 
 ```
 monitoring/
-├── grafana/dashboards/      # 대시보드 2종 (비즈니스, 성능)
+├── grafana/dashboards/      # 대시보드 3종 (비즈니스, 성능, 사용자 지표)
 ├── server/                  # 운영 서버 상주 스택 (기본)
 │   ├── docker-compose.yml   # Prometheus, Grafana, mysqld-exporter, node-exporter
 │   ├── prometheus.yml       # blue/green 앱, MySQL, 호스트를 15~30초 주기로 수집
@@ -17,6 +17,8 @@ monitoring/
 **https://prod-mody.shop/grafana/** (admin 비밀번호는 서버 `~/monitoring/server/monitoring.env`)
 
 - nginx `location /grafana/`가 `127.0.0.1:3000`으로 넘긴다. 익명 접근과 회원가입은 꺼져 있다.
+- 팀 공유용 조회 전용 계정 `mody-team`(Viewer)이 있다. 비밀번호는 서버 `monitoring.env`의 `GRAFANA_VIEWER_PASSWORD`.
+- **MODY 사용자 지표**는 관리 화면 `/admin/stats`와 같은 정의(식사·운동 기록, 챌린지 인증, 댓글)로 DAU/WAU/MAU, 가입 퍼널, 주간 코호트 리텐션을 보여준다.
 - Prometheus는 서버의 `127.0.0.1:9090`에만 열려 있다. 필요하면 `ssh -N -L 9090:127.0.0.1:9090 mody-prod`로 본다.
 
 ## 서버 배포
