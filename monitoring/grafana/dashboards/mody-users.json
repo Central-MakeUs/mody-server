@@ -1,0 +1,406 @@
+{
+  "uid": "mody-users",
+  "title": "MODY 사용자 지표",
+  "tags": [
+    "mody",
+    "users"
+  ],
+  "timezone": "Asia/Seoul",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "5m",
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "DAU (오늘)",
+      "description": "오늘(한국시간) 식사·운동 기록, 챌린지 인증, 댓글 중 하나라도 남긴 회원",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT COUNT(DISTINCT a.member_id) AS value FROM (\n  SELECT member_id, uploaded_at AS at FROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, uploaded_at FROM challenge_proof WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, created_at FROM record_comment WHERE status = 'ACTIVE' AND deleted_at IS NULL\n) a WHERE a.at >= CURDATE() - INTERVAL 0 DAY"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6E7CFF"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "WAU (최근 7일)",
+      "description": "",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT COUNT(DISTINCT a.member_id) AS value FROM (\n  SELECT member_id, uploaded_at AS at FROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, uploaded_at FROM challenge_proof WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, created_at FROM record_comment WHERE status = 'ACTIVE' AND deleted_at IS NULL\n) a WHERE a.at >= CURDATE() - INTERVAL 6 DAY"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6E7CFF"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "MAU (최근 30일)",
+      "description": "",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT COUNT(DISTINCT a.member_id) AS value FROM (\n  SELECT member_id, uploaded_at AS at FROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, uploaded_at FROM challenge_proof WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, created_at FROM record_comment WHERE status = 'ACTIVE' AND deleted_at IS NULL\n) a WHERE a.at >= CURDATE() - INTERVAL 29 DAY"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6E7CFF"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "DAU / MAU",
+      "description": "",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT ROUND(100 * d.n / NULLIF(m.n, 0), 1) AS value FROM\n   (SELECT COUNT(DISTINCT a.member_id) n FROM (\n  SELECT member_id, uploaded_at AS at FROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, uploaded_at FROM challenge_proof WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, created_at FROM record_comment WHERE status = 'ACTIVE' AND deleted_at IS NULL\n) a WHERE a.at >= CURDATE()) d,\n   (SELECT COUNT(DISTINCT a.member_id) n FROM (\n  SELECT member_id, uploaded_at AS at FROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, uploaded_at FROM challenge_proof WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, created_at FROM record_comment WHERE status = 'ACTIVE' AND deleted_at IS NULL\n) a WHERE a.at >= CURDATE() - INTERVAL 29 DAY) m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6E7CFF"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 5,
+      "type": "barchart",
+      "title": "일별 활성 사용자",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "description": "걸음 수 자동 동기화는 활동에 포함하지 않는다.",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT $__timeGroupAlias(a.at + INTERVAL 9 HOUR, 1d, 0), COUNT(DISTINCT a.member_id) AS '활성 사용자'\n   FROM (\n  SELECT member_id, uploaded_at AS at FROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, uploaded_at FROM challenge_proof WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, created_at FROM record_comment WHERE status = 'ACTIVE' AND deleted_at IS NULL\n) a WHERE $__timeFilter(a.at) GROUP BY 1 ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#A8B0FF"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 100,
+        "showValue": "auto",
+        "legend": {
+          "showLegend": false
+        },
+        "barWidth": 0.8
+      }
+    },
+    {
+      "id": 6,
+      "type": "bargauge",
+      "title": "가입 퍼널 (최근 30일 가입자)",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 10,
+        "x": 0,
+        "y": 13
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "SELECT COUNT(*) AS '가입',\n   SUM(m.birth_date IS NOT NULL AND m.target_weight_kg IS NOT NULL) AS '프로필 입력',\n   SUM(EXISTS (SELECT 1 FROM group_member gm WHERE gm.member_id = m.id)) AS '그룹 참여',\n   SUM(EXISTS (SELECT 1 FROM activity_record r WHERE r.member_id = m.id)\n       OR EXISTS (SELECT 1 FROM challenge_proof p WHERE p.member_id = m.id)) AS '첫 기록',\n   SUM(EXISTS (SELECT 1 FROM (\n  SELECT member_id, uploaded_at AS at FROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, uploaded_at FROM challenge_proof WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, created_at FROM record_comment WHERE status = 'ACTIVE' AND deleted_at IS NULL\n) a WHERE a.member_id = m.id AND a.at >= CURDATE() - INTERVAL 6 DAY)) AS '최근 7일 활동'\n   FROM member m WHERE m.created_at >= CURDATE() - INTERVAL 29 DAY"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#FBD406"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "color",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "table",
+      "title": "주간 코호트 리텐션 (%)",
+      "datasource": {
+        "type": "mysql",
+        "uid": "mody-mysql"
+      },
+      "description": "가입 주(월요일 시작)별로, 가입일 기준 k주차(가입일+7k일 ~ +7k+6일)에 활동한 회원 비율. 끝나지 않은 주차는 비운다.",
+      "gridPos": {
+        "h": 9,
+        "w": 14,
+        "x": 10,
+        "y": 13
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "mysql",
+            "uid": "mody-mysql"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "WITH c AS (\n  SELECT id, DATE(created_at) AS joined, DATE(created_at) - INTERVAL WEEKDAY(created_at) DAY AS wk FROM member\n  WHERE created_at >= CURDATE() - INTERVAL WEEKDAY(CURDATE()) DAY - INTERVAL 7 WEEK),\na AS (SELECT DISTINCT member_id, DATE(at) AS d FROM (\n  SELECT member_id, uploaded_at AS at FROM activity_record WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, uploaded_at FROM challenge_proof WHERE status = 'ACTIVE' AND deleted_at IS NULL\n  UNION ALL SELECT member_id, created_at FROM record_comment WHERE status = 'ACTIVE' AND deleted_at IS NULL\n) x WHERE at >= CURDATE() - INTERVAL 70 DAY),\nr AS (SELECT c.id, FLOOR(DATEDIFF(a.d, c.joined) / 7) AS k FROM c JOIN a ON a.member_id = c.id AND a.d >= c.joined)\nSELECT DATE_FORMAT(c.wk, '%Y-%m-%d') AS '가입 주', COUNT(DISTINCT c.id) AS '가입자',\n  CASE WHEN MAX(c.joined) + INTERVAL 6 DAY <= CURDATE() THEN ROUND(100 * COUNT(DISTINCT CASE WHEN r.k = 0 THEN r.id END) / COUNT(DISTINCT c.id), 1) END AS '0주차',\n  CASE WHEN MAX(c.joined) + INTERVAL 13 DAY <= CURDATE() THEN ROUND(100 * COUNT(DISTINCT CASE WHEN r.k = 1 THEN r.id END) / COUNT(DISTINCT c.id), 1) END AS '1주차',\n  CASE WHEN MAX(c.joined) + INTERVAL 20 DAY <= CURDATE() THEN ROUND(100 * COUNT(DISTINCT CASE WHEN r.k = 2 THEN r.id END) / COUNT(DISTINCT c.id), 1) END AS '2주차',\n  CASE WHEN MAX(c.joined) + INTERVAL 27 DAY <= CURDATE() THEN ROUND(100 * COUNT(DISTINCT CASE WHEN r.k = 3 THEN r.id END) / COUNT(DISTINCT c.id), 1) END AS '3주차',\n  CASE WHEN MAX(c.joined) + INTERVAL 34 DAY <= CURDATE() THEN ROUND(100 * COUNT(DISTINCT CASE WHEN r.k = 4 THEN r.id END) / COUNT(DISTINCT c.id), 1) END AS '4주차',\n  CASE WHEN MAX(c.joined) + INTERVAL 41 DAY <= CURDATE() THEN ROUND(100 * COUNT(DISTINCT CASE WHEN r.k = 5 THEN r.id END) / COUNT(DISTINCT c.id), 1) END AS '5주차',\n  CASE WHEN MAX(c.joined) + INTERVAL 48 DAY <= CURDATE() THEN ROUND(100 * COUNT(DISTINCT CASE WHEN r.k = 6 THEN r.id END) / COUNT(DISTINCT c.id), 1) END AS '6주차',\n  CASE WHEN MAX(c.joined) + INTERVAL 55 DAY <= CURDATE() THEN ROUND(100 * COUNT(DISTINCT CASE WHEN r.k = 7 THEN r.id END) / COUNT(DISTINCT c.id), 1) END AS '7주차'\nFROM c LEFT JOIN r ON r.id = c.id GROUP BY c.wk ORDER BY c.wk DESC"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "color-background",
+              "mode": "gradient"
+            }
+          },
+          "color": {
+            "mode": "continuous-BlPu"
+          },
+          "min": 0,
+          "max": 100,
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "가입 주"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "가입자"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    }
+  ],
+  "description": "관리 화면 /admin/stats 와 같은 정의의 사용자 지표"
+}
