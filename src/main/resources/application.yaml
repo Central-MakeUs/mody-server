@@ -132,7 +132,7 @@ oauth:
     identity-token:
       issuer: ${APPLE_ID_TOKEN_ISSUER:https://appleid.apple.com}
       audience: ${APPLE_BUNDLE_ID:com.jagsim.mody-dev}
-      team-id: ${APPLE_TEAM_ID:BLRYMXGV5K}
+      team-id: ${APPLE_TEAM_ID:R8ZX684WX2}
       public-key-cache-ttl-seconds: ${APPLE_PUBLIC_KEY_CACHE_TTL_SECONDS:3600}
 
 springdoc:

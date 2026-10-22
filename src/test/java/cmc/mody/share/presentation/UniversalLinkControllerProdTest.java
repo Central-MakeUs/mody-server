@@ -31,7 +31,8 @@ class UniversalLinkControllerProdTest {
             .andExpect(status().isOk())
             .andExpect(redirectedUrl(null))
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.applinks.details[0].appIDs[0]").value("BLRYMXGV5K.com.jagsim.mody"))
+            .andExpect(jsonPath("$.applinks.details[0].appIDs[0]").value("R8ZX684WX2.com.jagsim.mody"))
+            .andExpect(jsonPath("$.applinks.details[0].appIDs[1]").value("BLRYMXGV5K.com.jagsim.mody"))
             .andExpect(jsonPath("$.applinks.details[0].components[0].['/']").value("/invite"))
             .andExpect(jsonPath("$.applinks.details[0].components[1].['/']").value("/invite/*"));
     }
