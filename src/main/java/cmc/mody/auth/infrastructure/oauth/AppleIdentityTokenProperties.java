@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class AppleIdentityTokenProperties {
     private String issuer = "https://appleid.apple.com";
     private String audience = "com.jagsim.mody-dev";
-    private String teamId = "BLRYMXGV5K";
+    private String teamId = "R8ZX684WX2";
     private long publicKeyCacheTtlSeconds = 3600L;
 
     public String getIssuer() {

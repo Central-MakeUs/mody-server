@@ -79,5 +79,5 @@ oauth:
     identity-token:
       issuer: https://appleid.apple.com
       audience: com.jagsim.mody-dev
-      team-id: BLRYMXGV5K
+      team-id: R8ZX684WX2
       public-key-cache-ttl-seconds: 3600

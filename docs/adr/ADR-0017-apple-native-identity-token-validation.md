@@ -19,7 +19,7 @@ iOS 클라이언트는 Apple SDK로 로그인한 뒤 서버에 `identityToken`�
 
 Apple 로그인에서 공유받은 운영 식별자는 다음과 같다.
 
-- Team ID: `BLRYMXGV5K`
+- Team ID: `R8ZX684WX2` (2026-10-22 개발자 계정 이전, 이전 값 `BLRYMXGV5K`)
 - DEV Bundle ID: `com.jagsim.mody-dev`
 - PROD Bundle ID: `com.jagsim.mody`
 
