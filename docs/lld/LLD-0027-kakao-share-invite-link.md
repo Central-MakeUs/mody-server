@@ -58,8 +58,9 @@ GET /.well-known/assetlinks.json
 
 환경별 AASA 앱 ID:
 
-- dev/local: `BLRYMXGV5K.com.jagsim.mody-dev`
-- prod: `BLRYMXGV5K.com.jagsim.mody`
+- dev/local: `R8ZX684WX2.com.jagsim.mody-dev`, `BLRYMXGV5K.com.jagsim.mody-dev`
+- prod: `R8ZX684WX2.com.jagsim.mody`, `BLRYMXGV5K.com.jagsim.mody`
+- 2026-10-22 Apple 개발자 계정 이전으로 Team ID가 `R8ZX684WX2`로 바뀌었다. 이전 팀으로 서명된 예전 빌드도 초대 링크가 열리도록 예전 ID를 함께 둔다. 예전 빌드 사용자가 없어지면 제거한다.
 
 ### Invite 랜딩 페이지
 
