@@ -43,7 +43,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "up{job=\"mody-app\"}",
+          "expr": "max(up{job=\"mody-app\"})",
           "legendFormat": "",
           "datasource": {
             "type": "prometheus",
@@ -107,7 +107,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "process_uptime_seconds{job=\"mody-app\"}",
+          "expr": "max(process_uptime_seconds{job=\"mody-app\"})",
           "legendFormat": "",
           "datasource": {
             "type": "prometheus",
@@ -283,13 +283,14 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max(http_server_requests_seconds{job=\"mody-app\",quantile=\"0.95\"})",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"mody-app\",uri!~\"/actuator.*\"}[$__range])))",
           "legendFormat": "",
           "datasource": {
             "type": "prometheus",
             "uid": "mody-prometheus"
           },
-          "range": true
+          "range": false,
+          "instant": true
         }
       ],
       "options": {
@@ -412,7 +413,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max(http_server_requests_seconds{job=\"mody-app\",quantile=\"0.5\"})",
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"mody-app\",uri!~\"/actuator.*\"}[15m])))",
           "legendFormat": "p50",
           "datasource": {
             "type": "prometheus",
@@ -422,7 +423,7 @@
         },
         {
           "refId": "B",
-          "expr": "max(http_server_requests_seconds{job=\"mody-app\",quantile=\"0.95\"})",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"mody-app\",uri!~\"/actuator.*\"}[15m])))",
           "legendFormat": "p95",
           "datasource": {
             "type": "prometheus",
@@ -432,7 +433,7 @@
         },
         {
           "refId": "C",
-          "expr": "max(http_server_requests_seconds{job=\"mody-app\",quantile=\"0.99\"})",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"mody-app\",uri!~\"/actuator.*\"}[15m])))",
           "legendFormat": "p99",
           "datasource": {
             "type": "prometheus",
@@ -485,7 +486,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "topk(10, max by (uri, method) (http_server_requests_seconds{job=\"mody-app\",quantile=\"0.95\"}))",
+          "expr": "topk(10, histogram_quantile(0.95, sum by (le, uri, method) (increase(http_server_requests_seconds_bucket{job=\"mody-app\",uri!~\"/actuator.*\"}[$__range]))))",
           "legendFormat": "",
           "datasource": {
             "type": "prometheus",

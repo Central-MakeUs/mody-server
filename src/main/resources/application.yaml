@@ -161,12 +161,15 @@ management:
       application: ${spring.application.name}
       env: ${SPRING_PROFILES_ACTIVE:local}
     distribution:
-      # 운영 서버 CPU가 느려 버킷 히스토그램(URI x 버킷)을 켜면 스크랩 렌더링이
-      # 10초를 넘는다. 인스턴스가 하나뿐이라 클라이언트 측 분위수로 충분하다.
+      # 분위수는 Prometheus에서 버킷으로 계산한다. 클라이언트 측 분위수는 최근 2분만
+      # 보여 요청이 적으면 0으로 떨어지고, 구간·API를 합쳐 다시 계산할 수 없다.
+      # 버킷 수를 줄이려고 범위를 5ms~10s로 제한한다.
       percentiles-histogram:
-        http.server.requests: false
-      percentiles:
-        http.server.requests: 0.5, 0.95, 0.99
+        http.server.requests: true
+      minimum-expected-value:
+        http.server.requests: 5ms
+      maximum-expected-value:
+        http.server.requests: 10s
 
 ---
 
