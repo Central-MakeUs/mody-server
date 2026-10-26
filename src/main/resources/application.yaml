@@ -88,6 +88,10 @@ notification:
     enabled: ${NOTIFICATION_STREAK_RISK_ENABLED:false}
     cron: ${NOTIFICATION_STREAK_RISK_CRON:0 0 21 * * *}
     batch-size: ${NOTIFICATION_STREAK_RISK_BATCH_SIZE:500}
+  buddy-record:
+    enabled: ${NOTIFICATION_BUDDY_RECORD_ENABLED:false}
+    quiet-start: ${NOTIFICATION_BUDDY_RECORD_QUIET_START:00:00}
+    quiet-end: ${NOTIFICATION_BUDDY_RECORD_QUIET_END:05:00}
   push:
     provider: ${NOTIFICATION_PUSH_PROVIDER:no-op}
     title: ${NOTIFICATION_PUSH_TITLE:Mody}

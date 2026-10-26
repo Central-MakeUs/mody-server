@@ -3,8 +3,11 @@ package cmc.mody.notification.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
+import cmc.mody.grouping.domain.GroupMember;
+import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
 import cmc.mody.notification.application.event.NotificationRequestedEvent;
+import cmc.mody.notification.domain.NotificationSetting;
 import cmc.mody.notification.domain.NotificationType;
 import cmc.mody.notification.infrastructure.repository.NotificationSettingRepository;
 import cmc.mody.record.domain.ActivityRecord;
@@ -69,6 +72,44 @@ class NotificationRecipientResolverTest {
         ));
 
         assertThat(receivers).containsExactly(1L);
+    }
+
+    @Test
+    @DisplayName("버디 기록 알림은 작성자와 챌린지 알림을 끈 그룹원을 제외한다.")
+    void resolveBuddyRecordReceivers() {
+        NotificationRecipientResolver resolver = resolver();
+        given(groupMemberRepository.findByGroupIdAndGroupMemberStatusAndDeletedAtIsNullOrderByJoinedAtAsc(
+            100L,
+            GroupMemberStatus.JOINED
+        )).willReturn(List.of(
+            groupMember(1L),
+            groupMember(2L),
+            groupMember(3L)
+        ));
+        NotificationSetting challengeOff = new NotificationSetting(30L, 3L);
+        challengeOff.updateReminderFlags(true, true, true, false);
+        given(notificationSettingRepository.findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(2L))
+            .willReturn(Optional.empty());
+        given(notificationSettingRepository.findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(3L))
+            .willReturn(Optional.of(challengeOff));
+
+        List<Long> receivers = resolver.resolve(NotificationRequestedEvent.immediate(
+            NotificationType.BUDDY_MEAL_RECORDED,
+            Map.of(
+                "groupId", 100L,
+                "recordId", 10L,
+                "writerMemberId", 1L,
+                "nickname", "민석"
+            ),
+            "RECORD",
+            10L
+        ));
+
+        assertThat(receivers).containsExactly(2L);
+    }
+
+    private GroupMember groupMember(Long memberId) {
+        return new GroupMember(memberId + 20, memberId, 100L, LocalDateTime.of(2026, 7, 1, 0, 0));
     }
 
     private NotificationRecipientResolver resolver() {

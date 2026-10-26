@@ -31,6 +31,12 @@ class NotificationLinkResolverTest {
         assertThat(resolver.resolve(
             event(NotificationType.WEEKLY_CHALLENGE_COMPLETED, Map.of("groupId", 1L), "CHALLENGE", 10L)
         )).isEqualTo("/groups/1/challenges?tab=weekly");
+        assertThat(resolver.resolve(event(
+            NotificationType.BUDDY_EXERCISE_RECORDED,
+            Map.of("groupId", 1L, "recordId", 10L),
+            "RECORD",
+            10L
+        ))).isEqualTo("/groups/1/records/10");
     }
 
     @Test

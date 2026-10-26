@@ -2,6 +2,9 @@ package cmc.mody.notification.application;
 
 import cmc.mody.notification.application.event.NotificationRequestedEvent;
 import cmc.mody.notification.domain.NotificationType;
+import java.time.Clock;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.Map;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -10,10 +13,22 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class NotificationRequestService {
-    private final ApplicationEventPublisher eventPublisher;
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
-    public NotificationRequestService(ApplicationEventPublisher eventPublisher) {
+    private final ApplicationEventPublisher eventPublisher;
+    private final NotificationBuddyRecordProperties buddyRecordProperties;
+    private Clock clock = Clock.system(KST);
+
+    public NotificationRequestService(
+        ApplicationEventPublisher eventPublisher,
+        NotificationBuddyRecordProperties buddyRecordProperties
+    ) {
         this.eventPublisher = eventPublisher;
+        this.buddyRecordProperties = buddyRecordProperties;
+    }
+
+    void useClock(Clock clock) {
+        this.clock = clock;
     }
 
     public void request(NotificationRequestedEvent event) {
@@ -117,6 +132,30 @@ public class NotificationRequestService {
             ),
             "CHALLENGE",
             groupChallengeId
+        ));
+    }
+
+    public void requestBuddyRecordCreated(
+        NotificationType type,
+        Long groupId,
+        Long recordId,
+        Long writerMemberId,
+        String nickname
+    ) {
+        if (!buddyRecordProperties.isEnabled()
+            || buddyRecordProperties.isQuietTime(LocalTime.now(clock.withZone(KST)))) {
+            return;
+        }
+        request(NotificationRequestedEvent.immediate(
+            type,
+            Map.of(
+                "groupId", groupId,
+                "recordId", recordId,
+                "writerMemberId", writerMemberId,
+                "nickname", nickname
+            ),
+            "RECORD",
+            recordId
         ));
     }
 }

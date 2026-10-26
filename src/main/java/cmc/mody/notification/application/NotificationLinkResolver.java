@@ -19,6 +19,10 @@ public class NotificationLinkResolver {
             case BUDDY_NUDGE -> groupHome(NotificationPayload.requireLong(payload, "groupId"));
             case STEP_CHALLENGE_COMPLETED -> stepChallenge(groupIdFromPayloadOrReference(payload, event));
             case WEEKLY_CHALLENGE_COMPLETED -> weeklyChallenge(groupIdFromPayloadOrReference(payload, event));
+            case BUDDY_MEAL_RECORDED, BUDDY_EXERCISE_RECORDED -> groupRecordDetail(
+                NotificationPayload.requireLong(payload, "groupId"),
+                NotificationPayload.requireLong(payload, "recordId")
+            );
             default -> null;
         };
     }
@@ -33,7 +37,7 @@ public class NotificationLinkResolver {
             case GROUP_MEMBER_JOINED, GROUP_RECORD_STREAK_RISK, BUDDY_NUDGE -> groupHome(referenceId);
             case EXERCISE_REMINDER -> "/records/exercise";
             case MEAL_REMINDER -> "/records/meal";
-            case COMMENT_CREATED -> recordDetail(referenceId);
+            case COMMENT_CREATED, BUDDY_MEAL_RECORDED, BUDDY_EXERCISE_RECORDED -> recordDetail(referenceId);
             case STEP_CHALLENGE_COMPLETED -> stepChallenge(groupReferenceId(notification));
             case WEEKLY_CHALLENGE_COMPLETED -> weeklyChallenge(groupReferenceId(notification));
             default -> null;
@@ -64,6 +68,10 @@ public class NotificationLinkResolver {
 
     private String recordDetail(Long recordId) {
         return recordId == null ? "/records" : "/records/%d".formatted(recordId);
+    }
+
+    private String groupRecordDetail(Long groupId, Long recordId) {
+        return "/groups/%d/records/%d".formatted(groupId, recordId);
     }
 
     private String stepChallenge(Long groupId) {
