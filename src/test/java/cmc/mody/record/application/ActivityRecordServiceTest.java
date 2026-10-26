@@ -19,6 +19,7 @@ import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.notification.application.NotificationRequestService;
+import cmc.mody.notification.domain.NotificationType;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateCommand;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateResult;
 import cmc.mody.record.domain.ActivityRecord;
@@ -398,6 +399,10 @@ class ActivityRecordServiceTest {
         assertThat(activityRecordGroupCaptor.getAllValues())
             .extracting(ActivityRecordGroup::getGroupId)
             .containsExactly(10L, 11L);
+        then(notificationRequestService).should()
+            .requestBuddyRecordCreated(NotificationType.BUDDY_MEAL_RECORDED, 10L, 100L, 1L, "민석");
+        then(notificationRequestService).should()
+            .requestBuddyRecordCreated(NotificationType.BUDDY_MEAL_RECORDED, 11L, 100L, 1L, "민석");
     }
 
     @Test

@@ -39,6 +39,7 @@ public class NotificationRecipientResolver {
                 List.of(NotificationPayload.requireLong(payload, "receiverMemberId"));
             case COMMENT_CREATED -> resolveComment(payload);
             case STEP_CHALLENGE_COMPLETED, WEEKLY_CHALLENGE_COMPLETED -> resolveGroupMembers(payload);
+            case BUDDY_MEAL_RECORDED, BUDDY_EXERCISE_RECORDED -> resolveBuddyRecord(payload);
             default -> throw new GeneralException(ErrorStatus.NOTIFICATION_UNSUPPORTED_TYPE);
         };
     }
@@ -74,6 +75,21 @@ public class NotificationRecipientResolver {
             .stream()
             .map(GroupMember::getMemberId)
             .toList();
+    }
+
+    private List<Long> resolveBuddyRecord(Map<String, Object> payload) {
+        Long writerMemberId = NotificationPayload.requireLong(payload, "writerMemberId");
+        return resolveGroupMembers(payload).stream()
+            .filter(memberId -> !memberId.equals(writerMemberId))
+            .filter(this::isChallengeNotificationEnabled)
+            .toList();
+    }
+
+    private boolean isChallengeNotificationEnabled(Long memberId) {
+        return notificationSettingRepository
+            .findFirstByMemberIdAndDeletedAtIsNullOrderByIdDesc(memberId)
+            .map(NotificationSetting::isChallengeNotificationEnabled)
+            .orElse(true);
     }
 
     private boolean isCommentNotificationEnabled(Long memberId) {
