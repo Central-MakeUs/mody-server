@@ -21,17 +21,20 @@ public class NotificationSender {
     private final MemberPushTokenRepository memberPushTokenRepository;
     private final PushNotificationClient pushNotificationClient;
     private final NotificationFailureAlertService notificationFailureAlertService;
+    private final PushTokenInvalidationAlertService pushTokenInvalidationAlertService;
 
     public NotificationSender(
         NotificationRepository notificationRepository,
         MemberPushTokenRepository memberPushTokenRepository,
         PushNotificationClient pushNotificationClient,
-        NotificationFailureAlertService notificationFailureAlertService
+        NotificationFailureAlertService notificationFailureAlertService,
+        PushTokenInvalidationAlertService pushTokenInvalidationAlertService
     ) {
         this.notificationRepository = notificationRepository;
         this.memberPushTokenRepository = memberPushTokenRepository;
         this.pushNotificationClient = pushNotificationClient;
         this.notificationFailureAlertService = notificationFailureAlertService;
+        this.pushTokenInvalidationAlertService = pushTokenInvalidationAlertService;
     }
 
     @Async("notificationExecutor")
@@ -72,8 +75,10 @@ public class NotificationSender {
         if (!result.hasInvalidTokens()) {
             return;
         }
-        memberPushTokenRepository.findByFcmTokenInAndDeletedAtIsNull(result.invalidTokens())
-            .forEach(MemberPushToken::disable);
+        List<MemberPushToken> invalidTokens =
+            memberPushTokenRepository.findByFcmTokenInAndDeletedAtIsNull(result.invalidTokens());
+        invalidTokens.forEach(MemberPushToken::disable);
+        pushTokenInvalidationAlertService.record(invalidTokens);
     }
 
     private void handleFailure(Notification notification, RuntimeException exception) {

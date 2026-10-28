@@ -374,6 +374,11 @@ H2 테스트에서는 repository fake 또는 단순 조회 방식으로 검증�
 7. FCM이 invalid token을 반환하면 해당 token을 비활성화한다.
 8. 실패하면 retry 가능 여부에 따라 `PENDING`으로 재예약하거나 `FAILED`로 변경한다.
 9. `FAILED`로 확정되면 알림 id, 수신자 id, 알림 타입, 참조 정보, retry count, 예외 정보를 Slack으로 전송한다.
+10. 7에서 비활성화한 token은 `PushTokenInvalidationAlertService`가 집계한다.
+    최근 `window`(기본 10분) 안에 `threshold`(기본 20개) 이상이면 플랫폼별 개수를 Slack으로 전송한다.
+    같은 알림은 `cooldown`(기본 1시간) 동안 다시 보내지 않는다.
+    token이 없어도 알림은 `SENT`로 처리되므로, 대량 비활성화는 이 알림으로만 드러난다.
+    집계는 인스턴스 메모리에 두며 재시작하면 초기화된다.
 
 재시도 backoff 기본값:
 
@@ -420,6 +425,11 @@ notification:
     enabled: false
     quiet-start: "00:00"
     quiet-end: "05:00"
+  token-alert:
+    enabled: true
+    threshold: 20
+    window: 10m
+    cooldown: 1h
   retention:
     enabled: false
     cron: "0 0 4 * * *"
@@ -477,6 +487,7 @@ error-alert:
 - retry count가 한도를 넘으면 Slack 실패 알림을 요청한다.
 - Slack 알림 설정이 꺼져 있으면 실패 알림은 no-op으로 처리한다.
 - FCM invalid token은 비활성화한다.
+- 비활성화 token이 집계 시간 안에 기준치 이상이면 Slack 알림을 보내고, 쿨다운 동안 다시 보내지 않는다.
 - 다른 회원의 FCM token으로 발송하지 않는다.
 - FCM client 테스트는 fake `PushNotificationClient`를 사용한다.
 
