@@ -13,7 +13,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
     NotificationRetentionProperties.class,
     NotificationPushProperties.class,
     NotificationStreakRiskProperties.class,
-    NotificationBuddyRecordProperties.class
+    NotificationBuddyRecordProperties.class,
+    NotificationTokenAlertProperties.class
 })
 public class NotificationConfig {
     @Bean(name = "notificationExecutor")
