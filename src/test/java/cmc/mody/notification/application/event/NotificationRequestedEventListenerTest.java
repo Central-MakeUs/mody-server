@@ -115,6 +115,39 @@ class NotificationRequestedEventListenerTest {
         );
     }
 
+    @Test
+    @DisplayName("버디 기록 알림은 기록과 수신자 기준 dedupe key로 저장한다.")
+    void createBuddyRecordNotification() {
+        NotificationRequestedEventListener listener = listener();
+        NotificationRequestedEvent event = NotificationRequestedEvent.immediate(
+            NotificationType.BUDDY_MEAL_RECORDED,
+            Map.of(
+                "groupId", 10L,
+                "recordId", 50L,
+                "writerMemberId", 2L,
+                "nickname", "모나"
+            ),
+            "RECORD",
+            50L
+        );
+        given(recipientResolver.resolve(event)).willReturn(List.of(1L));
+        given(templateRenderer.render(NotificationType.BUDDY_MEAL_RECORDED, event.payload()))
+            .willReturn(new NotificationTemplate("모나님이 식사 기록을 남겼어요!", "오늘은 어떤 식사를 했는지 구경해볼까요?"));
+        given(notificationRepository.existsByDedupeKeyAndDeletedAtIsNull("BUDDY_MEAL_RECORDED:RECORD:50:1"))
+            .willReturn(false);
+        given(linkResolver.resolve(event)).willReturn("/groups/10/records/50");
+        given(idGenerator.nextId()).willReturn(102L);
+
+        listener.createNotifications(event);
+
+        then(notificationRepository).should().insertIfDedupeKeyAbsent(
+            eq(102L), eq(1L), eq("BUDDY_MEAL_RECORDED"), eq("모나님이 식사 기록을 남겼어요!"),
+            eq("오늘은 어떤 식사를 했는지 구경해볼까요?"), eq(null), eq("RECORD"), eq(50L),
+            eq("/groups/10/records/50"), any(LocalDateTime.class), eq(3),
+            eq("BUDDY_MEAL_RECORDED:RECORD:50:1")
+        );
+    }
+
     private NotificationRequestedEventListener listener() {
         NotificationDispatchProperties properties = new NotificationDispatchProperties();
         properties.setMaxRetry(3);

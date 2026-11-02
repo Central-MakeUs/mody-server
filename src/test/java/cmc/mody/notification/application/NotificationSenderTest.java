@@ -38,6 +38,9 @@ class NotificationSenderTest {
     @Mock
     private NotificationFailureAlertService notificationFailureAlertService;
 
+    @Mock
+    private PushTokenInvalidationAlertService pushTokenInvalidationAlertService;
+
     @Test
     @DisplayName("PROCESSING 알림을 FCM token으로 발송하고 SENT로 변경한다.")
     void sendSuccess() {
@@ -72,6 +75,7 @@ class NotificationSenderTest {
         sender.send(10L);
 
         assertThat(pushToken.isEnabled()).isFalse();
+        then(pushTokenInvalidationAlertService).should().record(List.of(pushToken));
         assertThat(notification.getDeliveryStatus()).isEqualTo(NotificationDeliveryStatus.SENT);
     }
 
@@ -131,7 +135,8 @@ class NotificationSenderTest {
             notificationRepository,
             memberPushTokenRepository,
             pushNotificationClient,
-            notificationFailureAlertService
+            notificationFailureAlertService,
+            pushTokenInvalidationAlertService
         );
     }
 

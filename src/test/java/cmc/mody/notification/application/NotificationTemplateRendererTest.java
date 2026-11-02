@@ -42,6 +42,10 @@ class NotificationTemplateRendererTest {
             .isEqualTo("이번 주 챌린지 완료!");
         assertThat(renderer.render(NotificationType.WEEKLY_CHALLENGE_COMPLETED, Map.of("groupName", "2키로만")).content())
             .isEqualTo("2키로만 그룹에서 챌린지 1개를 완료했어요!");
+        assertThat(renderer.render(NotificationType.BUDDY_MEAL_RECORDED, Map.of("nickname", "모나")))
+            .isEqualTo(new NotificationTemplate("모나님이 식사 기록을 남겼어요!", "오늘은 어떤 식사를 했는지 구경해볼까요?"));
+        assertThat(renderer.render(NotificationType.BUDDY_EXERCISE_RECORDED, Map.of("nickname", "모나")))
+            .isEqualTo(new NotificationTemplate("모나님이 운동 기록을 남겼어요!", "오늘은 어떤 운동을 했는지 구경해볼까요?"));
     }
 
     @Test

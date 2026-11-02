@@ -143,6 +143,7 @@ public record NotificationRequestedEvent(
 - `BUDDY_NUDGE`: 찌르기 대상 회원.
 - `STEP_CHALLENGE_COMPLETED`: 챌린지에 참여 중인 그룹 활성 구성원.
 - `WEEKLY_CHALLENGE_COMPLETED`: 챌린지에 참여 중인 그룹 활성 구성원.
+- `BUDDY_MEAL_RECORDED`, `BUDDY_EXERCISE_RECORDED`: 기록이 노출되는 그룹의 활성 구성원. 작성자 본인과 챌린지 알림을 끈 회원은 제외한다.
 
 수신자 목록이 비어 있으면 알림 row를 만들지 않고 종료한다.
 
@@ -162,6 +163,8 @@ public record NotificationRequestedEvent(
 | BUDDY_NUDGE | ${nickname}님이 콕 찔렀어요! | ${nickname}님의 응원을 받고 얼른 기록해주세요! |
 | STEP_CHALLENGE_COMPLETED | ${destination}까지 걸어가기 완료! | ${destination}을 걸어서 방문하다니 멋진걸요? |
 | WEEKLY_CHALLENGE_COMPLETED | 이번 주 챌린지 완료! | ${groupName} 그룹에서 챌린지 1개를 완료했어요! |
+| BUDDY_MEAL_RECORDED | ${nickname}님이 식사 기록을 남겼어요! | 오늘은 어떤 식사를 했는지 구경해볼까요? |
+| BUDDY_EXERCISE_RECORDED | ${nickname}님이 운동 기록을 남겼어요! | 오늘은 어떤 운동을 했는지 구경해볼까요? |
 
 필수 payload가 없으면 `NOTIFICATION301` 계열 검증 에러로 처리한다.
 
@@ -180,6 +183,7 @@ public record NotificationRequestedEvent(
 | BUDDY_NUDGE | `/groups/{groupId}/home` | 콕 찌른 회원이 있는 그룹 |
 | STEP_CHALLENGE_COMPLETED | `/groups/{groupId}/challenges/step` | 해당 그룹 걸음 수 챌린지 |
 | WEEKLY_CHALLENGE_COMPLETED | `/groups/{groupId}/challenges?tab=weekly` | 해당 그룹 챌린지 탭 |
+| BUDDY_MEAL_RECORDED, BUDDY_EXERCISE_RECORDED | `/groups/{groupId}/records/{recordId}` | 해당 게시물 상세. 삭제된 게시물이면 앱에서 피드로 이동 |
 
 `link`는 알림 생성 시점에 계산해 저장한다.
 과거 데이터처럼 `link`가 비어 있으면 `notification_type`, `reference_type`, `reference_id` 기준으로 fallback 계산한다.
@@ -196,6 +200,9 @@ public record NotificationRequestedEvent(
 - 그룹 연속 기록 위험 알림은 미기록자 본인에게만 하루 1회 발송한다.
 - 걸음수 챌린지 완료 알림은 목적지 도달 시점에 이벤트당 1회 발송한다.
 - 주간 챌린지 완료 알림은 전원 인증 완료 시점에 이벤트당 1회 발송한다.
+- 버디 기록 알림은 게시물 1건당 수신자에게 1회 발송한다. 여러 그룹을 함께 쓰는 버디에게도 한 번만 보낸다.
+- 버디 기록 알림은 00:00~05:00(KST)에 올라온 기록이면 만들지 않고, 나중에 몰아서 보내지도 않는다.
+- 버디 기록 알림은 별도 토글 없이 챌린지 알림 토글을 따른다.
 - 푸시 발송에 실패해도 앱 내 알림 row는 유지한다.
 - 읽음 상태와 푸시 발송 상태는 독립적으로 관리한다.
 - FCM이 `UNREGISTERED` 또는 토큰 단위 `INVALID_ARGUMENT`를 반환하면 해당 token을 비활성화한다.
@@ -290,6 +297,7 @@ CHALLENGE:GROUP_CHALLENGE:challengeId:receiverMemberId
 RECORD_REMINDER:DATE:memberId:recordType:yyyyMMdd
 GROUP_RECORD_STREAK_RISK:DATE:memberId:groupId:yyyyMMdd
 BUDDY_NUDGE:DATE:senderMemberId:receiverMemberId:yyyyMMdd
+BUDDY_MEAL_RECORDED:RECORD:recordId:receiverMemberId
 ```
 
 ## 11. 발송 선점 스케줄러
@@ -366,6 +374,11 @@ H2 테스트에서는 repository fake 또는 단순 조회 방식으로 검증�
 7. FCM이 invalid token을 반환하면 해당 token을 비활성화한다.
 8. 실패하면 retry 가능 여부에 따라 `PENDING`으로 재예약하거나 `FAILED`로 변경한다.
 9. `FAILED`로 확정되면 알림 id, 수신자 id, 알림 타입, 참조 정보, retry count, 예외 정보를 Slack으로 전송한다.
+10. 7에서 비활성화한 token은 `PushTokenInvalidationAlertService`가 집계한다.
+    최근 `window`(기본 10분) 안에 `threshold`(기본 20개) 이상이면 플랫폼별 개수를 Slack으로 전송한다.
+    같은 알림은 `cooldown`(기본 1시간) 동안 다시 보내지 않는다.
+    token이 없어도 알림은 `SENT`로 처리되므로, 대량 비활성화는 이 알림으로만 드러난다.
+    집계는 인스턴스 메모리에 두며 재시작하면 초기화된다.
 
 재시도 backoff 기본값:
 
@@ -408,6 +421,15 @@ notification:
     enabled: false
     cron: "0 0 21 * * *"
     batch-size: 500
+  buddy-record:
+    enabled: false
+    quiet-start: "00:00"
+    quiet-end: "05:00"
+  token-alert:
+    enabled: true
+    threshold: 20
+    window: 10m
+    cooldown: 1h
   retention:
     enabled: false
     cron: "0 0 4 * * *"
@@ -465,6 +487,7 @@ error-alert:
 - retry count가 한도를 넘으면 Slack 실패 알림을 요청한다.
 - Slack 알림 설정이 꺼져 있으면 실패 알림은 no-op으로 처리한다.
 - FCM invalid token은 비활성화한다.
+- 비활성화 token이 집계 시간 안에 기준치 이상이면 Slack 알림을 보내고, 쿨다운 동안 다시 보내지 않는다.
 - 다른 회원의 FCM token으로 발송하지 않는다.
 - FCM client 테스트는 fake `PushNotificationClient`를 사용한다.
 

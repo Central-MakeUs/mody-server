@@ -54,6 +54,14 @@ public class NotificationTemplateRenderer {
                 "이번 주 챌린지 완료!",
                 NotificationPayload.requireString(payload, "groupName") + " 그룹에서 챌린지 1개를 완료했어요!"
             );
+            case BUDDY_MEAL_RECORDED -> new NotificationTemplate(
+                NotificationPayload.requireString(payload, "nickname") + "님이 식사 기록을 남겼어요!",
+                "오늘은 어떤 식사를 했는지 구경해볼까요?"
+            );
+            case BUDDY_EXERCISE_RECORDED -> new NotificationTemplate(
+                NotificationPayload.requireString(payload, "nickname") + "님이 운동 기록을 남겼어요!",
+                "오늘은 어떤 운동을 했는지 구경해볼까요?"
+            );
             default -> throw new GeneralException(ErrorStatus.NOTIFICATION_UNSUPPORTED_TYPE);
         };
         return new NotificationTemplate(pushProperties.applyTitlePrefix(template.title()), template.content());

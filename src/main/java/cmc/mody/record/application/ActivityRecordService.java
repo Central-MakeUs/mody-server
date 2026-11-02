@@ -12,6 +12,7 @@ import cmc.mody.grouping.infrastructure.repository.ModyGroupRepository;
 import cmc.mody.member.domain.Member;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.notification.application.NotificationRequestService;
+import cmc.mody.notification.domain.NotificationType;
 import cmc.mody.record.domain.ActivityRecord;
 import cmc.mody.record.domain.ActivityRecordGroup;
 import cmc.mody.record.domain.RecordComment;
@@ -163,7 +164,7 @@ public class ActivityRecordService {
 
     @Transactional
     public RecordCreateResult createRecord(Long memberId, RecordCreateCommand command) {
-        getMember(memberId);
+        Member member = getMember(memberId);
         List<GroupMember> joinedGroups = groupMemberRepository
             .findByMemberIdAndGroupMemberStatusAndDeletedAtIsNull(memberId, GroupMemberStatus.JOINED);
         if (joinedGroups.isEmpty()) {
@@ -213,6 +214,18 @@ public class ActivityRecordService {
                 memberId,
                 uploadedAt
             ));
+        }
+        NotificationType notificationType = command.recordType() == RecordType.MEAL
+            ? NotificationType.BUDDY_MEAL_RECORDED
+            : NotificationType.BUDDY_EXERCISE_RECORDED;
+        for (GroupMember joinedGroup : joinedGroups) {
+            notificationRequestService.requestBuddyRecordCreated(
+                notificationType,
+                joinedGroup.getGroupId(),
+                savedRecord.getId(),
+                memberId,
+                joinedGroup.getDisplayNickname() == null ? member.getNickname() : joinedGroup.getDisplayNickname()
+            );
         }
         return new RecordCreateResult(savedRecord.getId(), groupIds);
     }

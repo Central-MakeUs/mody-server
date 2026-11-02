@@ -125,6 +125,12 @@ public class NotificationRequestedEventListener {
                 NotificationPayload.requireLong(payload, "recordId").toString(),
                 receiverMemberId.toString()
             );
+            case BUDDY_MEAL_RECORDED, BUDDY_EXERCISE_RECORDED -> String.join(":",
+                event.type().name(),
+                "RECORD",
+                NotificationPayload.requireLong(payload, "recordId").toString(),
+                receiverMemberId.toString()
+            );
             case MEAL_REMINDER -> String.join(":",
                 event.type().name(),
                 "DATE",
