@@ -2,15 +2,19 @@ package cmc.mody.notification.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 
 import cmc.mody.notification.application.event.NotificationRequestedEvent;
 import cmc.mody.notification.domain.NotificationType;
+import cmc.mody.notification.infrastructure.repository.NotificationRepository;
 import java.time.Clock;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +30,9 @@ class NotificationRequestServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private NotificationRepository notificationRepository;
 
     @Captor
     private ArgumentCaptor<NotificationRequestedEvent> eventCaptor;
@@ -84,10 +91,24 @@ class NotificationRequestServiceTest {
         assertThat(properties.isQuietTime(LocalTime.of(22, 59))).isFalse();
     }
 
+    @Test
+    @DisplayName("기록 삭제 시 그 기록의 버디 기록 알림을 취소한다.")
+    void cancelBuddyRecordCreated() {
+        NotificationRequestService service = service(true, "2026-11-04T13:32:30+09:00");
+
+        service.cancelBuddyRecordCreated(50L);
+
+        then(notificationRepository).should().deleteByRecord(
+            eq(50L),
+            eq(List.of(NotificationType.BUDDY_MEAL_RECORDED, NotificationType.BUDDY_EXERCISE_RECORDED)),
+            eq(LocalDateTime.of(2026, 11, 4, 13, 32, 30))
+        );
+    }
+
     private NotificationRequestService service(boolean enabled, String now) {
         NotificationBuddyRecordProperties properties = new NotificationBuddyRecordProperties();
         properties.setEnabled(enabled);
-        NotificationRequestService service = new NotificationRequestService(eventPublisher, properties);
+        NotificationRequestService service = new NotificationRequestService(eventPublisher, properties, notificationRepository);
         service.useClock(Clock.fixed(OffsetDateTime.parse(now).toInstant(), KST));
         return service;
     }
