@@ -25,7 +25,6 @@ import cmc.mody.member.infrastructure.repository.SocialAccountRepository;
 import cmc.mody.member.infrastructure.repository.WeightRecordRepository;
 import cmc.mody.notification.application.NotificationPreferenceService;
 import cmc.mody.notification.domain.ExerciseSchedule;
-import cmc.mody.notification.domain.MemberPushToken;
 import cmc.mody.notification.domain.MealType;
 import cmc.mody.notification.domain.Notification;
 import cmc.mody.notification.domain.NotificationSetting;
@@ -293,8 +292,7 @@ public class MypageService {
             .forEach(ExerciseSchedule::delete);
         notificationRepository.findByReceiverMemberIdAndDeletedAtIsNull(memberId)
             .forEach(Notification::delete);
-        memberPushTokenRepository.findByMemberIdAndDeletedAtIsNull(memberId)
-            .forEach(MemberPushToken::delete);
+        memberPushTokenRepository.deleteAll(memberPushTokenRepository.findByMemberIdAndDeletedAtIsNull(memberId));
     }
 
     private void deleteJoinedGroupMemberships(Long memberId) {

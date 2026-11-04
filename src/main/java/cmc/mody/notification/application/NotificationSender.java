@@ -60,6 +60,7 @@ public class NotificationSender {
                 .findByMemberIdAndEnabledTrueAndDeletedAtIsNull(notification.getReceiverMemberId())
                 .stream()
                 .map(MemberPushToken::getFcmToken)
+                .distinct()
                 .toList();
             if (!tokens.isEmpty()) {
                 PushNotificationResult result = pushNotificationClient.send(notification, tokens);

@@ -52,7 +52,7 @@ POST /api/v1/auth/logout
 
 ## 4. 데이터 모델
 
-다음 엔티티는 `BaseEntity.delete()`를 사용해 soft delete한다.
+다음 엔티티는 `BaseEntity.delete()`를 사용해 soft delete한다. `member_push_token`은 하드 삭제한다.
 
 - `member`
 - `social_account`
@@ -61,7 +61,6 @@ POST /api/v1/auth/logout
 - `notification_setting`
 - `exercise_schedule`
 - `notification`
-- `member_push_token`
 - `group_member`
 - `activity_record`
 - `record_comment`

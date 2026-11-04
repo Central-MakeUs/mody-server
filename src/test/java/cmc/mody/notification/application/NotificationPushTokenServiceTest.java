@@ -3,8 +3,9 @@ package cmc.mody.notification.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.inOrder;
 
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
@@ -24,7 +25,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -40,78 +41,19 @@ class NotificationPushTokenServiceTest {
     private MemberPushTokenRepository memberPushTokenRepository;
 
     @Test
-    @DisplayName("회원 디바이스의 푸시 토큰을 새로 등록한다.")
+    @DisplayName("다른 기기가 쓰던 같은 토큰을 지우고 회원 디바이스 토큰을 upsert한다.")
     void registerPushToken() {
         NotificationPushTokenService service = service();
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
-        given(memberPushTokenRepository.findByFcmTokenAndDeletedAtIsNull("fcm-token")).willReturn(Optional.empty());
-        given(memberPushTokenRepository.findByMemberIdAndDeviceIdAndDeletedAtIsNull(1L, "ios-device"))
-            .willReturn(Optional.empty());
         given(idGenerator.nextId()).willReturn(10L);
 
         service.register(1L, new RegisterPushTokenCommand("ios-device", PushPlatform.IOS, "fcm-token"));
 
-        ArgumentCaptor<MemberPushToken> captor = ArgumentCaptor.forClass(MemberPushToken.class);
-        verify(memberPushTokenRepository).save(captor.capture());
-        assertThat(captor.getValue().getId()).isEqualTo(10L);
-        assertThat(captor.getValue().getMemberId()).isEqualTo(1L);
-        assertThat(captor.getValue().getDeviceId()).isEqualTo("ios-device");
-        assertThat(captor.getValue().getPlatform()).isEqualTo(PushPlatform.IOS);
-        assertThat(captor.getValue().getFcmToken()).isEqualTo("fcm-token");
-        assertThat(captor.getValue().isEnabled()).isTrue();
-        assertThat(captor.getValue().getLastSeenAt()).isNotNull();
-    }
-
-    @Test
-    @DisplayName("기존 디바이스 토큰은 새 FCM 토큰으로 갱신한다.")
-    void updatePushToken() {
-        NotificationPushTokenService service = service();
-        MemberPushToken pushToken = new MemberPushToken(
-            10L,
-            1L,
-            "ios-device",
-            PushPlatform.IOS,
-            "old-token",
-            LocalDateTime.of(2026, 7, 4, 10, 0)
+        InOrder inOrder = inOrder(memberPushTokenRepository);
+        inOrder.verify(memberPushTokenRepository).deleteOtherDevicesUsingToken("fcm-token", 1L, "ios-device");
+        inOrder.verify(memberPushTokenRepository).upsert(
+            eq(10L), eq(1L), eq("ios-device"), eq("IOS"), eq("fcm-token"), any(LocalDateTime.class)
         );
-        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
-        given(memberPushTokenRepository.findByFcmTokenAndDeletedAtIsNull("new-token")).willReturn(Optional.empty());
-        given(memberPushTokenRepository.findByMemberIdAndDeviceIdAndDeletedAtIsNull(1L, "ios-device"))
-            .willReturn(Optional.of(pushToken));
-
-        service.register(1L, new RegisterPushTokenCommand("ios-device", PushPlatform.IOS, "new-token"));
-
-        assertThat(pushToken.getFcmToken()).isEqualTo("new-token");
-        assertThat(pushToken.isEnabled()).isTrue();
-        verify(memberPushTokenRepository).save(pushToken);
-    }
-
-    @Test
-    @DisplayName("동일 FCM 토큰이 다른 디바이스에 있으면 이전 토큰을 삭제한 뒤 저장한다.")
-    void disableDuplicatedFcmToken() {
-        NotificationPushTokenService service = service();
-        MemberPushToken duplicated = new MemberPushToken(
-            9L,
-            2L,
-            "android-device",
-            PushPlatform.ANDROID,
-            "fcm-token",
-            LocalDateTime.of(2026, 7, 4, 10, 0)
-        );
-        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
-        given(memberPushTokenRepository.findByFcmTokenAndDeletedAtIsNull("fcm-token"))
-            .willReturn(Optional.of(duplicated));
-        given(memberPushTokenRepository.findByMemberIdAndDeviceIdAndDeletedAtIsNull(1L, "ios-device"))
-            .willReturn(Optional.empty());
-        given(idGenerator.nextId()).willReturn(10L);
-
-        service.register(1L, new RegisterPushTokenCommand("ios-device", PushPlatform.IOS, "fcm-token"));
-
-        assertThat(duplicated.isEnabled()).isFalse();
-        assertThat(duplicated.isActive()).isFalse();
-        assertThat(duplicated.getDeletedAt()).isNotNull();
-        verify(memberPushTokenRepository).flush();
-        verify(memberPushTokenRepository).save(any(MemberPushToken.class));
     }
 
     @Test

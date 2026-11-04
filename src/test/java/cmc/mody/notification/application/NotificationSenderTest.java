@@ -59,6 +59,21 @@ class NotificationSenderTest {
     }
 
     @Test
+    @DisplayName("같은 FCM token이 여러 행에 있어도 한 번만 발송한다.")
+    void sendDistinctTokens() {
+        NotificationSender sender = sender();
+        Notification notification = processingNotification(3);
+        given(notificationRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(notification));
+        given(memberPushTokenRepository.findByMemberIdAndEnabledTrueAndDeletedAtIsNull(1L))
+            .willReturn(List.of(pushToken(), pushToken()));
+        given(pushNotificationClient.send(notification, List.of("fcm-token"))).willReturn(PushNotificationResult.empty());
+
+        sender.send(10L);
+
+        then(pushNotificationClient).should().send(eq(notification), eq(List.of("fcm-token")));
+    }
+
+    @Test
     @DisplayName("FCM이 invalid token을 반환하면 해당 토큰을 비활성화하고 알림은 SENT로 처리한다.")
     void sendWithInvalidTokens() {
         NotificationSender sender = sender();
