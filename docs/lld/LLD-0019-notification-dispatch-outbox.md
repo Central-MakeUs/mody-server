@@ -270,13 +270,13 @@ FCM token은 회원과 별도 테이블로 관리한다.
 - `fcm_token`
 - `enabled`
 - `last_seen_at`
-- `deleted_at`
 
-동일 기기 재등록 시 `device_id` 기준으로 token을 갱신한다.
-device id를 안정적으로 받을 수 없으면 `fcm_token` 기준으로 중복을 방지한다.
-동일 FCM token이 다른 회원/기기에서 재등록되면 기존 row는 `deleted_at`을 채워 소프트 삭제한 뒤 새 row를 저장한다.
-운영 DB의 unique 제약은 `enabled`가 아니라 `deleted_at IS NULL` 기준의 생성 컬럼으로 관리하므로,
-단순 `enabled=false`만으로는 중복 token 제약을 해소하지 않는다.
+`(member_id, device_id)`에 unique 제약(`uk_member_push_token_member_device`)을 둔다.
+등록은 `INSERT ... ON DUPLICATE KEY UPDATE`로 처리해서, 같은 기기 등록 요청이 동시에 와도 한 행만 남고 최신 token으로 갱신된다.
+꺼진 token을 다시 등록하면 `enabled`를 다시 켠다.
+동일 FCM token이 다른 회원/기기 행에 있으면 등록 전에 그 행을 하드 삭제한다.
+push token은 소프트 삭제하지 않는다. 탈퇴 시에도 하드 삭제한다.
+발송할 때는 같은 token을 한 번만 보내도록 중복을 제거한다.
 
 ## 10. 알림 생성 트랜잭션
 
