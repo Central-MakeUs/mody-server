@@ -129,4 +129,39 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
          for update skip locked
         """, nativeQuery = true)
     List<Notification> findDueNotificationsForUpdateSkipLocked(@Param("batchSize") int batchSize);
+
+    @Query(value = """
+        select distinct notification.receiver_member_id
+          from notification
+          join activity_record on activity_record.id = notification.reference_id
+         where notification.receiver_member_id in (:receiverMemberIds)
+           and notification.notification_type in ('BUDDY_MEAL_RECORDED', 'BUDDY_EXERCISE_RECORDED')
+           and notification.reference_type = 'RECORD'
+           and notification.reference_id <> :recordId
+           and notification.created_at >= :since
+           and (notification.deleted_at is null or notification.sent_at is not null)
+           and activity_record.member_id = :writerMemberId
+        """, nativeQuery = true)
+    List<Long> findRecentBuddyRecordReceiverMemberIds(
+        @Param("receiverMemberIds") Collection<Long> receiverMemberIds,
+        @Param("writerMemberId") Long writerMemberId,
+        @Param("recordId") Long recordId,
+        @Param("since") LocalDateTime since
+    );
+
+    @Modifying(flushAutomatically = true)
+    @Query("""
+        update Notification notification
+           set notification.status = cmc.mody.common.domain.Status.INACTIVE,
+               notification.deletedAt = :deletedAt
+         where notification.referenceType = 'RECORD'
+           and notification.referenceId = :recordId
+           and notification.notificationType in :notificationTypes
+           and notification.deletedAt is null
+        """)
+    int deleteByRecord(
+        @Param("recordId") Long recordId,
+        @Param("notificationTypes") Collection<NotificationType> notificationTypes,
+        @Param("deletedAt") LocalDateTime deletedAt
+    );
 }

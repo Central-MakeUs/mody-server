@@ -442,7 +442,7 @@ class ActivityRecordServiceTest {
     }
 
     @Test
-    @DisplayName("기록을 삭제하면 모든 그룹 노출과 댓글을 함께 소프트 삭제한다.")
+    @DisplayName("기록을 삭제하면 모든 그룹 노출과 댓글, 버디 기록 알림을 함께 소프트 삭제한다.")
     void deleteRecord() {
         ActivityRecordService service = service();
         ActivityRecord record = mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30));
@@ -464,6 +464,7 @@ class ActivityRecordServiceTest {
         assertThat(secondGroup.getDeletedAt()).isNotNull();
         assertThat(firstComment.getDeletedAt()).isNotNull();
         assertThat(secondComment.getDeletedAt()).isNotNull();
+        then(notificationRequestService).should().cancelBuddyRecordCreated(100L);
     }
 
     @Test
