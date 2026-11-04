@@ -523,7 +523,7 @@ class MypageServiceTest {
         assertThat(notificationSetting.getStatus()).isEqualTo(Status.INACTIVE);
         assertThat(exerciseSchedule.getStatus()).isEqualTo(Status.INACTIVE);
         assertThat(notification.getStatus()).isEqualTo(Status.INACTIVE);
-        assertThat(pushToken.getStatus()).isEqualTo(Status.INACTIVE);
+        then(memberPushTokenRepository).should().deleteAll(List.of(pushToken));
         assertThat(groupMember.getGroupMemberStatus()).isEqualTo(GroupMemberStatus.LEFT);
         assertThat(record.getStatus()).isEqualTo(Status.INACTIVE);
         assertThat(myComment.getStatus()).isEqualTo(Status.INACTIVE);

@@ -23,29 +23,15 @@ public class NotificationPushTokenService {
     @Transactional
     public void register(Long memberId, RegisterPushTokenCommand command) {
         getMember(memberId);
-        LocalDateTime now = LocalDateTime.now();
-
-        memberPushTokenRepository.findByFcmTokenAndDeletedAtIsNull(command.fcmToken())
-            .filter(found -> !found.belongsTo(memberId, command.deviceId()))
-            .ifPresent(duplicated -> {
-                duplicated.disable();
-                duplicated.delete();
-                memberPushTokenRepository.flush();
-            });
-
-        MemberPushToken memberPushToken = memberPushTokenRepository
-            .findByMemberIdAndDeviceIdAndDeletedAtIsNull(memberId, command.deviceId())
-            .orElseGet(() -> new MemberPushToken(
-                idGenerator.nextId(),
-                memberId,
-                command.deviceId(),
-                command.platform(),
-                command.fcmToken(),
-                now
-            ));
-
-        memberPushToken.updateToken(command.fcmToken(), command.platform(), now);
-        memberPushTokenRepository.save(memberPushToken);
+        memberPushTokenRepository.deleteOtherDevicesUsingToken(command.fcmToken(), memberId, command.deviceId());
+        memberPushTokenRepository.upsert(
+            idGenerator.nextId(),
+            memberId,
+            command.deviceId(),
+            command.platform().name(),
+            command.fcmToken(),
+            LocalDateTime.now()
+        );
     }
 
     @Transactional

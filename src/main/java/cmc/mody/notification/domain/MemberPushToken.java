@@ -7,6 +7,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -18,8 +19,10 @@ import lombok.NoArgsConstructor;
 @Table(
         name = "member_push_token",
         indexes = {
-                @Index(name = "idx_member_push_token_member", columnList = "member_id, enabled"),
-                @Index(name = "idx_member_push_token_device", columnList = "member_id, device_id")
+                @Index(name = "idx_member_push_token_member", columnList = "member_id, enabled")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_member_push_token_member_device", columnNames = {"member_id", "device_id"})
         }
 )
 public class MemberPushToken extends BaseEntity {
