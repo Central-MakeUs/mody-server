@@ -2,9 +2,12 @@ package cmc.mody.notification.application;
 
 import cmc.mody.notification.application.event.NotificationRequestedEvent;
 import cmc.mody.notification.domain.NotificationType;
+import cmc.mody.notification.infrastructure.repository.NotificationRepository;
 import java.time.Clock;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Map;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -15,16 +18,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationRequestService {
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
+    private static final List<NotificationType> BUDDY_RECORD_TYPES = List.of(
+        NotificationType.BUDDY_MEAL_RECORDED,
+        NotificationType.BUDDY_EXERCISE_RECORDED
+    );
+
     private final ApplicationEventPublisher eventPublisher;
     private final NotificationBuddyRecordProperties buddyRecordProperties;
+    private final NotificationRepository notificationRepository;
     private Clock clock = Clock.system(KST);
 
     public NotificationRequestService(
         ApplicationEventPublisher eventPublisher,
-        NotificationBuddyRecordProperties buddyRecordProperties
+        NotificationBuddyRecordProperties buddyRecordProperties,
+        NotificationRepository notificationRepository
     ) {
         this.eventPublisher = eventPublisher;
         this.buddyRecordProperties = buddyRecordProperties;
+        this.notificationRepository = notificationRepository;
     }
 
     void useClock(Clock clock) {
@@ -157,5 +168,9 @@ public class NotificationRequestService {
             "RECORD",
             recordId
         ));
+    }
+
+    public void cancelBuddyRecordCreated(Long recordId) {
+        notificationRepository.deleteByRecord(recordId, BUDDY_RECORD_TYPES, LocalDateTime.now(clock));
     }
 }

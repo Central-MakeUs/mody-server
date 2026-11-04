@@ -243,6 +243,7 @@ public class ActivityRecordService {
         activityRecordGroupRepository.findByRecordIdAndDeletedAtIsNull(recordId)
             .forEach(ActivityRecordGroup::delete);
         record.delete();
+        notificationRequestService.cancelBuddyRecordCreated(recordId);
     }
 
     @Transactional
