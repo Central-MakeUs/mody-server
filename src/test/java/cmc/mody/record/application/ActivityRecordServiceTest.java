@@ -264,6 +264,7 @@ class ActivityRecordServiceTest {
             .isEqualTo("https://storage.example.com/profiles/member-1.jpg");
         assertThat(result.records().get(1).imageUrl()).isEqualTo("https://storage.example.com/records/1/2026/07/meal.jpg");
         assertThat(result.records().get(2).recordType()).isEqualTo(RecordType.EXERCISE);
+        assertThat(result.records()).allMatch(ActivityRecordService.RecordDetailResult::isMine);
         then(recordViewHistoryRepository).should().save(recordViewHistoryCaptor.capture());
         assertThat(recordViewHistoryCaptor.getValue().getViewerMemberId()).isEqualTo(1L);
         assertThat(recordViewHistoryCaptor.getValue().getGroupId()).isEqualTo(10L);
@@ -534,6 +535,62 @@ class ActivityRecordServiceTest {
         assertThat(savedComment.getMemberId()).isEqualTo(1L);
         assertThat(savedComment.getContent()).isEqualTo("좋다");
         then(notificationRequestService).should().requestCommentCreated(100L, 1L, "민석");
+    }
+
+    @Test
+    @DisplayName("본인 댓글을 삭제한다.")
+    void deleteComment() {
+        ActivityRecordService service = service();
+        givenAccessibleRecord();
+        RecordComment comment = new RecordComment(200L, 100L, 10L, 1L, "좋다");
+        given(recordCommentRepository.findById(200L)).willReturn(Optional.of(comment));
+
+        service.deleteComment(1L, 10L, 100L, 200L);
+
+        assertThat(comment.getDeletedAt()).isNotNull();
+        assertThat(comment.isActive()).isFalse();
+    }
+
+    @Test
+    @DisplayName("다른 회원의 댓글은 삭제할 수 없다.")
+    void deleteCommentOfOtherMember() {
+        ActivityRecordService service = service();
+        givenAccessibleRecord();
+        RecordComment comment = new RecordComment(200L, 100L, 10L, 2L, "좋다");
+        given(recordCommentRepository.findById(200L)).willReturn(Optional.of(comment));
+
+        assertThatThrownBy(() -> service.deleteComment(1L, 10L, 100L, 200L))
+            .isInstanceOfSatisfying(GeneralException.class, exception ->
+                assertThat(exception.getStatus()).isEqualTo(ErrorStatus.RECORD_COMMENT_NOT_FOUND));
+        assertThat(comment.getDeletedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("다른 기록의 댓글 id로는 삭제할 수 없다.")
+    void deleteCommentOfOtherRecord() {
+        ActivityRecordService service = service();
+        givenAccessibleRecord();
+        RecordComment comment = new RecordComment(200L, 999L, 10L, 1L, "좋다");
+        given(recordCommentRepository.findById(200L)).willReturn(Optional.of(comment));
+
+        assertThatThrownBy(() -> service.deleteComment(1L, 10L, 100L, 200L))
+            .isInstanceOfSatisfying(GeneralException.class, exception ->
+                assertThat(exception.getStatus()).isEqualTo(ErrorStatus.RECORD_COMMENT_NOT_FOUND));
+        assertThat(comment.getDeletedAt()).isNull();
+    }
+
+    private void givenAccessibleRecord() {
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
+        given(modyGroupRepository.findById(10L)).willReturn(Optional.of(group()));
+        given(groupMemberRepository.existsByMemberIdAndGroupIdAndGroupMemberStatusAndDeletedAtIsNull(
+            1L,
+            10L,
+            GroupMemberStatus.JOINED
+        )).willReturn(true);
+        given(activityRecordRepository.findById(100L))
+            .willReturn(Optional.of(mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30))));
+        given(activityRecordGroupRepository.findByRecordIdAndGroupIdAndDeletedAtIsNull(100L, 10L))
+            .willReturn(Optional.of(recordGroup(100L, 10L, 1L, LocalDateTime.of(2026, 7, 1, 12, 30))));
     }
 
     @Test

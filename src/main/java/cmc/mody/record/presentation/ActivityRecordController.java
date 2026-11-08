@@ -20,6 +20,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -153,6 +154,17 @@ public class ActivityRecordController {
         return ApiResponse.created(CommentCreateResponse.from(result));
     }
 
+    @DeleteMapping("/groups/{groupId}/records/{recordId}/comments/{commentId}")
+    public ApiResponse<Void> deleteComment(
+        @Parameter(hidden = true) @CurrentMember Long memberId,
+        @PathVariable Long groupId,
+        @PathVariable Long recordId,
+        @PathVariable Long commentId
+    ) {
+        activityRecordService.deleteComment(memberId, groupId, recordId, commentId);
+        return ApiResponse.ok();
+    }
+
     public record ActivityCalendarResponse(
         LocalDate weekStartDate,
         LocalDate weekEndDate,
@@ -246,7 +258,8 @@ public class ActivityRecordController {
         Integer exerciseDurationMinutes,
         String exerciseName,
         String imageUrl,
-        ImageCropRegionResponse imageCropRegion
+        ImageCropRegionResponse imageCropRegion,
+        boolean isMine
     ) {
         public static RecordDetailItemResponse from(ActivityRecordService.RecordDetailResult result) {
             return new RecordDetailItemResponse(
@@ -260,7 +273,8 @@ public class ActivityRecordController {
                 result.exerciseDurationMinutes(),
                 result.exerciseName(),
                 result.imageUrl(),
-                ImageCropRegionResponse.from(result.imageCropRegion())
+                ImageCropRegionResponse.from(result.imageCropRegion()),
+                result.isMine()
             );
         }
     }
@@ -279,6 +293,7 @@ public class ActivityRecordController {
         String nickname,
         String profileImageUrl,
         String content,
+        LocalDateTime createdAt,
         boolean isMine
     ) {
         public static CommentResponse from(ActivityRecordService.CommentResult result) {
@@ -288,6 +303,7 @@ public class ActivityRecordController {
                 result.nickname(),
                 result.profileImageUrl(),
                 result.content(),
+                result.createdAt(),
                 result.isMine()
             );
         }
@@ -421,7 +437,7 @@ public class ActivityRecordController {
 
     public record CommentCreateRequest(
         @NotBlank(message = "댓글 내용은 필수입니다.")
-        @Size(max = 100, message = "댓글은 100자 이하로 입력해주세요.")
+        @Size(max = 200, message = "댓글은 200자 이하로 입력해주세요.")
         String content
     ) {
         public CommentCreateCommand toCommand() {

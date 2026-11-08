@@ -86,6 +86,7 @@ class ActivityRecordControllerDocsTest {
         - RECORD307: 운동 기록 payload 조합 오류
         - RECORD308: 운동 시간 범위 오류
         - RECORD309: 댓글 내용 오류
+        - RECORD310: 댓글 없음 또는 본인 댓글이 아님
         - RECORD302: 기록 없음 또는 접근할 수 없는 기록
         """.formatted(AUTHENTICATED_API, IMAGE_UPLOAD_FLOW, CURSOR_PAGING, RECORD_CREATE_RULES);
 
@@ -327,7 +328,8 @@ class ActivityRecordControllerDocsTest {
                         null,
                         null,
                         "https://storage.example.com/records/1/2026/07/meal.jpg",
-                        imageCropRegionResult()
+                        imageCropRegionResult(),
+                        true
                     ),
                     new RecordDetailResult(
                         2L,
@@ -340,7 +342,8 @@ class ActivityRecordControllerDocsTest {
                         40,
                         "러닝",
                         "https://storage.example.com/records/1/2026/07/exercise.jpg",
-                        null
+                        null,
+                        true
                     )
                 ),
                 2L,
@@ -414,6 +417,9 @@ class ActivityRecordControllerDocsTest {
                              .type(JsonFieldType.NUMBER)
                              .optional()
                              .description("관심 영역 height, 0~1"),
+                        fieldWithPath("result.records[].isMine")
+                             .type(JsonFieldType.BOOLEAN)
+                             .description("현재 로그인한 회원이 작성한 기록 여부. 헤더의 나 배지와 삭제/신고 메뉴 분기에 사용"),
                         fieldWithPath("result.nextCursor").type(JsonFieldType.NUMBER).optional().description("다음 페이지용 커서 id. 더 이상 없으면 null"),
                         fieldWithPath("result.hasNext").type(JsonFieldType.BOOLEAN).description("다음 페이지 존재 여부")
                     ))
@@ -433,6 +439,7 @@ class ActivityRecordControllerDocsTest {
                         "친구",
                         "https://storage.example.com/profiles/member-2.jpg",
                         "좋다",
+                        java.time.LocalDateTime.of(2026, 11, 8, 13, 50),
                         false
                     ),
                     new CommentResult(
@@ -440,7 +447,8 @@ class ActivityRecordControllerDocsTest {
                         1L,
                         "민석",
                         "https://storage.example.com/profiles/member-1.jpg",
-                        "고마워",
+                        ":mody-clap:",
+                        java.time.LocalDateTime.of(2026, 11, 8, 13, 54),
                         true
                     )
                 ),
@@ -477,7 +485,10 @@ class ActivityRecordControllerDocsTest {
                             .description("댓글 작성자 프로필 이미지"),
                         fieldWithPath("result.comments[].content")
                             .type(JsonFieldType.STRING)
-                            .description("댓글 내용"),
+                            .description("댓글 내용. 모디 스티커는 앱이 보낸 :mody-xxx: 텍스트가 그대로 담긴다"),
+                        fieldWithPath("result.comments[].createdAt")
+                            .type(JsonFieldType.STRING)
+                            .description("댓글 작성 시각"),
                         fieldWithPath("result.comments[].isMine")
                             .type(JsonFieldType.BOOLEAN)
                             .description("현재 로그인한 회원이 작성한 댓글 여부"),
@@ -847,6 +858,37 @@ class ActivityRecordControllerDocsTest {
     }
 
     @Test
+    void deleteComment() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(delete("/api/v1/groups/{groupId}/records/{recordId}/comments/{commentId}", 1L, 1L, 10L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isOk())
+            .andDo(document("record-comment-delete",
+                resource(ResourceSnippetParameters.builder()
+                    .tag("Feed")
+                    .summary("기록 댓글 삭제")
+                    .description("작성자 본인의 댓글을 삭제한다. 삭제된 댓글은 목록에서 빠진다.")
+                    .responseFields(commonResponseFields())
+                    .build())
+            ));
+    }
+
+    @Test
+    void deleteCommentNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.RECORD_COMMENT_NOT_FOUND))
+            .given(activityRecordService)
+            .deleteComment(1L, 1L, 1L, 10L);
+
+        mockMvc.perform(delete("/api/v1/groups/{groupId}/records/{recordId}/comments/{commentId}", 1L, 1L, 10L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.code").value(ErrorStatus.RECORD_COMMENT_NOT_FOUND.getCode()))
+            .andDo(documentError("record-comment-delete-not-found", "기록 댓글 삭제"));
+    }
+
+    @Test
     void createRecordValidationError() throws Exception {
         given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
 
@@ -1045,7 +1087,7 @@ class ActivityRecordControllerDocsTest {
                     .requestFields(
                         fieldWithPath("content")
                             .type(JsonFieldType.STRING)
-                            .description("댓글 내용. 100자 이하")
+                            .description("댓글 내용. 200자 이하. 모디 스티커는 :mody-xxx: 텍스트로 보낸다")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.commentId").type(JsonFieldType.NUMBER).description("댓글 id"),
