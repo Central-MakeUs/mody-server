@@ -66,7 +66,7 @@ final class ValidationErrorStatusResolver {
         Map.entry("운동 분은 59분 이하로 입력해주세요.", ErrorStatus.RECORD_EXERCISE_DURATION_INVALID),
         Map.entry("운동명은 30자 이하로 입력해주세요.", ErrorStatus.RECORD_EXERCISE_PAYLOAD_INVALID),
         Map.entry("댓글 내용은 필수입니다.", ErrorStatus.RECORD_COMMENT_INVALID),
-        Map.entry("댓글은 100자 이하로 입력해주세요.", ErrorStatus.RECORD_COMMENT_INVALID)
+        Map.entry("댓글은 200자 이하로 입력해주세요.", ErrorStatus.RECORD_COMMENT_INVALID)
     );
 
     private ValidationErrorStatusResolver() {

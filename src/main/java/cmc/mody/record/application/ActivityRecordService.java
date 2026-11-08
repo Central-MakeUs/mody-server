@@ -131,7 +131,8 @@ public class ActivityRecordService {
             cursor,
             size,
             recordWriter.getDisplayNickname(),
-            recordWriter.getDisplayProfileImageKey()
+            recordWriter.getDisplayProfileImageKey(),
+            memberId.equals(record.getMemberId())
         );
     }
 
@@ -270,6 +271,18 @@ public class ActivityRecordService {
         return new CommentCreateResult(savedComment.getId(), recordId);
     }
 
+    @Transactional
+    public void deleteComment(Long memberId, Long groupId, Long recordId, Long commentId) {
+        getMember(memberId);
+        getAccessibleRecord(memberId, groupId, recordId);
+        RecordComment comment = recordCommentRepository.findById(commentId)
+            .filter(RecordComment::isActive)
+            .filter(found -> recordId.equals(found.getRecordId()) && groupId.equals(found.getGroupId()))
+            .filter(found -> memberId.equals(found.getMemberId()))
+            .orElseThrow(() -> new GeneralException(ErrorStatus.RECORD_COMMENT_NOT_FOUND));
+        comment.delete();
+    }
+
     private ActivityRecord getAccessibleRecord(Long memberId, Long groupId, Long recordId) {
         validateGroupMembership(memberId, groupId);
         ActivityRecord record = activityRecordRepository.findById(recordId)
@@ -286,7 +299,8 @@ public class ActivityRecordService {
         Long cursor,
         int size,
         String nickname,
-        String profileImageKey
+        String profileImageKey,
+        boolean isMine
     ) {
         LocalDate recordDate = record.getUploadedAt().toLocalDate();
         int pageSize = normalizeSize(size);
@@ -306,7 +320,7 @@ public class ActivityRecordService {
         List<ActivityRecord> pageRecords = hasNext ? foundRecords.subList(0, pageSize) : foundRecords;
 
         List<RecordDetailResult> records = pageRecords.stream()
-            .map(found -> toRecordDetail(found, nickname, profileImageKey))
+            .map(found -> toRecordDetail(found, nickname, profileImageKey, isMine))
             .toList();
 
         long totalCount = activityRecordRepository.countActiveRecordsForDetailCarousel(
@@ -333,7 +347,12 @@ public class ActivityRecordService {
         return new RecordDetailPageResult((int) totalCount, currentIndex, records, nextCursor, hasNext);
     }
 
-    private RecordDetailResult toRecordDetail(ActivityRecord record, String nickname, String profileImageKey) {
+    private RecordDetailResult toRecordDetail(
+        ActivityRecord record,
+        String nickname,
+        String profileImageKey,
+        boolean isMine
+    ) {
         return new RecordDetailResult(
             record.getId(),
             record.getRecordType(),
@@ -345,7 +364,8 @@ public class ActivityRecordService {
             record.getExerciseDurationMinutes(),
             record.getExerciseName(),
             imageUrlResolver.resolve(record.getImageKey()),
-            ImageCropRegionResult.from(record)
+            ImageCropRegionResult.from(record),
+            isMine
         );
     }
 
@@ -361,6 +381,7 @@ public class ActivityRecordService {
                 currentMember.getNickname(),
                 imageUrlResolver.resolve(currentMember.getProfileImageKey()),
                 comment.getContent(),
+                comment.getCreatedAt(),
                 true
             );
         }
@@ -375,6 +396,7 @@ public class ActivityRecordService {
             groupMember.getDisplayNickname(),
             imageUrlResolver.resolve(groupMember.getDisplayProfileImageKey()),
             comment.getContent(),
+            comment.getCreatedAt(),
             comment.getMemberId().equals(currentMember.getId())
         );
     }
@@ -564,7 +586,8 @@ public class ActivityRecordService {
         Integer exerciseDurationMinutes,
         String exerciseName,
         String imageUrl,
-        ImageCropRegionResult imageCropRegion
+        ImageCropRegionResult imageCropRegion,
+        boolean isMine
     ) {
     }
 
@@ -607,6 +630,7 @@ public class ActivityRecordService {
         String nickname,
         String profileImageUrl,
         String content,
+        LocalDateTime createdAt,
         boolean isMine
     ) {
     }
