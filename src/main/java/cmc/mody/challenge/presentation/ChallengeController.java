@@ -560,17 +560,28 @@ public class ChallengeController {
         @Digits(integer = 1, fraction = 17, message = "이미지 관심 영역 height는 정규화 소수로 입력해주세요.")
         BigDecimal height
     ) {
+        // 클라이언트 크롭 화면의 부동소수점 오차로 경계를 살짝 넘는 값은 허용하고 이미지 경계에 맞춰 저장한다.
+        private static final BigDecimal REGION_TOLERANCE = new BigDecimal("0.01");
+
         @AssertTrue(message = "이미지 관심 영역은 원본 이미지의 정규화 좌표 범위를 벗어날 수 없습니다.")
         public boolean isRegionInsideImage() {
             if (x == null || y == null || width == null || height == null) {
                 return true;
             }
-            return x.add(width).compareTo(BigDecimal.ONE) <= 0
-                && y.add(height).compareTo(BigDecimal.ONE) <= 0;
+            return isInsideImage(x, width) && isInsideImage(y, height);
         }
 
         public WeeklyChallengeService.ImageCropRegionCommand toCommand() {
-            return new WeeklyChallengeService.ImageCropRegionCommand(x, y, width, height);
+            return new WeeklyChallengeService.ImageCropRegionCommand(x, y, fitInsideImage(x, width), fitInsideImage(y, height));
+        }
+
+        private static boolean isInsideImage(BigDecimal start, BigDecimal length) {
+            return start.compareTo(BigDecimal.ONE) < 0
+                && start.add(length).compareTo(BigDecimal.ONE.add(REGION_TOLERANCE)) <= 0;
+        }
+
+        private static BigDecimal fitInsideImage(BigDecimal start, BigDecimal length) {
+            return length.min(BigDecimal.ONE.subtract(start));
         }
     }
 
