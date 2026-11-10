@@ -8,8 +8,10 @@ import java.time.LocalDate;
 import java.util.Locale;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UploadService {
@@ -23,6 +25,7 @@ public class UploadService {
         String extension = extractExtension(fileName);
         String imageKey = createImageKey(memberId, uploadDomain, extension);
         PresignedUrlIssueResult issued = presignedUrlIssuer.issue(imageKey);
+        log.info("presigned url issued domain={} imageKey={}", uploadDomain, imageKey);
         return new PresignedUrlResult(issued.presignedUrl(), imageKey, issued.expiresInSeconds());
     }
 

@@ -4,10 +4,12 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @ConditionalOnProperty(prefix = "notification.dispatch", name = "enabled", havingValue = "true")
 public class NotificationDispatchScheduler {
@@ -34,6 +36,7 @@ public class NotificationDispatchScheduler {
         if (notificationIds.isEmpty()) {
             return;
         }
+        log.info("notification dispatch claimed count={}", notificationIds.size());
         notificationIds.forEach(notificationSender::sendAsync);
     }
 

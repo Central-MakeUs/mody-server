@@ -48,9 +48,11 @@ import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MypageService {
@@ -172,6 +174,7 @@ public class MypageService {
         deleteRecordViewHistories(memberId);
         deleteChallengeData(memberId);
         member.delete();
+        log.info("member withdrawn memberId={}", memberId);
     }
 
     @Transactional(readOnly = true)
@@ -248,6 +251,7 @@ public class MypageService {
         deleteGroupRecordViewHistories(memberId, groupId);
         deleteGroupChallengeData(memberId, groupId);
         groupMember.leave(LocalDateTime.now());
+        log.info("group left groupId={}", groupId);
     }
 
     private Member getMember(Long memberId) {

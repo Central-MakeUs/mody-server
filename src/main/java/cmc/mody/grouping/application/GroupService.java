@@ -26,9 +26,11 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class GroupService {
@@ -73,6 +75,7 @@ public class GroupService {
         globalWeeklyChallengeService.initializeForNewGroup(group.getId());
         member.completeGroupOnboarding();
 
+        log.info("group created groupId={}", group.getId());
         return new GroupCreateResult(group.getId(), group.getCode(), group.getName());
     }
 
@@ -103,6 +106,7 @@ public class GroupService {
             member.getId(),
             member.getNickname()
         );
+        log.info("group joined groupId={} memberCount={}", group.getId(), memberCount);
         return new GroupJoinResult(group.getId(), group.getCode(), group.getName(), memberCount);
     }
 
@@ -140,6 +144,7 @@ public class GroupService {
             .orElseThrow(() -> new GeneralException(ErrorStatus.GROUP_MEMBER_NOT_FOUND));
         deleteGroupRecordsAndComments(memberId, groupId);
         groupMember.leave(LocalDateTime.now());
+        log.info("group left groupId={}", groupId);
     }
 
     private Member getMember(Long memberId) {

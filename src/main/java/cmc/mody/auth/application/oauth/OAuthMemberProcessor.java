@@ -12,10 +12,12 @@ import cmc.mody.member.domain.SocialAccount;
 import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.member.infrastructure.repository.SocialAccountRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OAuthMemberProcessor {
@@ -66,6 +68,7 @@ public class OAuthMemberProcessor {
             profile.loginType(),
             profile.providerUserId()
         ));
+        log.info("member signed up memberId={} loginType={}", memberId, profile.loginType());
         return new OAuthMemberResult(memberId, false, false, false);
     }
 

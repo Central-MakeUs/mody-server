@@ -15,9 +15,11 @@ import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.report.domain.RecordReport;
 import cmc.mody.report.infrastructure.repository.RecordReportRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RecordReportService {
@@ -45,6 +47,7 @@ public class RecordReportService {
             memberId,
             recordId
         ));
+        log.info("record reported reportId={} recordId={}", savedReport.getId(), recordId);
         return RecordReportResult.from(savedReport);
     }
 

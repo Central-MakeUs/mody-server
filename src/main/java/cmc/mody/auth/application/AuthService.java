@@ -6,10 +6,12 @@ import cmc.mody.auth.presentation.dto.TokenDto;
 import cmc.mody.notification.application.NotificationPushTokenService;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -37,6 +39,7 @@ public class AuthService {
                 Long memberId = tokenProvider.getMemberIdByRefreshToken(refreshToken);
                 refreshTokenService.delete(memberId, refreshToken);
                 notificationPushTokenService.disableAll(memberId);
+                log.info("logout memberId={}", memberId);
             });
             return null;
         });

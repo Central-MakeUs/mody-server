@@ -6,7 +6,9 @@ import static cmc.mody.auth.infrastructure.constants.JwtConstants.BEARER_PREFIX;
 import cmc.mody.auth.application.token.TokenProvider;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
+import cmc.mody.common.logging.LogKeys;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.core.MethodParameter;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -31,7 +33,9 @@ public class CurrentMemberArgumentResolver implements HandlerMethodArgumentResol
         NativeWebRequest webRequest,
         WebDataBinderFactory binderFactory
     ) {
-        return tokenProvider.getMemberIdByAccessToken(extractToken(webRequest));
+        Long memberId = tokenProvider.getMemberIdByAccessToken(extractToken(webRequest));
+        MDC.put(LogKeys.MEMBER_ID, String.valueOf(memberId));
+        return memberId;
     }
 
     private String extractToken(NativeWebRequest webRequest) {

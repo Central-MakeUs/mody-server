@@ -6,8 +6,10 @@
 monitoring/
 ├── grafana/dashboards/      # 대시보드 3종 (비즈니스, 성능, 사용자 지표)
 ├── server/                  # 운영 서버 상주 스택 (기본)
-│   ├── docker-compose.yml   # Prometheus, Grafana, mysqld-exporter, node-exporter
+│   ├── docker-compose.yml   # Prometheus, Grafana, Loki, Alloy, mysqld-exporter, node-exporter
 │   ├── prometheus.yml       # blue/green 앱, MySQL, 호스트를 15~30초 주기로 수집
+│   ├── loki.yml             # 로그 저장소 (파일시스템, 14일 보관)
+│   ├── alloy.alloy          # 앱 컨테이너·호스트 nginx 로그 수집
 │   └── provisioning/
 └── local/                   # 예전 로컬 실행용 스택 (GCP e2-micro 시절)
 ```
@@ -20,6 +22,32 @@ monitoring/
 - 팀 공유용 조회 전용 계정 `mody-team`(Viewer)이 있다. 비밀번호는 서버 `monitoring.env`의 `GRAFANA_VIEWER_PASSWORD`.
 - **MODY 사용자 지표**는 관리 화면 `/admin/stats`와 같은 정의(식사·운동 기록, 챌린지 인증, 댓글)로 DAU/WAU/MAU, 가입 퍼널, 주간 코호트 리텐션을 보여준다.
 - Prometheus는 서버의 `127.0.0.1:9090`에만 열려 있다. 필요하면 `ssh -N -L 9090:127.0.0.1:9090 mody-prod`로 본다.
+
+## 로그 (Loki)
+
+Grafana **Explore → Loki**에서 본다. 앱 로그는 블루그린 배포로 컨테이너가 바뀌어도 14일 동안 남는다.
+
+| 라벨 | 값 |
+| --- | --- |
+| `service` | `mody-server`, `nginx` |
+| `container` | `mody-web-blue`, `mody-web-green` |
+| `level` | `INFO`, `WARN`, `ERROR` (앱만) |
+| `stream` | `access`, `error` (nginx만) |
+
+앱 로그 한 줄에는 `rid`(요청 ID)와 `mid`(회원 ID)가 붙는다. 응답 헤더 `X-Request-Id`가 `rid`와 같다.
+
+```logql
+{service="mody-server", level="ERROR"}                       # 에러
+{service="mody-server"} |= "mid=123456789"                   # 특정 회원의 요청 흐름
+{service="mody-server"} |= "rid=1a2b3c4d"                    # 한 요청의 로그 전부
+{service="mody-server"} |= "access" |~ "status=(4|5)\\d\\d"   # 실패한 요청
+{service="mody-server"} |= "Validation failed"               # 입력 검증 실패 (필드·거절값 포함)
+{service="nginx", stream="access"} |~ "\" 5\\d\\d "             # nginx 5xx
+```
+
+주요 이벤트 로그: `login`, `member signed up`, `member withdrawn`, `record created/deleted`,
+`comment created/deleted`, `group created/joined/left`, `record reported`, `weekly challenge proved`,
+`presigned url issued`, `push token registered/disabled`, `notification sent`.
 
 ## 서버 배포
 
