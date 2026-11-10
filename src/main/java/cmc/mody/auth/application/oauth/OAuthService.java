@@ -7,8 +7,10 @@ import cmc.mody.auth.application.token.TokenProvider;
 import cmc.mody.auth.presentation.dto.TokenDto;
 import cmc.mody.member.domain.LoginType;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OAuthService {
@@ -35,6 +37,8 @@ public class OAuthService {
         OAuthMemberResult result = memberProcessor.ensure(profile);
         TokenDto token = tokenProvider.createToken(result.memberId());
         refreshTokenService.replace(result.memberId(), token.refreshToken());
+        log.info("login memberId={} loginType={} personalInfoCompleted={} mainAccessible={}",
+            result.memberId(), profile.loginType(), result.personalInfoCompleted(), result.mainAccessible());
         return TokenDto.of(
             result.memberId(),
             token.accessToken(),

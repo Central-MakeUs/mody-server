@@ -1,0 +1,80 @@
+// 운영 서버의 앱 컨테이너 로그와 호스트 nginx 로그를 Loki로 보낸다.
+// 블루그린 배포로 컨테이너가 바뀌어도 이름 패턴으로 다시 붙는다.
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "mody" {
+  targets = discovery.docker.containers.targets
+
+  // 앱(mody-web-blue/green)만 수집한다.
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/mody-web-.*"
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    target_label = "service"
+    replacement  = "mody-server"
+  }
+}
+
+loki.source.docker "mody" {
+  host             = "unix:///var/run/docker.sock"
+  targets          = discovery.relabel.mody.output
+  forward_to       = [loki.process.mody.receiver]
+  refresh_interval = "10s"
+}
+
+// nginx 는 호스트 systemd 서비스라 로그 파일을 직접 읽는다.
+local.file_match "nginx" {
+  path_targets = [
+    {"__path__" = "/var/log/nginx/access.log", "service" = "nginx", "stream" = "access"},
+    {"__path__" = "/var/log/nginx/error.log", "service" = "nginx", "stream" = "error"},
+  ]
+}
+
+loki.source.file "nginx" {
+  targets    = local.file_match.nginx.targets
+  forward_to = [loki.process.mody.receiver]
+}
+
+loki.process "mody" {
+  // 스프링 로그 첫 줄에서 레벨을 뽑아 라벨로 쓴다. 스택트레이스는 앞 줄에 붙인다.
+  stage.match {
+    selector = "{service=\"mody-server\"}"
+
+    stage.multiline {
+      firstline     = "^\\d{4}-\\d{2}-\\d{2}T"
+      max_wait_time = "3s"
+    }
+
+    stage.regex {
+      expression = "^\\S+\\s+(?P<level>[A-Z]+)\\s"
+    }
+
+    stage.labels {
+      values = { level = "" }
+    }
+  }
+
+  stage.static_labels {
+    values = { env = "prod" }
+  }
+
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

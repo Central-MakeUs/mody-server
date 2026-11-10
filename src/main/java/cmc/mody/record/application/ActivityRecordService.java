@@ -33,10 +33,12 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ActivityRecordService {
@@ -228,6 +230,8 @@ public class ActivityRecordService {
                 joinedGroup.getDisplayNickname() == null ? member.getNickname() : joinedGroup.getDisplayNickname()
             );
         }
+        log.info("record created recordId={} type={} groupIds={} imageKey={} crop={}",
+            savedRecord.getId(), command.recordType(), groupIds, command.imageKey(), command.imageCropRegion());
         return new RecordCreateResult(savedRecord.getId(), groupIds);
     }
 
@@ -245,6 +249,7 @@ public class ActivityRecordService {
             .forEach(ActivityRecordGroup::delete);
         record.delete();
         notificationRequestService.cancelBuddyRecordCreated(recordId);
+        log.info("record deleted recordId={}", recordId);
     }
 
     @Transactional
@@ -268,6 +273,8 @@ public class ActivityRecordService {
             command.content().trim()
         ));
         notificationRequestService.requestCommentCreated(recordId, memberId, commenterNickname);
+        log.info("comment created commentId={} recordId={} groupId={} length={}",
+            savedComment.getId(), recordId, groupId, savedComment.getContent().length());
         return new CommentCreateResult(savedComment.getId(), recordId);
     }
 
@@ -281,6 +288,7 @@ public class ActivityRecordService {
             .filter(found -> memberId.equals(found.getMemberId()))
             .orElseThrow(() -> new GeneralException(ErrorStatus.RECORD_COMMENT_NOT_FOUND));
         comment.delete();
+        log.info("comment deleted commentId={} recordId={} groupId={}", commentId, recordId, groupId);
     }
 
     private ActivityRecord getAccessibleRecord(Long memberId, Long groupId, Long recordId) {

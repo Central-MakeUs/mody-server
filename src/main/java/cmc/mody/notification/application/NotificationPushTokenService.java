@@ -10,9 +10,11 @@ import cmc.mody.notification.domain.PushPlatform;
 import cmc.mody.notification.infrastructure.repository.MemberPushTokenRepository;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationPushTokenService {
@@ -32,6 +34,7 @@ public class NotificationPushTokenService {
             command.fcmToken(),
             LocalDateTime.now()
         );
+        log.info("push token registered deviceId={} platform={}", command.deviceId(), command.platform());
     }
 
     @Transactional
@@ -39,6 +42,7 @@ public class NotificationPushTokenService {
         getMember(memberId);
         memberPushTokenRepository.findByMemberIdAndDeviceIdAndDeletedAtIsNull(memberId, command.deviceId())
             .ifPresent(MemberPushToken::disable);
+        log.info("push token disabled deviceId={}", command.deviceId());
     }
 
     @Transactional

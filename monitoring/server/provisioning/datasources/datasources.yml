@@ -10,6 +10,20 @@ datasources:
     jsonData:
       timeInterval: 15s
 
+  - name: Loki
+    type: loki
+    uid: mody-loki
+    access: proxy
+    url: http://loki:3100
+    jsonData:
+      maxLines: 1000
+      # 로그의 rid 로 같은 요청의 로그를 바로 모아 본다.
+      derivedFields:
+        - name: requestId
+          matcherRegex: "rid=([A-Za-z0-9-]+)"
+          url: '{service="mody-server"} |= "rid=$${__value.raw}"'
+          datasourceUid: mody-loki
+
   - name: MySQL
     type: mysql
     uid: mody-mysql

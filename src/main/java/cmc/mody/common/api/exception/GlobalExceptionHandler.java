@@ -4,6 +4,7 @@ import cmc.mody.common.api.ApiResponse;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.alert.ServerErrorAlertService;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
@@ -28,7 +29,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(GeneralException.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneralException(GeneralException e, HttpServletRequest request) {
-        log.warn("GeneralException: {}", e.getMessage());
+        log.warn("GeneralException code={} status={} path={} message={}",
+            e.getStatus().getCode(), e.getStatus().getHttpStatus(), describe(request), e.getMessage());
         notifyIfServerError(e, request, e.getStatus().getHttpStatus(), e.getStatus().getCode());
         return ResponseEntity
             .status(e.getStatus().getHttpStatus())
@@ -40,11 +42,30 @@ public class GlobalExceptionHandler {
         MethodArgumentNotValidException e,
         HttpServletRequest request
     ) {
-        log.warn("Validation failed: {}", e.getBindingResult().getFieldErrors());
+        log.warn("Validation failed path={} errors={}", describe(request), summarize(e));
         ErrorStatus status = ValidationErrorStatusResolver.resolve(e, resolveValidationStatus(request));
         return ResponseEntity
             .badRequest()
             .body(ApiResponse.failure(status));
+    }
+
+    private String describe(HttpServletRequest request) {
+        return request.getMethod() + " " + request.getRequestURI();
+    }
+
+    private String summarize(MethodArgumentNotValidException e) {
+        return e.getBindingResult().getFieldErrors().stream()
+            .map(error -> "%s(rejected=%s, %s)".formatted(
+                error.getField(),
+                abbreviate(error.getRejectedValue()),
+                error.getDefaultMessage()
+            ))
+            .collect(Collectors.joining("; "));
+    }
+
+    private String abbreviate(Object value) {
+        String text = String.valueOf(value);
+        return text.length() <= 60 ? text : text.substring(0, 60) + "...(" + text.length() + ")";
     }
 
     private ErrorStatus resolveValidationStatus(HttpServletRequest request) {
@@ -75,7 +96,8 @@ public class GlobalExceptionHandler {
         HttpMessageNotReadableException e,
         HttpServletRequest request
     ) {
-        log.warn("Request body is not readable: {}", e.getMessage());
+        log.warn("Request body is not readable path={} reason={}",
+            describe(request), e.getMostSpecificCause().getMessage());
         return ResponseEntity
             .badRequest()
             .body(ApiResponse.failure(resolveValidationStatus(request)));
@@ -96,7 +118,8 @@ public class GlobalExceptionHandler {
         MethodArgumentTypeMismatchException e,
         HttpServletRequest request
     ) {
-        log.warn("Request parameter type mismatch: name={}, value={}", e.getName(), e.getValue());
+        log.warn("Request parameter type mismatch path={} name={} value={}",
+            describe(request), e.getName(), e.getValue());
         return ResponseEntity
             .badRequest()
             .body(ApiResponse.failure(resolveValidationStatus(request)));
@@ -130,7 +153,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e, HttpServletRequest request) {
-        log.error("Unhandled exception", e);
+        log.error("Unhandled exception path={}", describe(request), e);
         notifyIfServerError(
             e,
             request,

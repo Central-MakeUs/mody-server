@@ -73,6 +73,37 @@ services:
       - /:/host:ro,rslave
     networks: [mody-network]
 
+  loki:
+    image: grafana/loki:3.3.2
+    container_name: mody-loki
+    restart: unless-stopped
+    command:
+      - -config.file=/etc/loki/loki.yml
+    volumes:
+      - ./loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+    ports:
+      - "127.0.0.1:3100:3100"
+    networks: [mody-network]
+
+  # 도커 소켓으로 앱 컨테이너 로그를, /var/log/nginx 로 호스트 nginx 로그를 읽어 Loki로 보낸다.
+  alloy:
+    image: grafana/alloy:v1.5.1
+    container_name: mody-alloy
+    restart: unless-stopped
+    depends_on:
+      - loki
+    command:
+      - run
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    volumes:
+      - ./alloy.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log/nginx:/var/log/nginx:ro
+      - alloy-data:/var/lib/alloy/data
+    networks: [mody-network]
+
 networks:
   mody-network:
     external: true
@@ -81,3 +112,5 @@ networks:
 volumes:
   prometheus-data:
   grafana-data:
+  loki-data:
+  alloy-data:

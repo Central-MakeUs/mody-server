@@ -62,11 +62,16 @@ public class NotificationSender {
                 .map(MemberPushToken::getFcmToken)
                 .distinct()
                 .toList();
+            int invalidTokenCount = 0;
             if (!tokens.isEmpty()) {
                 PushNotificationResult result = pushNotificationClient.send(notification, tokens);
                 disableInvalidTokens(result);
+                invalidTokenCount = result.invalidTokens().size();
             }
             notification.markSent(LocalDateTime.now());
+            log.info("notification sent notificationId={} type={} receiverId={} tokens={} invalidTokens={}",
+                notification.getId(), notification.getNotificationType(), notification.getReceiverMemberId(),
+                tokens.size(), invalidTokenCount);
         } catch (RuntimeException exception) {
             handleFailure(notification, exception);
         }
