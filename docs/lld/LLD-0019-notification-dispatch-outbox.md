@@ -195,6 +195,7 @@ public record NotificationRequestedEvent(
 - 식사 기록의 `먹지 않음`도 해당 식사 기록 완료로 인정한다.
 - 운동 알림은 회원이 등록한 요일-시간 일정에 맞춰 발송한다.
 - 운동 일정은 최소 개수 제한 없이 회원이 등록한 목록을 기준으로 한다.
+- 댓글 알림은 댓글 1건당 기록 작성자에게 1회 발송한다. 같은 기록에 댓글이 여러 개 달려도 댓글마다 보낸다.
 - 댓글 알림은 작성자 본인이 자기 기록에 댓글을 단 경우 발송하지 않는다.
 - 버디 찌르기는 같은 대상에게 하루 1회만 발송한다.
 - 그룹 연속 기록 위험 알림은 미기록자 본인에게만 하루 1회 발송한다.
@@ -203,7 +204,7 @@ public record NotificationRequestedEvent(
 - 버디 기록 알림은 게시물 1건당 수신자에게 1회 발송한다. 여러 그룹을 함께 쓰는 버디에게도 한 번만 보낸다.
 - 버디 기록 알림은 00:00~05:00(KST)에 올라온 기록이면 만들지 않고, 나중에 몰아서 보내지도 않는다.
 - 버디 기록 알림은 별도 토글 없이 챌린지 알림 토글을 따른다.
-- 같은 작성자의 버디 기록 알림은 수신자마다 `throttle`(기본 10분) 동안 한 번만 만든다. 첫 알림은 바로 보내고, 그 안에 올라온 기록은 알림을 만들지 않는다. 지우고 다시 올린 기록도 같은 기준을 따른다. 발송 전에 취소된 알림은 기준에서 뺀다.
+- 버디 기록 알림은 연달아 올라와도 묶지 않는다(알림 정책 5-1, Phase3 1차는 게시물 단위). 묶음 알림은 사용 데이터를 본 뒤 다시 검토한다.
 - 기록을 삭제하면 그 기록의 버디 기록 알림을 소프트 삭제한다. 아직 발송 전이면 발송되지 않고, 알림함에서도 사라진다.
 - 푸시 발송에 실패해도 앱 내 알림 row는 유지한다.
 - 읽음 상태와 푸시 발송 상태는 독립적으로 관리한다.
@@ -294,7 +295,7 @@ push token은 소프트 삭제하지 않는다. 탈퇴 시에도 하드 삭제�
 `dedupeKey` 예시:
 
 ```text
-COMMENT:RECORD:recordId:receiverMemberId
+COMMENT_CREATED:COMMENT:commentId:receiverMemberId
 CHALLENGE:GROUP_CHALLENGE:challengeId:receiverMemberId
 RECORD_REMINDER:DATE:memberId:recordType:yyyyMMdd
 GROUP_RECORD_STREAK_RISK:DATE:memberId:groupId:yyyyMMdd
@@ -427,7 +428,6 @@ notification:
     enabled: false
     quiet-start: "00:00"
     quiet-end: "05:00"
-    throttle: 10m
   token-alert:
     enabled: true
     threshold: 20

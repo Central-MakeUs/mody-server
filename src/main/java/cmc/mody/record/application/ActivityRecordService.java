@@ -272,7 +272,7 @@ public class ActivityRecordService {
             memberId,
             command.content().trim()
         ));
-        notificationRequestService.requestCommentCreated(recordId, memberId, commenterNickname);
+        notificationRequestService.requestCommentCreated(recordId, commentId, memberId, commenterNickname);
         log.info("comment created commentId={} recordId={} groupId={} length={}",
             savedComment.getId(), recordId, groupId, savedComment.getContent().length());
         return new CommentCreateResult(savedComment.getId(), recordId);

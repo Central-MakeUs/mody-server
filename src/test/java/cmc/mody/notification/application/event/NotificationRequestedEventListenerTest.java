@@ -8,7 +8,6 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 
 import cmc.mody.common.id.IdGenerator;
-import cmc.mody.notification.application.NotificationBuddyRecordProperties;
 import cmc.mody.notification.application.NotificationDispatchProperties;
 import cmc.mody.notification.application.NotificationLinkResolver;
 import cmc.mody.notification.application.NotificationRecipientResolver;
@@ -50,7 +49,7 @@ class NotificationRequestedEventListenerTest {
         given(recipientResolver.resolve(event)).willReturn(List.of(1L));
         given(templateRenderer.render(NotificationType.COMMENT_CREATED, event.payload()))
             .willReturn(new NotificationTemplate("댓글", "댓글이 달렸어요"));
-        given(notificationRepository.existsByDedupeKeyAndDeletedAtIsNull("COMMENT_CREATED:RECORD:10:1"))
+        given(notificationRepository.existsByDedupeKeyAndDeletedAtIsNull("COMMENT_CREATED:COMMENT:30:1"))
             .willReturn(false);
         given(linkResolver.resolve(event)).willReturn("/records/10");
         given(idGenerator.nextId()).willReturn(100L);
@@ -60,7 +59,7 @@ class NotificationRequestedEventListenerTest {
         then(notificationRepository).should().insertIfDedupeKeyAbsent(
             eq(100L), eq(1L), eq("COMMENT_CREATED"), eq("댓글"), eq("댓글이 달렸어요"), eq(null),
             eq("RECORD"), eq(10L), eq("/records/10"), any(LocalDateTime.class), eq(3),
-            eq("COMMENT_CREATED:RECORD:10:1")
+            eq("COMMENT_CREATED:COMMENT:30:1")
         );
     }
 
@@ -72,7 +71,7 @@ class NotificationRequestedEventListenerTest {
         given(recipientResolver.resolve(event)).willReturn(List.of(1L));
         given(templateRenderer.render(NotificationType.COMMENT_CREATED, event.payload()))
             .willReturn(new NotificationTemplate("댓글", "댓글이 달렸어요"));
-        given(notificationRepository.existsByDedupeKeyAndDeletedAtIsNull("COMMENT_CREATED:RECORD:10:1"))
+        given(notificationRepository.existsByDedupeKeyAndDeletedAtIsNull("COMMENT_CREATED:COMMENT:30:1"))
             .willReturn(true);
 
         listener.createNotifications(event);
@@ -150,68 +149,23 @@ class NotificationRequestedEventListenerTest {
     }
 
     @Test
-    @DisplayName("같은 버디의 기록 알림을 최근에 받은 수신자에게는 새 버디 기록 알림을 만들지 않는다.")
-    void skipThrottledBuddyRecordReceiver() {
+    @DisplayName("같은 기록에 달린 댓글이라도 댓글마다 알림을 저장한다.")
+    void createNotificationPerComment() {
         NotificationRequestedEventListener listener = listener();
-        NotificationRequestedEvent event = NotificationRequestedEvent.immediate(
-            NotificationType.BUDDY_EXERCISE_RECORDED,
-            Map.of(
-                "groupId", 10L,
-                "recordId", 51L,
-                "writerMemberId", 2L,
-                "nickname", "모나"
-            ),
-            "RECORD",
-            51L
-        );
-        given(recipientResolver.resolve(event)).willReturn(List.of(1L, 3L));
-        given(notificationRepository.findRecentBuddyRecordReceiverMemberIds(
-            eq(List.of(1L, 3L)), eq(2L), eq(51L), any(LocalDateTime.class)
-        )).willReturn(List.of(1L));
-        given(templateRenderer.render(NotificationType.BUDDY_EXERCISE_RECORDED, event.payload()))
-            .willReturn(new NotificationTemplate("모나님이 운동 기록을 남겼어요!", "구경해볼까요?"));
-        given(notificationRepository.existsByDedupeKeyAndDeletedAtIsNull("BUDDY_EXERCISE_RECORDED:RECORD:51:3"))
+        NotificationRequestedEvent event = commentEvent(31L);
+        given(recipientResolver.resolve(event)).willReturn(List.of(1L));
+        given(templateRenderer.render(NotificationType.COMMENT_CREATED, event.payload()))
+            .willReturn(new NotificationTemplate("댓글", "댓글이 달렸어요"));
+        given(notificationRepository.existsByDedupeKeyAndDeletedAtIsNull("COMMENT_CREATED:COMMENT:31:1"))
             .willReturn(false);
-        given(linkResolver.resolve(event)).willReturn("/groups/10/records/51");
+        given(linkResolver.resolve(event)).willReturn("/records/10");
         given(idGenerator.nextId()).willReturn(103L);
 
         listener.createNotifications(event);
 
         then(notificationRepository).should().insertIfDedupeKeyAbsent(
-            eq(103L), eq(3L), eq("BUDDY_EXERCISE_RECORDED"), any(), any(), eq(null), eq("RECORD"), eq(51L),
-            eq("/groups/10/records/51"), any(LocalDateTime.class), eq(3),
-            eq("BUDDY_EXERCISE_RECORDED:RECORD:51:3")
-        );
-        then(notificationRepository).should(never()).insertIfDedupeKeyAbsent(
-            any(), eq(1L), any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), any()
-        );
-    }
-
-    @Test
-    @DisplayName("모든 수신자가 묶음 대상이면 알림을 만들지 않는다.")
-    void skipWhenAllBuddyRecordReceiversThrottled() {
-        NotificationRequestedEventListener listener = listener();
-        NotificationRequestedEvent event = NotificationRequestedEvent.immediate(
-            NotificationType.BUDDY_MEAL_RECORDED,
-            Map.of(
-                "groupId", 10L,
-                "recordId", 52L,
-                "writerMemberId", 2L,
-                "nickname", "모나"
-            ),
-            "RECORD",
-            52L
-        );
-        given(recipientResolver.resolve(event)).willReturn(List.of(1L));
-        given(notificationRepository.findRecentBuddyRecordReceiverMemberIds(
-            eq(List.of(1L)), eq(2L), eq(52L), any(LocalDateTime.class)
-        )).willReturn(List.of(1L));
-
-        listener.createNotifications(event);
-
-        then(templateRenderer).shouldHaveNoInteractions();
-        then(notificationRepository).should(never()).insertIfDedupeKeyAbsent(
-            any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), anyInt(), any()
+            eq(103L), eq(1L), eq("COMMENT_CREATED"), any(), any(), eq(null), eq("RECORD"), eq(10L),
+            eq("/records/10"), any(LocalDateTime.class), eq(3), eq("COMMENT_CREATED:COMMENT:31:1")
         );
     }
 
@@ -224,16 +178,20 @@ class NotificationRequestedEventListenerTest {
             recipientResolver,
             templateRenderer,
             linkResolver,
-            notificationRepository,
-            new NotificationBuddyRecordProperties()
+            notificationRepository
         );
     }
 
     private NotificationRequestedEvent commentEvent() {
+        return commentEvent(30L);
+    }
+
+    private NotificationRequestedEvent commentEvent(Long commentId) {
         return NotificationRequestedEvent.immediate(
             NotificationType.COMMENT_CREATED,
             Map.of(
                 "recordId", 10L,
+                "commentId", commentId,
                 "commenterMemberId", 2L
             ),
             "RECORD",
