@@ -61,13 +61,27 @@ POST /api/v1/records/{recordId}/comments
 }
 ```
 
+응원 이모지 댓글 요청 (#277):
+
+```json
+{
+  "emojiId": "clap"
+}
+```
+
+- `content`와 `emojiId` 중 하나만 보낸다. 둘 다 비었거나 둘 다 있으면 `RECORD309`.
+- `emojiId`는 `clap`, `medal`, `fire`, `heart`, `run`만 허용한다. 그 외는 `RECORD311`.
+- 이미지는 앱에 두고 서버는 id만 저장한다. 이모지 댓글의 `content`는 빈 문자열로 저장한다.
+- 댓글 목록 응답에 `emojiId`를 내려준다. 일반 댓글은 `null`이다.
+- 이전의 `:mody-xxx:` 텍스트 스티커 규칙은 쓰지 않는다.
+
 ## 4. 데이터 모델
 
 - `activity_record`
   - `id`, `group_id`, `member_id`, `record_type`, 기록 필드, `image_key`를 사용한다.
   - `deleted_at is null`인 기록만 조회한다.
 - `record_comment`
-  - `record_id`, `member_id`, `content`를 저장한다.
+  - `record_id`, `member_id`, `content`, `emoji_id`(이모지 댓글만, V25)를 저장한다.
   - `deleted_at is null`인 댓글만 조회한다.
 - `group_member`
   - 요청자와 작성자가 현재 `JOINED` 상태인지 확인한다.

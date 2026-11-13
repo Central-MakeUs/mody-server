@@ -22,7 +22,8 @@ final class ValidationErrorStatusResolver {
         ErrorStatus.RECORD_MEAL_PAYLOAD_INVALID,
         ErrorStatus.RECORD_EXERCISE_PAYLOAD_INVALID,
         ErrorStatus.RECORD_EXERCISE_DURATION_INVALID,
-        ErrorStatus.RECORD_COMMENT_INVALID
+        ErrorStatus.RECORD_COMMENT_INVALID,
+        ErrorStatus.RECORD_COMMENT_EMOJI_INVALID
     );
 
     private static final Map<String, ErrorStatus> STATUS_BY_MESSAGE = Map.ofEntries(
@@ -65,8 +66,9 @@ final class ValidationErrorStatusResolver {
         Map.entry("운동 분은 0분 이상이어야 합니다.", ErrorStatus.RECORD_EXERCISE_DURATION_INVALID),
         Map.entry("운동 분은 59분 이하로 입력해주세요.", ErrorStatus.RECORD_EXERCISE_DURATION_INVALID),
         Map.entry("운동명은 30자 이하로 입력해주세요.", ErrorStatus.RECORD_EXERCISE_PAYLOAD_INVALID),
-        Map.entry("댓글 내용은 필수입니다.", ErrorStatus.RECORD_COMMENT_INVALID),
-        Map.entry("댓글은 200자 이하로 입력해주세요.", ErrorStatus.RECORD_COMMENT_INVALID)
+        Map.entry("댓글은 내용과 이모지 중 하나만 보내주세요.", ErrorStatus.RECORD_COMMENT_INVALID),
+        Map.entry("댓글은 200자 이하로 입력해주세요.", ErrorStatus.RECORD_COMMENT_INVALID),
+        Map.entry("지원하지 않는 댓글 이모지입니다.", ErrorStatus.RECORD_COMMENT_EMOJI_INVALID)
     );
 
     private ValidationErrorStatusResolver() {
