@@ -32,11 +32,19 @@ public class RecordComment extends BaseEntity {
     @Column(nullable = false, length = 200)
     private String content;
 
+    @Column(name = "emoji_id", length = 20)
+    private String emojiId;
+
     public RecordComment(Long id, Long recordId, Long groupId, Long memberId, String content) {
+        this(id, recordId, groupId, memberId, content, null);
+    }
+
+    public RecordComment(Long id, Long recordId, Long groupId, Long memberId, String content, String emojiId) {
         super(id);
         this.recordId = recordId;
         this.groupId = groupId;
         this.memberId = memberId;
         this.content = content;
+        this.emojiId = emojiId;
     }
 }
