@@ -6,6 +6,7 @@ import cmc.mody.record.application.ActivityRecordService;
 import cmc.mody.record.application.ActivityRecordService.CommentCreateCommand;
 import cmc.mody.record.application.ActivityRecordService.ImageCropRegionCommand;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateCommand;
+import cmc.mody.record.domain.CommentEmoji;
 import cmc.mody.record.domain.RecordType;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
@@ -293,6 +294,7 @@ public class ActivityRecordController {
         String nickname,
         String profileImageUrl,
         String content,
+        String emojiId,
         LocalDateTime createdAt,
         boolean isMine
     ) {
@@ -303,6 +305,7 @@ public class ActivityRecordController {
                 result.nickname(),
                 result.profileImageUrl(),
                 result.content(),
+                result.emojiId(),
                 result.createdAt(),
                 result.isMine()
             );
@@ -447,12 +450,23 @@ public class ActivityRecordController {
     }
 
     public record CommentCreateRequest(
-        @NotBlank(message = "댓글 내용은 필수입니다.")
         @Size(max = 200, message = "댓글은 200자 이하로 입력해주세요.")
-        String content
+        String content,
+        String emojiId
     ) {
+        @AssertTrue(message = "댓글은 내용과 이모지 중 하나만 보내주세요.")
+        public boolean isContentOrEmojiOnly() {
+            boolean hasContent = content != null && !content.isBlank();
+            return hasContent != (emojiId != null);
+        }
+
+        @AssertTrue(message = "지원하지 않는 댓글 이모지입니다.")
+        public boolean isEmojiSupported() {
+            return emojiId == null || CommentEmoji.isSupported(emojiId);
+        }
+
         public CommentCreateCommand toCommand() {
-            return new CommentCreateCommand(content);
+            return new CommentCreateCommand(content, emojiId);
         }
     }
 

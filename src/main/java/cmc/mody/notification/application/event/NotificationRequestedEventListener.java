@@ -2,7 +2,6 @@ package cmc.mody.notification.application.event;
 
 import cmc.mody.common.id.IdGenerator;
 import cmc.mody.notification.application.BuddyNudgeDedupeKey;
-import cmc.mody.notification.application.NotificationBuddyRecordProperties;
 import cmc.mody.notification.application.NotificationDispatchProperties;
 import cmc.mody.notification.application.NotificationLinkResolver;
 import cmc.mody.notification.application.NotificationPayload;
@@ -14,10 +13,8 @@ import cmc.mody.notification.domain.NotificationType;
 import cmc.mody.notification.infrastructure.repository.NotificationRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -30,7 +27,6 @@ public class NotificationRequestedEventListener {
     private final NotificationTemplateRenderer templateRenderer;
     private final NotificationLinkResolver linkResolver;
     private final NotificationRepository notificationRepository;
-    private final NotificationBuddyRecordProperties buddyRecordProperties;
 
     public NotificationRequestedEventListener(
         IdGenerator idGenerator,
@@ -38,8 +34,7 @@ public class NotificationRequestedEventListener {
         NotificationRecipientResolver recipientResolver,
         NotificationTemplateRenderer templateRenderer,
         NotificationLinkResolver linkResolver,
-        NotificationRepository notificationRepository,
-        NotificationBuddyRecordProperties buddyRecordProperties
+        NotificationRepository notificationRepository
     ) {
         this.idGenerator = idGenerator;
         this.dispatchProperties = dispatchProperties;
@@ -47,7 +42,6 @@ public class NotificationRequestedEventListener {
         this.templateRenderer = templateRenderer;
         this.linkResolver = linkResolver;
         this.notificationRepository = notificationRepository;
-        this.buddyRecordProperties = buddyRecordProperties;
     }
 
     @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
@@ -56,7 +50,7 @@ public class NotificationRequestedEventListener {
     }
 
     void createNotifications(NotificationRequestedEvent event) {
-        List<Long> receiverMemberIds = excludeThrottledBuddyRecordReceivers(event, recipientResolver.resolve(event));
+        List<Long> receiverMemberIds = recipientResolver.resolve(event);
         if (receiverMemberIds.isEmpty()) {
             return;
         }
@@ -66,31 +60,6 @@ public class NotificationRequestedEventListener {
         for (Long receiverMemberId : receiverMemberIds) {
             saveIfNotDuplicated(event, receiverMemberId, template, scheduledAt);
         }
-    }
-
-    private List<Long> excludeThrottledBuddyRecordReceivers(
-        NotificationRequestedEvent event,
-        List<Long> receiverMemberIds
-    ) {
-        if (receiverMemberIds.isEmpty() || !isBuddyRecord(event.type())) {
-            return receiverMemberIds;
-        }
-        Map<String, Object> payload = event.payload();
-        Set<Long> throttledReceiverMemberIds = new HashSet<>(
-            notificationRepository.findRecentBuddyRecordReceiverMemberIds(
-                receiverMemberIds,
-                NotificationPayload.requireLong(payload, "writerMemberId"),
-                NotificationPayload.requireLong(payload, "recordId"),
-                LocalDateTime.now().minus(buddyRecordProperties.getThrottle())
-            )
-        );
-        return receiverMemberIds.stream()
-            .filter(receiverMemberId -> !throttledReceiverMemberIds.contains(receiverMemberId))
-            .toList();
-    }
-
-    private boolean isBuddyRecord(NotificationType type) {
-        return type == NotificationType.BUDDY_MEAL_RECORDED || type == NotificationType.BUDDY_EXERCISE_RECORDED;
     }
 
     private void saveIfNotDuplicated(
@@ -152,8 +121,8 @@ public class NotificationRequestedEventListener {
             );
             case COMMENT_CREATED -> String.join(":",
                 event.type().name(),
-                "RECORD",
-                NotificationPayload.requireLong(payload, "recordId").toString(),
+                "COMMENT",
+                NotificationPayload.requireLong(payload, "commentId").toString(),
                 receiverMemberId.toString()
             );
             case BUDDY_MEAL_RECORDED, BUDDY_EXERCISE_RECORDED -> String.join(":",

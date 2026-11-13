@@ -270,11 +270,12 @@ public class ActivityRecordService {
             recordId,
             groupId,
             memberId,
-            command.content().trim()
+            command.emojiId() == null ? command.content().trim() : "",
+            command.emojiId()
         ));
-        notificationRequestService.requestCommentCreated(recordId, memberId, commenterNickname);
-        log.info("comment created commentId={} recordId={} groupId={} length={}",
-            savedComment.getId(), recordId, groupId, savedComment.getContent().length());
+        notificationRequestService.requestCommentCreated(recordId, commentId, memberId, commenterNickname);
+        log.info("comment created commentId={} recordId={} groupId={} length={} emojiId={}",
+            savedComment.getId(), recordId, groupId, savedComment.getContent().length(), savedComment.getEmojiId());
         return new CommentCreateResult(savedComment.getId(), recordId);
     }
 
@@ -389,6 +390,7 @@ public class ActivityRecordService {
                 currentMember.getNickname(),
                 imageUrlResolver.resolve(currentMember.getProfileImageKey()),
                 comment.getContent(),
+                comment.getEmojiId(),
                 comment.getCreatedAt(),
                 true
             );
@@ -404,6 +406,7 @@ public class ActivityRecordService {
             groupMember.getDisplayNickname(),
             imageUrlResolver.resolve(groupMember.getDisplayProfileImageKey()),
             comment.getContent(),
+            comment.getEmojiId(),
             comment.getCreatedAt(),
             comment.getMemberId().equals(currentMember.getId())
         );
@@ -539,7 +542,7 @@ public class ActivityRecordService {
     public record RecordCreateResult(Long recordId, List<Long> groupIds) {
     }
 
-    public record CommentCreateCommand(String content) {
+    public record CommentCreateCommand(String content, String emojiId) {
     }
 
     public record CommentCreateResult(Long commentId, Long recordId) {
@@ -638,6 +641,7 @@ public class ActivityRecordService {
         String nickname,
         String profileImageUrl,
         String content,
+        String emojiId,
         LocalDateTime createdAt,
         boolean isMine
     ) {

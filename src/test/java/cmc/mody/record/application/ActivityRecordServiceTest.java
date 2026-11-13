@@ -494,6 +494,42 @@ class ActivityRecordServiceTest {
     @DisplayName("접근 가능한 기록에 댓글을 작성한다.")
     void createComment() {
         ActivityRecordService service = service();
+        givenCommentableRecord();
+
+        ActivityRecordService.CommentCreateResult result = service.createComment(
+            1L,
+            10L,
+            100L,
+            new ActivityRecordService.CommentCreateCommand("  좋다  ", null)
+        );
+
+        assertThat(result.commentId()).isEqualTo(200L);
+        then(recordCommentRepository).should().save(recordCommentCaptor.capture());
+        RecordComment savedComment = recordCommentCaptor.getValue();
+        assertThat(savedComment.getRecordId()).isEqualTo(100L);
+        assertThat(savedComment.getGroupId()).isEqualTo(10L);
+        assertThat(savedComment.getMemberId()).isEqualTo(1L);
+        assertThat(savedComment.getContent()).isEqualTo("좋다");
+        assertThat(savedComment.getEmojiId()).isNull();
+        then(notificationRequestService).should().requestCommentCreated(100L, 200L, 1L, "민석");
+    }
+
+    @Test
+    @DisplayName("응원 이모지 댓글은 내용 없이 이모지 id만 저장한다.")
+    void createEmojiComment() {
+        ActivityRecordService service = service();
+        givenCommentableRecord();
+
+        service.createComment(1L, 10L, 100L, new ActivityRecordService.CommentCreateCommand(null, "clap"));
+
+        then(recordCommentRepository).should().save(recordCommentCaptor.capture());
+        RecordComment savedComment = recordCommentCaptor.getValue();
+        assertThat(savedComment.getContent()).isEmpty();
+        assertThat(savedComment.getEmojiId()).isEqualTo("clap");
+        then(notificationRequestService).should().requestCommentCreated(100L, 200L, 1L, "민석");
+    }
+
+    private void givenCommentableRecord() {
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
         given(activityRecordRepository.findById(100L))
             .willReturn(Optional.of(mealRecord(100L, LocalDateTime.of(2026, 7, 1, 12, 30))));
@@ -519,22 +555,6 @@ class ActivityRecordServiceTest {
         given(idGenerator.nextId()).willReturn(200L);
         given(recordCommentRepository.save(any(RecordComment.class)))
             .willAnswer(invocation -> invocation.getArgument(0));
-
-        ActivityRecordService.CommentCreateResult result = service.createComment(
-            1L,
-            10L,
-            100L,
-            new ActivityRecordService.CommentCreateCommand("  좋다  ")
-        );
-
-        assertThat(result.commentId()).isEqualTo(200L);
-        then(recordCommentRepository).should().save(recordCommentCaptor.capture());
-        RecordComment savedComment = recordCommentCaptor.getValue();
-        assertThat(savedComment.getRecordId()).isEqualTo(100L);
-        assertThat(savedComment.getGroupId()).isEqualTo(10L);
-        assertThat(savedComment.getMemberId()).isEqualTo(1L);
-        assertThat(savedComment.getContent()).isEqualTo("좋다");
-        then(notificationRequestService).should().requestCommentCreated(100L, 1L, "민석");
     }
 
     @Test
@@ -610,7 +630,7 @@ class ActivityRecordServiceTest {
             1L,
             10L,
             100L,
-            new ActivityRecordService.CommentCreateCommand("좋다")
+            new ActivityRecordService.CommentCreateCommand("좋다", null)
         ))
             .isInstanceOfSatisfying(GeneralException.class, exception ->
                 assertThat(exception.getStatus()).isEqualTo(ErrorStatus.RECORD_NOT_FOUND));

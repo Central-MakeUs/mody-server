@@ -46,11 +46,12 @@ public class NotificationRequestService {
         eventPublisher.publishEvent(event);
     }
 
-    public void requestCommentCreated(Long recordId, Long commenterMemberId, String nickname) {
+    public void requestCommentCreated(Long recordId, Long commentId, Long commenterMemberId, String nickname) {
         request(NotificationRequestedEvent.immediate(
             NotificationType.COMMENT_CREATED,
             Map.of(
                 "recordId", recordId,
+                "commentId", commentId,
                 "commenterMemberId", commenterMemberId,
                 "nickname", nickname
             ),

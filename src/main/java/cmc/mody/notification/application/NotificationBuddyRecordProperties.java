@@ -1,6 +1,5 @@
 package cmc.mody.notification.application;
 
-import java.time.Duration;
 import java.time.LocalTime;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -9,7 +8,6 @@ public class NotificationBuddyRecordProperties {
     private boolean enabled = false;
     private LocalTime quietStart = LocalTime.MIDNIGHT;
     private LocalTime quietEnd = LocalTime.of(5, 0);
-    private Duration throttle = Duration.ofMinutes(10);
 
     public boolean isEnabled() {
         return enabled;
@@ -33,14 +31,6 @@ public class NotificationBuddyRecordProperties {
 
     public void setQuietEnd(LocalTime quietEnd) {
         this.quietEnd = quietEnd;
-    }
-
-    public Duration getThrottle() {
-        return throttle;
-    }
-
-    public void setThrottle(Duration throttle) {
-        this.throttle = throttle;
     }
 
     public boolean isQuietTime(LocalTime time) {
