@@ -1140,13 +1140,27 @@ class ActivityRecordControllerDocsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "content": "",
                       "emojiId": "clap"
                     }
                     """))
-            .andExpect(status().isCreated());
+            .andExpect(status().isCreated())
+            .andDo(document("record-comment-create-emoji",
+                resource(ResourceSnippetParameters.builder()
+                    .tag("Feed")
+                    .summary("기록 댓글 작성")
+                    .requestFields(
+                        fieldWithPath("emojiId")
+                            .type(JsonFieldType.STRING)
+                            .description("응원 이모지 id. clap, medal, fire, heart, run 중 하나")
+                    )
+                    .responseFields(commonResponseFields(
+                        fieldWithPath("result.commentId").type(JsonFieldType.NUMBER).description("댓글 id"),
+                        fieldWithPath("result.recordId").type(JsonFieldType.NUMBER).description("기록 id")
+                    ))
+                    .build())
+            ));
         then(activityRecordService).should()
-            .createComment(eq(1L), eq(1L), eq(1L), eq(new CommentCreateCommand("", "clap")));
+            .createComment(eq(1L), eq(1L), eq(1L), eq(new CommentCreateCommand(null, "clap")));
     }
 
     @Test
