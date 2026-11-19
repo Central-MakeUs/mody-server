@@ -529,6 +529,39 @@ class ActivityRecordServiceTest {
         then(notificationRequestService).should().requestCommentCreated(100L, 200L, 1L, "민석");
     }
 
+    @Test
+    @DisplayName("텍스트 사이 이모지 토큰은 내용 그대로 저장한다.")
+    void createInlineEmojiComment() {
+        ActivityRecordService service = service();
+        givenCommentableRecord();
+
+        service.createComment(
+            1L,
+            10L,
+            100L,
+            new ActivityRecordService.CommentCreateCommand(" 오늘도 :fire: 화이팅 :clap: ", null)
+        );
+
+        then(recordCommentRepository).should().save(recordCommentCaptor.capture());
+        RecordComment savedComment = recordCommentCaptor.getValue();
+        assertThat(savedComment.getContent()).isEqualTo("오늘도 :fire: 화이팅 :clap:");
+        assertThat(savedComment.getEmojiId()).isNull();
+    }
+
+    @Test
+    @DisplayName("내용이 이모지 토큰 하나뿐이면 이모지 댓글로 저장한다.")
+    void createSingleEmojiTokenComment() {
+        ActivityRecordService service = service();
+        givenCommentableRecord();
+
+        service.createComment(1L, 10L, 100L, new ActivityRecordService.CommentCreateCommand(" :heart: ", null));
+
+        then(recordCommentRepository).should().save(recordCommentCaptor.capture());
+        RecordComment savedComment = recordCommentCaptor.getValue();
+        assertThat(savedComment.getContent()).isEmpty();
+        assertThat(savedComment.getEmojiId()).isEqualTo("heart");
+    }
+
     private void givenCommentableRecord() {
         given(memberRepository.findById(1L)).willReturn(Optional.of(member()));
         given(activityRecordRepository.findById(100L))

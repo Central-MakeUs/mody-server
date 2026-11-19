@@ -295,6 +295,7 @@ public class ActivityRecordController {
         String profileImageUrl,
         String content,
         String emojiId,
+        boolean emojiOnly,
         LocalDateTime createdAt,
         boolean isMine
     ) {
@@ -306,6 +307,7 @@ public class ActivityRecordController {
                 result.profileImageUrl(),
                 result.content(),
                 result.emojiId(),
+                result.emojiId() != null,
                 result.createdAt(),
                 result.isMine()
             );
