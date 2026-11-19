@@ -81,7 +81,7 @@ POST /api/v1/records/{recordId}/comments
 - `emojiId`는 `clap`, `medal`, `fire`, `heart`, `run`만 허용한다. 그 외는 `RECORD311`.
 - 이미지는 앱에 두고 서버는 id만 저장한다. 이모지 댓글의 `content`는 빈 문자열로 저장한다.
 - 텍스트 사이 이모지는 `content`에 `:id:` 토큰으로 넣는다. 서버는 내용을 그대로 저장하고 그대로 내려준다.
-  - 200자 제한은 토큰 글자를 포함해 센다.
+  - 길이 제한은 500자(V26)이고 토큰 글자를 포함해 센다.
   - 지원하지 않는 토큰(예: `:smile:`)은 막지 않고 일반 텍스트로 둔다. 앱은 아는 id만 이미지로 바꾼다.
 - `content`가 토큰 하나뿐이면(예: `":clap:"`) `emojiId` 요청과 같게 이모지 댓글로 저장한다.
 - 댓글 목록 응답에 `emojiId`와 `emojiOnly`를 내려준다.

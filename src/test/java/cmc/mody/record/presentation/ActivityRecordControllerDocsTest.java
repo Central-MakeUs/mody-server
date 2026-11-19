@@ -1104,7 +1104,7 @@ class ActivityRecordControllerDocsTest {
                         fieldWithPath("content")
                             .type(JsonFieldType.STRING)
                             .optional()
-                            .description("댓글 내용. 200자 이하(토큰 글자 포함). "
+                            .description("댓글 내용. 500자 이하(토큰 글자 포함). "
                                 + "이모지는 :clap: 형식 토큰으로 텍스트 사이에 넣을 수 있다"),
                         fieldWithPath("emojiId")
                             .type(JsonFieldType.STRING)
@@ -1202,6 +1202,18 @@ class ActivityRecordControllerDocsTest {
             ));
         then(activityRecordService).should()
             .createComment(eq(1L), eq(1L), eq(1L), eq(new CommentCreateCommand("오늘도 :fire: 화이팅 :clap:", null)));
+    }
+
+    @Test
+    void createCommentTooLong() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+
+        mockMvc.perform(post("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
+                .header("Authorization", "Bearer access-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"content\": \"" + "가".repeat(501) + "\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(ErrorStatus.RECORD_COMMENT_INVALID.getCode()));
     }
 
     @Test

@@ -29,7 +29,7 @@ public class RecordComment extends BaseEntity {
     @Column(name = "member_id", nullable = false)
     private Long memberId;
 
-    @Column(nullable = false, length = 200)
+    @Column(nullable = false, length = 500)
     private String content;
 
     @Column(name = "emoji_id", length = 20)
