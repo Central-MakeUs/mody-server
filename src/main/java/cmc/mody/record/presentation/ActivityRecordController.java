@@ -6,7 +6,6 @@ import cmc.mody.record.application.ActivityRecordService;
 import cmc.mody.record.application.ActivityRecordService.CommentCreateCommand;
 import cmc.mody.record.application.ActivityRecordService.ImageCropRegionCommand;
 import cmc.mody.record.application.ActivityRecordService.RecordCreateCommand;
-import cmc.mody.record.domain.CommentEmoji;
 import cmc.mody.record.domain.RecordType;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
@@ -452,23 +451,12 @@ public class ActivityRecordController {
     }
 
     public record CommentCreateRequest(
+        @NotBlank(message = "댓글 내용을 입력해주세요.")
         @Size(max = 500, message = "댓글은 500자 이하로 입력해주세요.")
-        String content,
-        String emojiId
+        String content
     ) {
-        @AssertTrue(message = "댓글은 내용과 이모지 중 하나만 보내주세요.")
-        public boolean isContentOrEmojiOnly() {
-            boolean hasContent = content != null && !content.isBlank();
-            return hasContent != (emojiId != null);
-        }
-
-        @AssertTrue(message = "지원하지 않는 댓글 이모지입니다.")
-        public boolean isEmojiSupported() {
-            return emojiId == null || CommentEmoji.isSupported(emojiId);
-        }
-
         public CommentCreateCommand toCommand() {
-            return new CommentCreateCommand(content, emojiId);
+            return new CommentCreateCommand(content);
         }
     }
 

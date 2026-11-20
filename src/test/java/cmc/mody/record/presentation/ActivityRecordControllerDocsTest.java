@@ -88,7 +88,6 @@ class ActivityRecordControllerDocsTest {
         - RECORD308: 운동 시간 범위 오류
         - RECORD309: 댓글 내용 오류
         - RECORD310: 댓글 없음 또는 본인 댓글이 아님
-        - RECORD311: 지원하지 않는 댓글 이모지
         - RECORD302: 기록 없음 또는 접근할 수 없는 기록
         """.formatted(AUTHENTICATED_API, IMAGE_UPLOAD_FLOW, CURSOR_PAGING, RECORD_CREATE_RULES);
 
@@ -1095,21 +1094,15 @@ class ActivityRecordControllerDocsTest {
                     .description("""
                         식사/운동 기록에 댓글을 작성한다.
                         댓글 작성자는 access token의 회원이며, 댓글 목록에서는 isMine으로 본인 댓글 여부를 확인한다.
-                        content와 emojiId 중 하나만 보낸다. 둘 다 비었거나 둘 다 있으면 RECORD309,
-                        지원하지 않는 emojiId는 RECORD311을 반환한다.
-                        텍스트 사이에 이모지를 넣으려면 content에 :mody-clap: 형식 토큰으로 넣는다.
+                        content가 비었거나 500자를 넘으면 RECORD309를 반환한다.
+                        응원 이모지는 content에 :mody-clap: 형식 토큰으로 넣는다.
                         content가 토큰 하나뿐이면(예: ":mody-clap:") 이모지 댓글로 저장한다.
                         """)
                     .requestFields(
                         fieldWithPath("content")
                             .type(JsonFieldType.STRING)
-                            .optional()
                             .description("댓글 내용. 500자 이하(토큰 글자 포함). "
-                                + "이모지는 :mody-clap: 형식 토큰으로 텍스트 사이에 넣을 수 있다"),
-                        fieldWithPath("emojiId")
-                            .type(JsonFieldType.STRING)
-                            .optional()
-                            .description("응원 이모지 id. clap, medal, fire, heart, run 중 하나. 일반 댓글이면 생략")
+                                + "이모지는 :mody-clap: 형식 토큰으로 텍스트 사이에 넣을 수 있다")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.commentId").type(JsonFieldType.NUMBER).description("댓글 id"),
@@ -1147,7 +1140,7 @@ class ActivityRecordControllerDocsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "emojiId": "clap"
+                      "content": ":mody-clap:"
                     }
                     """))
             .andExpect(status().isCreated())
@@ -1156,9 +1149,9 @@ class ActivityRecordControllerDocsTest {
                     .tag("Feed")
                     .summary("기록 댓글 작성")
                     .requestFields(
-                        fieldWithPath("emojiId")
+                        fieldWithPath("content")
                             .type(JsonFieldType.STRING)
-                            .description("응원 이모지 id. clap, medal, fire, heart, run 중 하나")
+                            .description("이모지 토큰 하나. :mody-clap:, :mody-medal:, :mody-fire:, :mody-heart:, :mody-run: 중 하나")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.commentId").type(JsonFieldType.NUMBER).description("댓글 id"),
@@ -1167,7 +1160,7 @@ class ActivityRecordControllerDocsTest {
                     .build())
             ));
         then(activityRecordService).should()
-            .createComment(eq(1L), eq(1L), eq(1L), eq(new CommentCreateCommand(null, "clap")));
+            .createComment(eq(1L), eq(1L), eq(1L), eq(new CommentCreateCommand(":mody-clap:")));
     }
 
     @Test
@@ -1201,7 +1194,7 @@ class ActivityRecordControllerDocsTest {
                     .build())
             ));
         then(activityRecordService).should()
-            .createComment(eq(1L), eq(1L), eq(1L), eq(new CommentCreateCommand("오늘도 :mody-fire: 화이팅 :mody-clap:", null)));
+            .createComment(eq(1L), eq(1L), eq(1L), eq(new CommentCreateCommand("오늘도 :mody-fire: 화이팅 :mody-clap:")));
     }
 
     @Test
@@ -1214,40 +1207,6 @@ class ActivityRecordControllerDocsTest {
                 .content("{\"content\": \"" + "가".repeat(501) + "\"}"))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.code").value(ErrorStatus.RECORD_COMMENT_INVALID.getCode()));
-    }
-
-    @Test
-    void createCommentWithContentAndEmoji() throws Exception {
-        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
-
-        mockMvc.perform(post("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
-                .header("Authorization", "Bearer access-token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {
-                      "content": "좋다",
-                      "emojiId": "clap"
-                    }
-                    """))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.code").value(ErrorStatus.RECORD_COMMENT_INVALID.getCode()));
-    }
-
-    @Test
-    void createCommentWithUnsupportedEmoji() throws Exception {
-        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
-
-        mockMvc.perform(post("/api/v1/groups/{groupId}/records/{recordId}/comments", 1L, 1L)
-                .header("Authorization", "Bearer access-token")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {
-                      "emojiId": "smile"
-                    }
-                    """))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.code").value(ErrorStatus.RECORD_COMMENT_EMOJI_INVALID.getCode()))
-            .andDo(documentError("record-comment-create-emoji-invalid", "기록 댓글 작성"));
     }
 
     @Test
