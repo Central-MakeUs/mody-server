@@ -69,11 +69,25 @@ POST /api/v1/records/{recordId}/comments
 }
 ```
 
+텍스트 사이 이모지 댓글 요청:
+
+```json
+{
+  "content": "오늘도 :fire: 화이팅 :clap:"
+}
+```
+
 - `content`와 `emojiId` 중 하나만 보낸다. 둘 다 비었거나 둘 다 있으면 `RECORD309`.
 - `emojiId`는 `clap`, `medal`, `fire`, `heart`, `run`만 허용한다. 그 외는 `RECORD311`.
 - 이미지는 앱에 두고 서버는 id만 저장한다. 이모지 댓글의 `content`는 빈 문자열로 저장한다.
-- 댓글 목록 응답에 `emojiId`를 내려준다. 일반 댓글은 `null`이다.
-- 이전의 `:mody-xxx:` 텍스트 스티커 규칙은 쓰지 않는다.
+- 텍스트 사이 이모지는 `content`에 `:id:` 토큰으로 넣는다. 서버는 내용을 그대로 저장하고 그대로 내려준다.
+  - 길이 제한은 500자(V26)이고 토큰 글자를 포함해 센다.
+  - 지원하지 않는 토큰(예: `:smile:`)은 막지 않고 일반 텍스트로 둔다. 앱은 아는 id만 이미지로 바꾼다.
+- `content`가 토큰 하나뿐이면(예: `":clap:"`) `emojiId` 요청과 같게 이모지 댓글로 저장한다.
+- 댓글 목록 응답에 `emojiId`와 `emojiOnly`를 내려준다.
+  - 이모지만 있는 댓글: `content` 빈 문자열, `emojiId` 값, `emojiOnly` true. 앱은 이 경우만 크게 그린다.
+  - 그 외 댓글: `emojiId` null, `emojiOnly` false. `content`의 토큰을 이미지로 바꿔 그린다.
+  - 이전 버전 앱은 섞인 댓글의 토큰을 글자 그대로 보여준다.
 
 ## 4. 데이터 모델
 
