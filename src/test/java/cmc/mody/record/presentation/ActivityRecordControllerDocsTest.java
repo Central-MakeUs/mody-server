@@ -489,7 +489,7 @@ class ActivityRecordControllerDocsTest {
                             .description("댓글 작성자 프로필 이미지"),
                         fieldWithPath("result.comments[].content")
                             .type(JsonFieldType.STRING)
-                            .description("댓글 내용. 텍스트 사이 이모지는 :clap: 형식 토큰으로 들어 있다. "
+                            .description("댓글 내용. 텍스트 사이 이모지는 :mody-clap: 형식 토큰으로 들어 있다. "
                                 + "이모지만 있는 댓글은 빈 문자열"),
                         fieldWithPath("result.comments[].emojiId")
                             .type(JsonFieldType.STRING)
@@ -1097,15 +1097,15 @@ class ActivityRecordControllerDocsTest {
                         댓글 작성자는 access token의 회원이며, 댓글 목록에서는 isMine으로 본인 댓글 여부를 확인한다.
                         content와 emojiId 중 하나만 보낸다. 둘 다 비었거나 둘 다 있으면 RECORD309,
                         지원하지 않는 emojiId는 RECORD311을 반환한다.
-                        텍스트 사이에 이모지를 넣으려면 content에 :clap: 형식 토큰으로 넣는다.
-                        content가 토큰 하나뿐이면(예: ":clap:") 이모지 댓글로 저장한다.
+                        텍스트 사이에 이모지를 넣으려면 content에 :mody-clap: 형식 토큰으로 넣는다.
+                        content가 토큰 하나뿐이면(예: ":mody-clap:") 이모지 댓글로 저장한다.
                         """)
                     .requestFields(
                         fieldWithPath("content")
                             .type(JsonFieldType.STRING)
                             .optional()
                             .description("댓글 내용. 500자 이하(토큰 글자 포함). "
-                                + "이모지는 :clap: 형식 토큰으로 텍스트 사이에 넣을 수 있다"),
+                                + "이모지는 :mody-clap: 형식 토큰으로 텍스트 사이에 넣을 수 있다"),
                         fieldWithPath("emojiId")
                             .type(JsonFieldType.STRING)
                             .optional()
@@ -1181,7 +1181,7 @@ class ActivityRecordControllerDocsTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     {
-                      "content": "오늘도 :fire: 화이팅 :clap:"
+                      "content": "오늘도 :mody-fire: 화이팅 :mody-clap:"
                     }
                     """))
             .andExpect(status().isCreated())
@@ -1192,7 +1192,7 @@ class ActivityRecordControllerDocsTest {
                     .requestFields(
                         fieldWithPath("content")
                             .type(JsonFieldType.STRING)
-                            .description("텍스트 사이에 :clap: 형식 이모지 토큰을 넣은 댓글 내용")
+                            .description("텍스트 사이에 :mody-clap: 형식 이모지 토큰을 넣은 댓글 내용")
                     )
                     .responseFields(commonResponseFields(
                         fieldWithPath("result.commentId").type(JsonFieldType.NUMBER).description("댓글 id"),
@@ -1201,7 +1201,7 @@ class ActivityRecordControllerDocsTest {
                     .build())
             ));
         then(activityRecordService).should()
-            .createComment(eq(1L), eq(1L), eq(1L), eq(new CommentCreateCommand("오늘도 :fire: 화이팅 :clap:", null)));
+            .createComment(eq(1L), eq(1L), eq(1L), eq(new CommentCreateCommand("오늘도 :mody-fire: 화이팅 :mody-clap:", null)));
     }
 
     @Test
