@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 
 /**
  * 댓글 입력창의 응원 이모지. 이미지는 앱에 두고 서버는 id만 저장한다.
- * 텍스트 사이에 넣을 때는 content에 {@code :id:} 형식으로 쓴다.
+ * 텍스트 사이에 넣을 때는 content에 {@code :mody-id:} 형식으로 쓴다.
  */
 public enum CommentEmoji {
     CLAP("clap"),
@@ -16,7 +16,7 @@ public enum CommentEmoji {
     HEART("heart"),
     RUN("run");
 
-    private static final Pattern SINGLE_TOKEN = Pattern.compile("^:([a-z]+):$");
+    private static final Pattern SINGLE_TOKEN = Pattern.compile("^:mody-([a-z]+):$");
 
     private final String id;
 
@@ -33,7 +33,7 @@ public enum CommentEmoji {
     }
 
     /**
-     * content가 지원하는 이모지 토큰 하나뿐이면(예: {@code :clap:}) 그 id를 돌려준다.
+     * content가 지원하는 이모지 토큰 하나뿐이면(예: {@code :mody-clap:}) 그 id를 돌려준다.
      */
     public static Optional<String> findSingleEmojiId(String content) {
         if (content == null) {

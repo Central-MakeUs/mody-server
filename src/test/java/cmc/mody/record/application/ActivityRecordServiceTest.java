@@ -539,12 +539,12 @@ class ActivityRecordServiceTest {
             1L,
             10L,
             100L,
-            new ActivityRecordService.CommentCreateCommand(" 오늘도 :fire: 화이팅 :clap: ", null)
+            new ActivityRecordService.CommentCreateCommand(" 오늘도 :mody-fire: 화이팅 :mody-clap: ", null)
         );
 
         then(recordCommentRepository).should().save(recordCommentCaptor.capture());
         RecordComment savedComment = recordCommentCaptor.getValue();
-        assertThat(savedComment.getContent()).isEqualTo("오늘도 :fire: 화이팅 :clap:");
+        assertThat(savedComment.getContent()).isEqualTo("오늘도 :mody-fire: 화이팅 :mody-clap:");
         assertThat(savedComment.getEmojiId()).isNull();
     }
 
@@ -554,7 +554,7 @@ class ActivityRecordServiceTest {
         ActivityRecordService service = service();
         givenCommentableRecord();
 
-        service.createComment(1L, 10L, 100L, new ActivityRecordService.CommentCreateCommand(" :heart: ", null));
+        service.createComment(1L, 10L, 100L, new ActivityRecordService.CommentCreateCommand(" :mody-heart: ", null));
 
         then(recordCommentRepository).should().save(recordCommentCaptor.capture());
         RecordComment savedComment = recordCommentCaptor.getValue();
