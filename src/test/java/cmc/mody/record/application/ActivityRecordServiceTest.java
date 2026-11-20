@@ -500,7 +500,7 @@ class ActivityRecordServiceTest {
             1L,
             10L,
             100L,
-            new ActivityRecordService.CommentCreateCommand("  좋다  ", null)
+            new ActivityRecordService.CommentCreateCommand("  좋다  ")
         );
 
         assertThat(result.commentId()).isEqualTo(200L);
@@ -515,21 +515,6 @@ class ActivityRecordServiceTest {
     }
 
     @Test
-    @DisplayName("응원 이모지 댓글은 내용 없이 이모지 id만 저장한다.")
-    void createEmojiComment() {
-        ActivityRecordService service = service();
-        givenCommentableRecord();
-
-        service.createComment(1L, 10L, 100L, new ActivityRecordService.CommentCreateCommand(null, "clap"));
-
-        then(recordCommentRepository).should().save(recordCommentCaptor.capture());
-        RecordComment savedComment = recordCommentCaptor.getValue();
-        assertThat(savedComment.getContent()).isEmpty();
-        assertThat(savedComment.getEmojiId()).isEqualTo("clap");
-        then(notificationRequestService).should().requestCommentCreated(100L, 200L, 1L, "민석");
-    }
-
-    @Test
     @DisplayName("텍스트 사이 이모지 토큰은 내용 그대로 저장한다.")
     void createInlineEmojiComment() {
         ActivityRecordService service = service();
@@ -539,7 +524,7 @@ class ActivityRecordServiceTest {
             1L,
             10L,
             100L,
-            new ActivityRecordService.CommentCreateCommand(" 오늘도 :mody-fire: 화이팅 :mody-clap: ", null)
+            new ActivityRecordService.CommentCreateCommand(" 오늘도 :mody-fire: 화이팅 :mody-clap: ")
         );
 
         then(recordCommentRepository).should().save(recordCommentCaptor.capture());
@@ -554,7 +539,7 @@ class ActivityRecordServiceTest {
         ActivityRecordService service = service();
         givenCommentableRecord();
 
-        service.createComment(1L, 10L, 100L, new ActivityRecordService.CommentCreateCommand(" :mody-heart: ", null));
+        service.createComment(1L, 10L, 100L, new ActivityRecordService.CommentCreateCommand(" :mody-heart: "));
 
         then(recordCommentRepository).should().save(recordCommentCaptor.capture());
         RecordComment savedComment = recordCommentCaptor.getValue();
@@ -663,7 +648,7 @@ class ActivityRecordServiceTest {
             1L,
             10L,
             100L,
-            new ActivityRecordService.CommentCreateCommand("좋다", null)
+            new ActivityRecordService.CommentCreateCommand("좋다")
         ))
             .isInstanceOfSatisfying(GeneralException.class, exception ->
                 assertThat(exception.getStatus()).isEqualTo(ErrorStatus.RECORD_NOT_FOUND));

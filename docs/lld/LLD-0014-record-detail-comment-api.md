@@ -61,11 +61,11 @@ POST /api/v1/records/{recordId}/comments
 }
 ```
 
-응원 이모지 댓글 요청 (#277):
+응원 이모지 댓글 요청:
 
 ```json
 {
-  "emojiId": "clap"
+  "content": ":mody-clap:"
 }
 ```
 
@@ -77,14 +77,15 @@ POST /api/v1/records/{recordId}/comments
 }
 ```
 
-- `content`와 `emojiId` 중 하나만 보낸다. 둘 다 비었거나 둘 다 있으면 `RECORD309`.
-- `emojiId`는 `clap`, `medal`, `fire`, `heart`, `run`만 허용한다. 그 외는 `RECORD311`.
-- 이미지는 앱에 두고 서버는 id만 저장한다. 이모지 댓글의 `content`는 빈 문자열로 저장한다.
+- 요청은 `content` 하나만 받는다. 비었거나 500자를 넘으면 `RECORD309`.
+  - #277에서 만든 요청 `emojiId` 필드는 #282에서 뺐다. 운영에서는 테스트 댓글 5건 말고 쓰인 적이 없었다.
+- 이모지 id는 `clap`, `medal`, `fire`, `heart`, `run`이다. 이미지는 앱에 두고 서버는 id만 저장한다.
+- 이모지 댓글의 `content`는 빈 문자열로, id는 `emoji_id`에 저장한다.
 - 텍스트 사이 이모지는 `content`에 `:mody-id:` 토큰으로 넣는다. 서버는 내용을 그대로 저장하고 그대로 내려준다.
   - 길이 제한은 500자(V26)이고 토큰 글자를 포함해 센다.
   - 지원하지 않는 토큰(예: `:mody-smile:`)은 막지 않고 일반 텍스트로 둔다. 앱은 아는 id만 이미지로 바꾼다.
 - 토큰은 `mody-` 접두어를 붙인다. `:clap:`처럼 접두어 없는 표준 이모지 이름과 겹치지 않게 하기 위해서다. `emojiId` 값은 접두어 없이 `clap`이다.
-- `content`가 토큰 하나뿐이면(예: `":mody-clap:"`) `emojiId` 요청과 같게 이모지 댓글로 저장한다.
+- `content`가 지원하는 토큰 하나뿐이면(예: `":mody-clap:"`) 이모지 댓글로 저장한다.
 - 댓글 목록 응답에 `emojiId`와 `emojiOnly`를 내려준다.
   - 이모지만 있는 댓글: `content` 빈 문자열, `emojiId` 값, `emojiOnly` true. 앱은 이 경우만 크게 그린다.
   - 그 외 댓글: `emojiId` null, `emojiOnly` false. `content`의 토큰을 이미지로 바꿔 그린다.

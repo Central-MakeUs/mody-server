@@ -265,10 +265,8 @@ public class ActivityRecordService {
             ? groupMembers.get(memberId).getDisplayNickname()
             : member.getNickname();
 
-        String content = command.content() == null ? "" : command.content().trim();
-        String emojiId = command.emojiId() != null
-            ? command.emojiId()
-            : CommentEmoji.findSingleEmojiId(content).orElse(null);
+        String content = command.content().trim();
+        String emojiId = CommentEmoji.findSingleEmojiId(content).orElse(null);
 
         Long commentId = idGenerator.nextId();
         RecordComment savedComment = recordCommentRepository.save(new RecordComment(
@@ -548,7 +546,7 @@ public class ActivityRecordService {
     public record RecordCreateResult(Long recordId, List<Long> groupIds) {
     }
 
-    public record CommentCreateCommand(String content, String emojiId) {
+    public record CommentCreateCommand(String content) {
     }
 
     public record CommentCreateResult(Long commentId, Long recordId) {
