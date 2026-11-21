@@ -91,6 +91,18 @@ POST /api/v1/records/{recordId}/comments
   - 그 외 댓글: `emojiId` null, `emojiOnly` false. `content`의 토큰을 이미지로 바꿔 그린다.
   - 이전 버전 앱은 섞인 댓글의 토큰을 글자 그대로 보여준다.
 
+댓글 신고 (#286):
+
+```http
+POST /api/v1/groups/{groupId}/records/{recordId}/comments/{commentId}/report
+```
+
+- 응답은 `201`, `{"reportId", "commentId"}`. 신고 사유는 받지 않는다.
+- 댓글 목록에 보이는 댓글만 신고할 수 있다. 삭제됐거나, 다른 기록·그룹의 댓글이거나, 작성자가 그룹을 나간 댓글은 `RECORD310`.
+- 요청자는 그룹에 참여 중이어야 하고 기록도 그룹에서 보여야 한다(`GROUP306`, `RECORD302`). 기록 신고와 같은 기준이다.
+- 같은 회원이 같은 댓글을 다시 신고하면 새로 만들지 않고 기존 신고를 돌려준다.
+- 신고해도 댓글은 그대로 보인다. 관리자 처리(숨김·기각)는 아직 없다.
+
 ## 4. 데이터 모델
 
 - `activity_record`
@@ -99,6 +111,9 @@ POST /api/v1/records/{recordId}/comments
 - `record_comment`
   - `record_id`, `member_id`, `content`, `emoji_id`(이모지 댓글만, V25)를 저장한다.
   - `deleted_at is null`인 댓글만 조회한다.
+- `comment_report` (V27)
+  - `reporter_member_id`, `comment_id`, `record_id`, `group_id`, 처리 결과(`resolution`, `resolved_at`, `resolved_by`)를 저장한다.
+  - 삭제되지 않은 신고는 회원·댓글 조합마다 하나만 둔다(유니크 인덱스).
 - `group_member`
   - 요청자와 작성자가 현재 `JOINED` 상태인지 확인한다.
   - 댓글 작성자 표시 정보는 `display_nickname`, `display_profile_image_key`를 사용한다.
