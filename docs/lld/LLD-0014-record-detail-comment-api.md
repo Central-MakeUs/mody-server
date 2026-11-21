@@ -61,19 +61,47 @@ POST /api/v1/records/{recordId}/comments
 }
 ```
 
-응원 이모지 댓글 요청 (#277):
+응원 이모지 댓글 요청:
 
 ```json
 {
-  "emojiId": "clap"
+  "content": ":mody-clap:"
 }
 ```
 
-- `content`와 `emojiId` 중 하나만 보낸다. 둘 다 비었거나 둘 다 있으면 `RECORD309`.
-- `emojiId`는 `clap`, `medal`, `fire`, `heart`, `run`만 허용한다. 그 외는 `RECORD311`.
-- 이미지는 앱에 두고 서버는 id만 저장한다. 이모지 댓글의 `content`는 빈 문자열로 저장한다.
-- 댓글 목록 응답에 `emojiId`를 내려준다. 일반 댓글은 `null`이다.
-- 이전의 `:mody-xxx:` 텍스트 스티커 규칙은 쓰지 않는다.
+텍스트 사이 이모지 댓글 요청:
+
+```json
+{
+  "content": "오늘도 :mody-fire: 화이팅 :mody-clap:"
+}
+```
+
+- 요청은 `content` 하나만 받는다. 비었거나 500자를 넘으면 `RECORD309`.
+  - #277에서 만든 요청 `emojiId` 필드는 #282에서 뺐다. 운영에서는 테스트 댓글 5건 말고 쓰인 적이 없었다.
+- 이모지 id는 `clap`, `medal`, `fire`, `heart`, `run`이다. 이미지는 앱에 두고 서버는 id만 저장한다.
+- 이모지 댓글의 `content`는 빈 문자열로, id는 `emoji_id`에 저장한다.
+- 텍스트 사이 이모지는 `content`에 `:mody-id:` 토큰으로 넣는다. 서버는 내용을 그대로 저장하고 그대로 내려준다.
+  - 길이 제한은 500자(V26)이고 토큰 글자를 포함해 센다.
+  - 지원하지 않는 토큰(예: `:mody-smile:`)은 막지 않고 일반 텍스트로 둔다. 앱은 아는 id만 이미지로 바꾼다.
+- 토큰은 `mody-` 접두어를 붙인다. `:clap:`처럼 접두어 없는 표준 이모지 이름과 겹치지 않게 하기 위해서다. `emojiId` 값은 접두어 없이 `clap`이다.
+- `content`가 지원하는 토큰 하나뿐이면(예: `":mody-clap:"`) 이모지 댓글로 저장한다.
+- 댓글 목록 응답에 `emojiId`와 `emojiOnly`를 내려준다.
+  - 이모지만 있는 댓글: `content` 빈 문자열, `emojiId` 값, `emojiOnly` true. 앱은 이 경우만 크게 그린다.
+  - 그 외 댓글: `emojiId` null, `emojiOnly` false. `content`의 토큰을 이미지로 바꿔 그린다.
+  - 이전 버전 앱은 섞인 댓글의 토큰을 글자 그대로 보여준다.
+
+댓글 신고 (#286):
+
+```http
+POST /api/v1/groups/{groupId}/records/{recordId}/comments/{commentId}/report
+```
+
+- 응답은 `201`, `{"reportId", "commentId"}`. 신고 사유는 받지 않는다.
+- 댓글 목록에 보이는 댓글만 신고할 수 있다. 삭제됐거나, 다른 기록·그룹의 댓글이거나, 작성자가 그룹을 나간 댓글은 `RECORD310`.
+- 요청자는 그룹에 참여 중이어야 하고 기록도 그룹에서 보여야 한다(`GROUP306`, `RECORD302`). 기록 신고와 같은 기준이다.
+- 같은 회원이 같은 댓글을 다시 신고하면 새로 만들지 않고 기존 신고를 돌려준다.
+- 신고해도 댓글은 그대로 보인다. 관리자 처리(숨김·기각)는 아직 없다.
 
 ## 4. 데이터 모델
 
@@ -83,6 +111,9 @@ POST /api/v1/records/{recordId}/comments
 - `record_comment`
   - `record_id`, `member_id`, `content`, `emoji_id`(이모지 댓글만, V25)를 저장한다.
   - `deleted_at is null`인 댓글만 조회한다.
+- `comment_report` (V27)
+  - `reporter_member_id`, `comment_id`, `record_id`, `group_id`, 처리 결과(`resolution`, `resolved_at`, `resolved_by`)를 저장한다.
+  - 삭제되지 않은 신고는 회원·댓글 조합마다 하나만 둔다(유니크 인덱스).
 - `group_member`
   - 요청자와 작성자가 현재 `JOINED` 상태인지 확인한다.
   - 댓글 작성자 표시 정보는 `display_nickname`, `display_profile_image_key`를 사용한다.

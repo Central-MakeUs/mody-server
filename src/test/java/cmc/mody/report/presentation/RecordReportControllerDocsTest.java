@@ -16,6 +16,7 @@ import cmc.mody.auth.presentation.support.CurrentMemberArgumentResolver;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.config.WebConfig;
+import cmc.mody.report.application.CommentReportService;
 import cmc.mody.report.application.RecordReportService;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import org.junit.jupiter.api.Test;
@@ -52,12 +53,35 @@ class RecordReportControllerDocsTest {
         - GROUP306: 그룹 참여 정보 없음
         - RECORD302: 기록 없음 또는 접근할 수 없는 기록
         """.formatted(AUTHENTICATED_API);
+    private static final String COMMENT_REPORT_DESCRIPTION = """
+        기록 댓글을 신고한다.
+
+        %s
+
+        신고 사유는 받지 않는다. 같은 댓글을 다시 신고하면 기존 신고 id를 돌려준다.
+        댓글 목록에 보이는 댓글만 신고할 수 있다.
+
+        발생 가능한 예외 코드:
+        - AUTH401: Authorization 헤더가 없거나 비어있음
+        - AUTH402: Bearer 뒤 JWT 값이 비어있음
+        - AUTH403: JWT 형식이 올바르지 않거나 refresh token을 사용함
+        - AUTH404: 만료된 JWT
+        - AUTH405: 지원하지 않는 JWT
+        - MEMBER302: 토큰의 회원 id에 해당하는 회원 없음
+        - GROUP302: 그룹 없음
+        - GROUP306: 그룹 참여 정보 없음
+        - RECORD302: 기록 없음 또는 접근할 수 없는 기록
+        - RECORD310: 댓글 없음 또는 이 기록의 댓글이 아님
+        """.formatted(AUTHENTICATED_API);
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
     private RecordReportService recordReportService;
+
+    @MockitoBean
+    private CommentReportService commentReportService;
 
     @MockitoBean
     private TokenProvider tokenProvider;
@@ -114,6 +138,55 @@ class RecordReportControllerDocsTest {
         mockMvc.perform(post("/api/v1/groups/{groupId}/records/{recordId}/report", 10L, 100L))
             .andExpect(status().isUnauthorized())
             .andDo(documentError("record-report-auth-missing"));
+    }
+
+    @Test
+    void reportComment() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        given(commentReportService.reportComment(1L, 10L, 100L, 200L))
+            .willReturn(new CommentReportService.CommentReportResult(300L, 200L));
+
+        mockMvc.perform(post(
+                "/api/v1/groups/{groupId}/records/{recordId}/comments/{commentId}/report", 10L, 100L, 200L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isCreated())
+            .andDo(document("comment-report",
+                resource(ResourceSnippetParameters.builder()
+                    .tag("Feed")
+                    .summary("기록 댓글 신고")
+                    .description(COMMENT_REPORT_DESCRIPTION)
+                    .pathParameters(
+                        parameterWithName("groupId").description("댓글이 달린 기록이 노출된 그룹 id"),
+                        parameterWithName("recordId").description("댓글이 달린 기록 id"),
+                        parameterWithName("commentId").description("신고할 댓글 id")
+                    )
+                    .responseFields(commonResponseFields(
+                        fieldWithPath("result.reportId").type(JsonFieldType.NUMBER).description("신고 id"),
+                        fieldWithPath("result.commentId").type(JsonFieldType.NUMBER).description("신고된 댓글 id")
+                    ))
+                    .build())
+            ));
+    }
+
+    @Test
+    void reportCommentNotFound() throws Exception {
+        given(tokenProvider.getMemberIdByAccessToken("access-token")).willReturn(1L);
+        willThrow(new GeneralException(ErrorStatus.RECORD_COMMENT_NOT_FOUND))
+            .given(commentReportService)
+            .reportComment(1L, 10L, 100L, 200L);
+
+        mockMvc.perform(post(
+                "/api/v1/groups/{groupId}/records/{recordId}/comments/{commentId}/report", 10L, 100L, 200L)
+                .header("Authorization", "Bearer access-token"))
+            .andExpect(status().isNotFound())
+            .andDo(document("comment-report-comment-not-found",
+                resource(ResourceSnippetParameters.builder()
+                    .tag("Feed")
+                    .summary("기록 댓글 신고")
+                    .description(COMMENT_REPORT_DESCRIPTION)
+                    .responseFields(commonResponseFields())
+                    .build())
+            ));
     }
 
     private RestDocumentationResultHandler documentError(String identifier) {

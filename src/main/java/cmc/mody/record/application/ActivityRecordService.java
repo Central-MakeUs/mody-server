@@ -15,6 +15,7 @@ import cmc.mody.notification.application.NotificationRequestService;
 import cmc.mody.notification.domain.NotificationType;
 import cmc.mody.record.domain.ActivityRecord;
 import cmc.mody.record.domain.ActivityRecordGroup;
+import cmc.mody.record.domain.CommentEmoji;
 import cmc.mody.record.domain.RecordComment;
 import cmc.mody.record.domain.RecordType;
 import cmc.mody.record.domain.RecordViewHistory;
@@ -264,14 +265,17 @@ public class ActivityRecordService {
             ? groupMembers.get(memberId).getDisplayNickname()
             : member.getNickname();
 
+        String content = command.content().trim();
+        String emojiId = CommentEmoji.findSingleEmojiId(content).orElse(null);
+
         Long commentId = idGenerator.nextId();
         RecordComment savedComment = recordCommentRepository.save(new RecordComment(
             commentId,
             recordId,
             groupId,
             memberId,
-            command.emojiId() == null ? command.content().trim() : "",
-            command.emojiId()
+            emojiId == null ? content : "",
+            emojiId
         ));
         notificationRequestService.requestCommentCreated(recordId, commentId, memberId, commenterNickname);
         log.info("comment created commentId={} recordId={} groupId={} length={} emojiId={}",
@@ -542,7 +546,7 @@ public class ActivityRecordService {
     public record RecordCreateResult(Long recordId, List<Long> groupIds) {
     }
 
-    public record CommentCreateCommand(String content, String emojiId) {
+    public record CommentCreateCommand(String content) {
     }
 
     public record CommentCreateResult(Long commentId, Long recordId) {
