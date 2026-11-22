@@ -72,6 +72,27 @@ function kstDate(offset = 0) {
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
+function age(birthDate) {
+  if (!birthDate) return null;
+  const [y, m, d] = birthDate.split("-").map(Number);
+  const [ty, tm, td] = kstDate().split("-").map(Number);
+  return ty - y - (tm < m || (tm === m && td < d) ? 1 : 0);
+}
+
+function profileLine(profile) {
+  if (!profile) return "";
+  const parts = [];
+  const years = age(profile.birthDate);
+  if (years != null) parts.push(`만 ${years}세`);
+  if (profile.groups?.length) parts.push(profile.groups.map((group) => group.name).join(", "));
+  return parts.join(" · ");
+}
+
+function commentText(comment) {
+  if (comment.content) return comment.content;
+  return comment.emojiId ? `:mody-${comment.emojiId}: (이모지)` : "";
+}
+
 function showWorkspace() {
   $("#login").hidden = true;
   $("#workspace").hidden = false;
@@ -82,7 +103,7 @@ function showWorkspace() {
     return;
   }
   // 회원 · 운영 화면에서 로그인하러 온 경우 원래 화면으로 돌려보낸다(허용된 경로만).
-  if (["/admin/members", "/admin/reports", "/admin/announcements", "/admin/stats", "/admin/audit"]
+  if (["/admin/members", "/admin/groups", "/admin/reports", "/admin/announcements", "/admin/stats", "/admin/audit"]
     .includes(next)) {
     location.assign(next);
     return;
@@ -172,7 +193,7 @@ async function loginWithGoogle({ credential }) {
   }
 }
 
-function card(item) {
+function card(item, profile) {
   const button = element("button", "feed-card");
   button.type = "button";
   button.setAttribute(
@@ -213,6 +234,8 @@ function card(item) {
     ),
     element("div", "card-id", `ID ${item.id}`),
   );
+  const context = profileLine(profile);
+  if (context) body.append(element("p", "card-context", context));
   button.append(photo, body);
   button.addEventListener("click", () => detail(item));
   return button;
@@ -308,7 +331,9 @@ async function loadPage(version) {
       signal: pageAbort.signal,
     });
     if (version !== generation) return;
-    page.items.forEach((item) => $("#feed").append(card(item)));
+    page.items.forEach((item) =>
+      $("#feed").append(card(item, page.authors?.[item.memberId])),
+    );
     loaded += page.items.length;
     nextCursor = page.nextCursor;
     renderCount();
@@ -388,10 +413,43 @@ async function detail(item) {
         list.append(row);
       }
     info.append(list);
+    if (data.type !== "CHALLENGE") info.append(commentSection(result.comments ?? []));
     if (!$("#detail").open) $("#detail").showModal();
   } catch (error) {
     message("#feed-message", error.message, true);
   }
+}
+
+function commentSection(comments) {
+  const box = element("section", "comment-list");
+  const live = comments.filter((comment) => !comment.deleted).length;
+  box.append(
+    element(
+      "h4",
+      "",
+      comments.length
+        ? `댓글 ${live}개${comments.length > live ? ` (삭제 ${comments.length - live}개 포함 ${comments.length}개)` : ""}`
+        : "댓글 없음",
+    ),
+  );
+  for (const comment of comments) {
+    const row = element("article", `comment${comment.deleted ? " deleted" : ""}`);
+    const head = element("div", "comment-head");
+    head.append(
+      element("strong", "", comment.nickname),
+      element(
+        "span",
+        "",
+        ` · ${comment.groupName ?? `그룹 #${comment.groupId}`} · ${comment.createdAt.replace("T", " ").slice(0, 16)}`,
+      ),
+    );
+    if (comment.deleted) head.append(element("span", "comment-flag", "삭제됨"));
+    if (comment.reportCount > 0)
+      head.append(element("span", "comment-flag warn", `신고 ${comment.reportCount}`));
+    row.append(head, element("p", "", commentText(comment)));
+    box.append(row);
+  }
+  return box;
 }
 
 form.addEventListener("submit", (event) => {

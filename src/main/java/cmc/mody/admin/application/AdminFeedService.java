@@ -56,6 +56,7 @@ public class AdminFeedService {
         """;
     private final NamedParameterJdbcTemplate jdbc;
     private final PhotoUrlResolver photos;
+    private final AdminMemberProfiles profiles;
 
     public Page list(LocalDate from, LocalDate to, String type, Long memberId, Long groupId,
         Long groupChallengeId, String keyword, String cursor, int size) {
@@ -74,7 +75,8 @@ public class AdminFeedService {
         boolean hasMore = rows.size() > size;
         List<Item> items = hasMore ? rows.subList(0, size) : rows;
         String next = hasMore ? encode(items.get(items.size() - 1)) : null;
-        return new Page(items, next, hasMore, query.from(), query.to(), "Asia/Seoul");
+        var authors = profiles.load(items.stream().map(item -> Long.valueOf(item.memberId())).toList());
+        return new Page(items, next, hasMore, query.from(), query.to(), "Asia/Seoul", authors);
     }
 
     public Summary summary(LocalDate from, LocalDate to, String type, Long memberId, Long groupId,
@@ -187,7 +189,33 @@ public class AdminFeedService {
         params.addValue("group", item.legacyGroupId() == null ? null : Long.valueOf(item.legacyGroupId()));
         List<Group> groups = jdbc.query(groupsQuery + " AND status = 'ACTIVE' AND deleted_at IS NULL ORDER BY id",
             params, (rs, n) -> new Group(Long.toString(rs.getLong("id")), rs.getString("name")));
-        return new Detail(item, groups);
+        List<Comment> comments = type.equals("CHALLENGE") ? List.of() : comments(id);
+        return new Detail(item, groups, comments);
+    }
+
+    /** 기록의 댓글을 삭제된 것까지 작성 순으로. 신고 처리 판단에 필요해 삭제 여부와 신고 수를 함께 준다. */
+    private List<Comment> comments(long recordId) {
+        return jdbc.query("""
+            SELECT c.id, c.group_id, g.name AS group_name, c.member_id,
+                CASE WHEN m.status = 'ACTIVE' AND m.deleted_at IS NULL THEN m.nickname ELSE '탈퇴한 회원' END
+                    AS nickname,
+                c.content, c.emoji_id, c.created_at,
+                CASE WHEN c.status = 'ACTIVE' AND c.deleted_at IS NULL THEN 0 ELSE 1 END AS removed,
+                c.deleted_at,
+                (SELECT COUNT(*) FROM comment_report cr WHERE cr.comment_id = c.id
+                    AND cr.status = 'ACTIVE' AND cr.deleted_at IS NULL) AS report_count
+            FROM record_comment c
+            LEFT JOIN member m ON m.id = c.member_id
+            LEFT JOIN mody_group g ON g.id = c.group_id
+            WHERE c.record_id = :record
+            ORDER BY c.created_at, c.id
+            LIMIT 500
+            """, new MapSqlParameterSource("record", recordId), (rs, n) -> new Comment(
+            Long.toString(rs.getLong("id")), Long.toString(rs.getLong("group_id")), rs.getString("group_name"),
+            Long.toString(rs.getLong("member_id")), rs.getString("nickname"), rs.getString("content"),
+            rs.getString("emoji_id"), rs.getTimestamp("created_at").toLocalDateTime(), rs.getBoolean("removed"),
+            rs.getTimestamp("deleted_at") == null ? null : rs.getTimestamp("deleted_at").toLocalDateTime(),
+            rs.getLong("report_count")));
     }
 
     private static String cursorCondition(String typeExpression) {
@@ -250,7 +278,12 @@ public class AdminFeedService {
         String imageUrl, String title, String description, String mealTime, Integer exerciseDurationMinutes,
         String groupChallengeId, String globalWeeklyChallengeId, String legacyGroupId, Crop crop,
         boolean groupRecordEditable) { }
+    /** authors: 화면에 나온 작성자의 생년월일과 참여 중인 그룹. 회원 ID 문자열로 찾는다. */
     public record Page(List<Item> items, String nextCursor, boolean hasMore, LocalDate from, LocalDate to,
-        String timezone) { }
-    public record Detail(Item item, List<Group> groups) { }
+        String timezone, java.util.Map<String, AdminMemberProfiles.Profile> authors) { }
+    /** content가 비어 있으면 emojiId만 있는 이모지 댓글이다. */
+    public record Comment(String id, String groupId, String groupName, String memberId, String nickname,
+        String content, String emojiId, LocalDateTime createdAt, boolean deleted, LocalDateTime deletedAt,
+        long reportCount) { }
+    public record Detail(Item item, List<Group> groups, List<Comment> comments) { }
 }

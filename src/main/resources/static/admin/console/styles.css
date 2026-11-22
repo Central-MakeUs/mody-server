@@ -840,3 +840,48 @@ dialog::backdrop {
     transition: none;
   }
 }
+.card-context {
+  margin: 6px 0 0;
+  font-size: 10px;
+  color: #6e7cff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.comment-list {
+  margin-top: 26px;
+}
+.comment-list h4 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+.comment-list .comment {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.comment-list .comment p {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.comment-list .comment.deleted p {
+  color: #a4acb1;
+  text-decoration: line-through;
+}
+.comment-head span {
+  color: #8b959c;
+}
+.comment-flag {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #eef0f2;
+  color: #616e75 !important;
+  font-size: 10px;
+}
+.comment-flag.warn {
+  background: #ffe9e2;
+  color: #c2410c !important;
+}

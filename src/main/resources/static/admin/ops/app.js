@@ -4,6 +4,7 @@
 const $ = (selector, root = document) => root.querySelector(selector);
 const VIEWS = {
   members: { path: "/admin/members", title: "회원 관리" },
+  groups: { path: "/admin/groups", title: "그룹 페이지" },
   reports: { path: "/admin/reports", title: "신고 처리" },
   announcements: { path: "/admin/announcements", title: "공지 푸시" },
   stats: { path: "/admin/stats", title: "통계" },
@@ -69,6 +70,33 @@ function message(id, text = "", error = false) {
   node.classList.toggle("error", error);
 }
 
+function kstToday() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
+}
+
+function age(birthDate) {
+  if (!birthDate) return null;
+  const [y, m, d] = birthDate.split("-").map(Number);
+  const [ty, tm, td] = kstToday().split("-").map(Number);
+  return ty - y - (tm < m || (tm === m && td < d) ? 1 : 0);
+}
+
+function ageText(birthDate) {
+  const years = age(birthDate);
+  return years == null ? "—" : `만 ${years}세`;
+}
+
+function commentText(comment) {
+  if (comment.content) return comment.content;
+  return comment.emojiId ? `:mody-${comment.emojiId}: (이모지)` : "";
+}
+
+function groupLink(id, name) {
+  const link = el("a", null, name ?? `그룹 #${id}`);
+  link.href = `/admin/groups?groupId=${encodeURIComponent(id)}`;
+  return link;
+}
+
 function chip(text, tone = "") {
   return el("span", `chip ${tone}`.trim(), text);
 }
@@ -103,7 +131,7 @@ function memberQuery(cursor) {
   return params;
 }
 
-function memberRow(item) {
+function memberRow(item, profile) {
   const row = el("tr", "clickable");
   row.tabIndex = 0;
   const who = el("td");
@@ -121,11 +149,21 @@ function memberRow(item) {
   (item.loginTypes.length ? item.loginTypes : ["—"]).forEach((type) =>
     logins.append(chip(LOGIN_LABELS[type] ?? type)),
   );
+  const groups = el("td");
+  const joined = profile?.groups ?? [];
+  if (!joined.length) groups.append(el("span", "muted", "—"));
+  joined.forEach((group, index) => {
+    if (index) groups.append(", ");
+    const link = groupLink(group.id, group.name);
+    link.addEventListener("click", (event) => event.stopPropagation());
+    groups.append(link);
+  });
   row.append(
     who,
+    el("td", null, ageText(profile?.birthDate)),
     logins,
     el("td", null, fmt(item.createdAt, false)),
-    el("td", null, num(item.groupCount)),
+    groups,
     el("td", null, num(item.recordCount)),
     el("td", null, fmt(item.lastRecordAt)),
   );
@@ -152,7 +190,7 @@ async function loadMembers(reset) {
   try {
     const page = await api(`/api/v1/admin/members?${memberQuery(members.cursor)}`);
     if (generation !== members.generation) return;
-    page.items.forEach((item) => $("#member-rows").append(memberRow(item)));
+    page.items.forEach((item) => $("#member-rows").append(memberRow(item, page.profiles?.[item.id])));
     members.cursor = page.nextCursor;
     $("#member-more").hidden = !page.hasMore;
     message("#member-message", $("#member-rows").children.length ? "" : "조건에 맞는 회원이 없어요.");
@@ -198,7 +236,7 @@ async function openMember(id) {
     d.groups.forEach((group) => {
       const line = el("div");
       const link = el("a", null, group.name);
-      link.href = `/admin/challenges?view=groups&groupId=${encodeURIComponent(group.id)}`;
+      link.href = `/admin/groups?groupId=${encodeURIComponent(group.id)}`;
       line.append(
         link,
         " ",
@@ -232,7 +270,7 @@ async function openMember(id) {
       section("기본 정보", kv([
         ["상태", status],
         ["가입일", fmt(d.createdAt)],
-        ["생년월일", d.birthDate ?? "—"],
+        ["생년월일", d.birthDate ? `${d.birthDate} (${ageText(d.birthDate)})` : "—"],
         ["목표 체중", d.targetWeightKg ? `${d.targetWeightKg}kg` : "—"],
         ["건강 앱 연동", d.healthConnection === "CONNECTED" ? "연결됨" : "연결 안 됨"],
         ["그룹 온보딩", d.groupOnboardingCompleted ? "완료" : "미완료"],
@@ -260,7 +298,7 @@ async function openMember(id) {
 }
 
 /* ---------- 신고 처리 ---------- */
-const reports = { cursor: null, loading: false, generation: 0, state: "PENDING", busy: false };
+const reports = { cursor: null, loading: false, generation: 0, state: "PENDING", kind: "records", busy: false };
 const RESOLUTION_LABELS = { HIDDEN: "숨김", DISMISSED: "기각" };
 
 function canWrite() {
@@ -269,8 +307,10 @@ function canWrite() {
 
 async function loadReportSummary() {
   try {
-    const summary = await api("/api/v1/admin/reports/summary");
-    $("#r-pending-records").textContent = num(summary.pendingRecords);
+    const comments = reports.kind === "comments";
+    const summary = await api(`/api/v1/admin/reports${comments ? "/comments" : ""}/summary`);
+    $("#r-pending-label").textContent = comments ? "처리 대기 댓글" : "처리 대기 기록";
+    $("#r-pending-records").textContent = num(comments ? summary.pendingComments : summary.pendingRecords);
     $("#r-pending-reports").textContent = num(summary.pendingReports);
     $("#r-hidden").textContent = num(summary.hiddenLast7Days);
     $("#r-dismissed").textContent = num(summary.dismissedLast7Days);
@@ -299,6 +339,81 @@ async function resolveReport(item, action) {
   } finally {
     reports.busy = false;
   }
+}
+
+async function resolveCommentReport(item, action) {
+  if (reports.busy) return;
+  const label = action === "hide" ? "숨김" : "기각";
+  const warning = action === "hide"
+    ? "이 댓글을 숨기면 댓글이 삭제돼요. 되돌릴 수 없어요."
+    : "신고를 기각하면 댓글은 그대로 두고 신고만 처리 완료돼요.";
+  if (!window.confirm(`${warning}\n\n댓글 ID ${item.commentId}을(를) ${label} 처리할까요?`)) return;
+  reports.busy = true;
+  try {
+    const result = await api(`/api/v1/admin/reports/comments/${encodeURIComponent(item.commentId)}/${action}`, {
+      method: "POST",
+    });
+    message("#report-message", `댓글 ${result.commentId}: 신고 ${result.resolvedReports}건을 ${label} 처리했어요.`);
+    loadReportSummary();
+    loadReports(true);
+  } catch (error) {
+    message("#report-message", error.message, true);
+  } finally {
+    reports.busy = false;
+  }
+}
+
+function reportActions(item, onResolve) {
+  const actions = el("div", "report-actions");
+  if (item.pendingCount > 0) {
+    const hide = el("button", "danger-button", "숨김");
+    hide.type = "button";
+    const dismiss = el("button", "secondary-button", "기각");
+    dismiss.type = "button";
+    hide.disabled = dismiss.disabled = !canWrite();
+    if (!canWrite()) hide.title = dismiss.title = "조회 전용 권한이에요.";
+    hide.addEventListener("click", () => onResolve(item, "hide"));
+    dismiss.addEventListener("click", () => onResolve(item, "dismiss"));
+    actions.append(hide, dismiss);
+  }
+  return actions;
+}
+
+function commentReportCard(item) {
+  const card = el("article", "report-card comment-report");
+  const quote = el("blockquote", "comment-quote", item.recordId ? commentText(item) : "댓글을 찾을 수 없어요.");
+  const body = el("div");
+  const type = item.recordType === "MEAL" ? "식사" : item.recordType === "EXERCISE" ? "운동" : "기록";
+  const where = el("h3");
+  where.append(`${type} · ${item.recordTitle ?? "제목 없음"} `);
+  if (item.groupId) where.append(el("span", "muted", "· "), groupLink(item.groupId, item.groupName));
+  body.append(where);
+  const author = el("p");
+  author.append("작성자 ");
+  if (item.authorId) {
+    const link = el("a", null, `${item.authorNickname} (ID ${item.authorId})`);
+    link.href = "#";
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      openMember(item.authorId);
+    });
+    author.append(link);
+  } else {
+    author.append("알 수 없음");
+  }
+  author.append(el("span", "muted", ` · 작성 ${fmt(item.createdAt)}`));
+  const state = el("p");
+  state.append(
+    chip(`신고 ${num(item.reportCount)}건`, "warn"),
+    item.pendingCount > 0 ? chip(`대기 ${num(item.pendingCount)}`, "") : chip(RESOLUTION_LABELS[item.resolution] ?? "처리 완료", "ok"),
+    item.commentActive ? chip("게시 중", "ok") : chip("삭제됨", "off"),
+  );
+  const when = el("p", "muted",
+    `첫 신고 ${fmt(item.firstReportedAt)} · 최근 신고 ${fmt(item.lastReportedAt)}${item.resolvedAt ? ` · 처리 ${fmt(item.resolvedAt)}` : ""}`);
+  const who = el("p", "muted", `신고자: ${item.reporters.map((r) => r.nickname).join(", ")}${item.reportCount > item.reporters.length ? " 외" : ""}`);
+  body.append(author, state, when, who);
+  card.append(quote, body, reportActions(item, resolveCommentReport));
+  return card;
 }
 
 function reportCard(item) {
@@ -338,19 +453,7 @@ function reportCard(item) {
     `첫 신고 ${fmt(item.firstReportedAt)} · 최근 신고 ${fmt(item.lastReportedAt)}${item.resolvedAt ? ` · 처리 ${fmt(item.resolvedAt)}` : ""}`);
   const who = el("p", "muted", `신고자: ${item.reporters.map((r) => r.nickname).join(", ")}${item.reportCount > item.reporters.length ? " 외" : ""}`);
   body.append(author, state, when, who);
-  const actions = el("div", "report-actions");
-  if (item.pendingCount > 0) {
-    const hide = el("button", "danger-button", "숨김");
-    hide.type = "button";
-    const dismiss = el("button", "secondary-button", "기각");
-    dismiss.type = "button";
-    hide.disabled = dismiss.disabled = !canWrite();
-    if (!canWrite()) hide.title = dismiss.title = "조회 전용 권한이에요.";
-    hide.addEventListener("click", () => resolveReport(item, "hide"));
-    dismiss.addEventListener("click", () => resolveReport(item, "dismiss"));
-    actions.append(hide, dismiss);
-  }
-  card.append(img, body, actions);
+  card.append(img, body, reportActions(item, resolveReport));
   return card;
 }
 
@@ -365,9 +468,10 @@ async function loadReports(reset) {
   const params = new URLSearchParams({ size: "20", state: reports.state });
   if (reports.cursor) params.set("cursor", reports.cursor);
   try {
-    const page = await api(`/api/v1/admin/reports?${params}`);
+    const comments = reports.kind === "comments";
+    const page = await api(`/api/v1/admin/reports${comments ? "/comments" : ""}?${params}`);
     if (generation !== reports.generation) return;
-    page.items.forEach((item) => $("#report-list").append(reportCard(item)));
+    page.items.forEach((item) => $("#report-list").append(comments ? commentReportCard(item) : reportCard(item)));
     reports.cursor = page.nextCursor;
     $("#report-more").hidden = !page.hasMore;
     if (!$("#report-list").children.length) {
@@ -377,6 +481,203 @@ async function loadReports(reset) {
     if (generation === reports.generation) message("#report-message", error.message, true);
   } finally {
     if (generation === reports.generation) reports.loading = false;
+  }
+}
+
+/* ---------- 그룹 페이지 ---------- */
+const groups = { cursor: null, loading: false, generation: 0 };
+const CHALLENGE_PERIOD = { CURRENT: ["진행 중", "ok"], PAST: ["지난 챌린지", "off"], UPCOMING: ["예정", ""] };
+
+function groupRow(item) {
+  const row = el("tr", "clickable");
+  row.tabIndex = 0;
+  const name = el("td");
+  name.append(el("strong", null, item.name), el("div", "muted", `ID ${item.id}`));
+  row.append(
+    name,
+    el("td", null, item.code),
+    el("td", null, num(item.memberCount)),
+    el("td", null, num(item.recordsLast7Days)),
+    el("td", null, fmt(item.lastRecordAt)),
+    el("td", null, fmt(item.createdAt, false)),
+  );
+  const open = () => {
+    history.pushState(null, "", `/admin/groups?groupId=${encodeURIComponent(item.id)}`);
+    showGroups();
+  };
+  row.addEventListener("click", open);
+  row.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") open();
+  });
+  return row;
+}
+
+async function loadGroups(reset) {
+  if (groups.loading && !reset) return;
+  const generation = reset ? ++groups.generation : groups.generation;
+  groups.loading = true;
+  if (reset) {
+    groups.cursor = null;
+    $("#group-rows").replaceChildren();
+  }
+  const params = new URLSearchParams({ size: "30" });
+  const keyword = $("#group-filters").elements.keyword.value.trim();
+  if (keyword) params.set("keyword", keyword);
+  if (groups.cursor) params.set("cursor", groups.cursor);
+  message("#group-message", "그룹을 불러오고 있어요.");
+  try {
+    const page = await api(`/api/v1/admin/group-pages?${params}`);
+    if (generation !== groups.generation) return;
+    page.items.forEach((item) => $("#group-rows").append(groupRow(item)));
+    groups.cursor = page.nextCursor;
+    $("#group-more").hidden = !page.hasMore;
+    message("#group-message", $("#group-rows").children.length ? "" : "조건에 맞는 그룹이 없어요.");
+  } catch (error) {
+    if (generation === groups.generation) message("#group-message", error.message, true);
+  } finally {
+    if (generation === groups.generation) groups.loading = false;
+  }
+}
+
+function table(headers, rows) {
+  const wrap = el("div", "table-wrap");
+  const node = el("table", "ops-table");
+  const head = el("tr");
+  headers.forEach((title) => head.append(el("th", null, title)));
+  const thead = el("thead");
+  thead.append(head);
+  const tbody = el("tbody");
+  rows.forEach((row) => tbody.append(row));
+  node.append(thead, tbody);
+  wrap.append(node);
+  return wrap;
+}
+
+function groupMemberRow(member) {
+  const row = el("tr", "clickable");
+  row.tabIndex = 0;
+  const who = el("td");
+  who.append(el("strong", null, member.displayNickname || member.nickname), el("div", "muted", `계정 ${member.nickname} · ID ${member.memberId}`));
+  const state = el("td");
+  state.append(member.memberStatus === "JOINED" ? chip("참여 중", "ok") : chip("나감", "off"));
+  if (!member.accountActive) state.append(" ", chip("탈퇴", "off"));
+  row.append(who, el("td", null, member.birthDate ? `${ageText(member.birthDate)} (${member.birthDate})` : "—"), state,
+    el("td", null, fmt(member.joinedAt)), el("td", null, fmt(member.leftAt)));
+  const open = () => openMember(member.memberId);
+  row.addEventListener("click", open);
+  row.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") open();
+  });
+  return row;
+}
+
+async function groupFeed(groupId) {
+  const box = el("div", "thumbs");
+  const from = new Date(Date.now() - 364 * 86400000);
+  const params = new URLSearchParams({
+    groupId,
+    from: new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(from),
+    to: kstToday(),
+    size: "24",
+  });
+  try {
+    const page = await api(`/api/v1/admin/feed?${params}`);
+    if (!page.items.length) return el("p", "muted", "최근 1년 기록이 없어요.");
+    page.items.forEach((item) => {
+      const figure = el("figure");
+      const img = el("img");
+      img.alt = "";
+      img.loading = "lazy";
+      const src = safeImage(item.imageUrl);
+      if (src) img.src = src;
+      const type = item.type === "MEAL" ? "식사" : item.type === "EXERCISE" ? "운동" : "챌린지";
+      figure.append(img, el("figcaption", null, `${item.nickname} · ${type} · ${fmt(item.uploadedAt, false)}`));
+      box.append(figure);
+    });
+  } catch (error) {
+    return el("p", "message error", `기록을 불러오지 못했어요. ${error.message}`);
+  }
+  return box;
+}
+
+async function openGroup(groupId) {
+  const body = $("#group-detail-body");
+  body.replaceChildren(el("p", "message", "그룹 정보를 불러오고 있어요."));
+  try {
+    const [d, feed] = await Promise.all([
+      api(`/api/v1/admin/group-pages/${encodeURIComponent(groupId)}`),
+      groupFeed(groupId),
+    ]);
+    $("#crumb").textContent = `그룹 페이지 / ${d.name}`;
+    document.title = `${d.name} · 모디 운영 콘솔`;
+    const joined = d.members.filter((member) => member.memberStatus === "JOINED").length;
+    const manage = el("a", null, "그룹 관리에서 이름 수정");
+    manage.href = `/admin/challenges?view=groups&groupId=${encodeURIComponent(d.id)}`;
+    const feedLink = el("a", null, "인증 피드에서 이 그룹 전체 기록 보기");
+    feedLink.href = `/admin?groupId=${encodeURIComponent(d.id)}&from=2026-01-01`;
+    const challenges = d.challenges.map((challenge) => {
+      const row = el("tr");
+      const period = el("td");
+      const [label, tone] = CHALLENGE_PERIOD[challenge.period] ?? [challenge.period, ""];
+      period.append(chip(label, tone));
+      const title = el("td");
+      const link = el("a", null, challenge.title ?? "제목 없음");
+      link.href = `/admin?groupChallengeId=${encodeURIComponent(challenge.id)}&from=${challenge.startsOn}&to=${challenge.endsOn}`;
+      title.append(link);
+      if (challenge.globalWeeklyChallengeId) title.append(" ", chip("전체 챌린지"));
+      row.append(period, title, el("td", null, `${challenge.startsOn} ~ ${challenge.endsOn}`),
+        el("td", null, challenge.status), el("td", null, num(challenge.proofCount)));
+      return row;
+    });
+    const comments = el("div", "comment-feed");
+    if (!d.recentComments.length) comments.append(el("p", "muted", "댓글이 없어요."));
+    d.recentComments.forEach((comment) => {
+      const line = el("div", "comment-line");
+      const type = comment.recordType === "MEAL" ? "식사" : comment.recordType === "EXERCISE" ? "운동" : "기록";
+      line.append(
+        el("strong", null, comment.nickname),
+        el("span", "muted", ` · ${type} ${comment.recordTitle ?? ""} · ${fmt(comment.createdAt)}`),
+        el("p", null, commentText(comment)),
+      );
+      comments.append(line);
+    });
+    body.replaceChildren(
+      el("h2", null, `${d.name}${d.active ? "" : " (삭제된 그룹)"}`),
+      section("기본 정보", kv([
+        ["그룹 ID", d.id],
+        ["초대 코드", d.code],
+        ["만든 날", fmt(d.createdAt)],
+        ["참여 중", `${num(joined)}명`],
+        ["기록", num(d.recordCount)],
+        ["최근 7일 기록", num(d.recordsLast7Days)],
+        ["댓글", num(d.commentCount)],
+      ]), el("p", null, ""), manage),
+      section(`구성원 (${num(d.members.length)})`,
+        d.members.length
+          ? table(["닉네임", "나이", "상태", "참여", "나감"], d.members.map(groupMemberRow))
+          : el("p", "muted", "구성원이 없어요.")),
+      section("주간 챌린지",
+        challenges.length
+          ? table(["구분", "챌린지", "기간", "상태", "인증"], challenges)
+          : el("p", "muted", "주간 챌린지가 없어요.")),
+      section("최근 기록", feed, el("p", null, ""), feedLink),
+      section("최근 댓글", comments),
+    );
+  } catch (error) {
+    body.replaceChildren(el("p", "message error", error.message));
+  }
+}
+
+function showGroups() {
+  const groupId = new URLSearchParams(location.search).get("groupId");
+  $("#group-list-view").hidden = Boolean(groupId);
+  $("#group-detail-view").hidden = !groupId;
+  if (groupId) {
+    openGroup(groupId);
+  } else {
+    $("#crumb").textContent = VIEWS.groups.title;
+    document.title = `${VIEWS.groups.title} · 모디 운영 콘솔`;
+    if (!$("#group-rows").children.length) loadGroups(true);
   }
 }
 
@@ -625,6 +926,7 @@ const LOADERS = {
     loadMemberSummary();
     loadMembers(true);
   },
+  groups: () => showGroups(),
   reports: () => {
     loadReportSummary();
     loadReports(true);
@@ -674,6 +976,35 @@ document.querySelectorAll("#report-tabs [data-state]").forEach((tab) =>
   }),
 );
 $("#report-more").addEventListener("click", () => loadReports(false));
+document.querySelectorAll("#report-kinds [data-kind]").forEach((tab) =>
+  tab.addEventListener("click", () => {
+    reports.kind = tab.dataset.kind;
+    document.querySelectorAll("#report-kinds [data-kind]").forEach((other) => {
+      const active = other === tab;
+      other.classList.toggle("active", active);
+      other.setAttribute("aria-pressed", String(active));
+    });
+    $("#report-intro").textContent = reports.kind === "comments"
+      ? "신고된 댓글을 확인하고 숨기거나 기각해요. 숨기면 그 댓글만 삭제돼요."
+      : "신고된 기록을 확인하고 숨기거나 기각해요. 숨기면 기록과 댓글, 그룹 공유가 함께 삭제돼요.";
+    message("#report-message");
+    loadReportSummary();
+    loadReports(true);
+  }),
+);
+$("#group-filters").addEventListener("submit", (event) => {
+  event.preventDefault();
+  loadGroups(true);
+});
+$("#group-more").addEventListener("click", () => loadGroups(false));
+$("#group-back").addEventListener("click", (event) => {
+  event.preventDefault();
+  history.pushState(null, "", "/admin/groups");
+  showGroups();
+});
+window.addEventListener("popstate", () => {
+  if (currentView() === "groups") showGroups();
+});
 $("#announce-form").elements.targetType.addEventListener("change", () => {
   syncAnnounceTarget();
   resetAnnouncePreview();

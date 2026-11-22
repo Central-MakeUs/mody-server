@@ -1,5 +1,6 @@
 package cmc.mody.admin.presentation;
 
+import cmc.mody.admin.application.AdminCommentReportService;
 import cmc.mody.admin.application.AdminReportService;
 import cmc.mody.admin.application.AdminSessionService;
 import cmc.mody.admin.domain.AdminAccount;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/admin/reports")
 public class AdminReportController {
     private final AdminReportService reports;
+    private final AdminCommentReportService commentReports;
     private final AdminAccessService access;
 
     @GetMapping
@@ -52,6 +54,38 @@ public class AdminReportController {
         HttpServletRequest request) {
         access.validate(key);
         return ApiResponse.ok(reports.dismiss(recordId, actor(request)));
+    }
+
+    @GetMapping("/comments")
+    public ApiResponse<AdminCommentReportService.Page> listComments(
+        @RequestHeader(value = "X-Admin-Api-Key", required = false) String key,
+        @RequestParam(required = false) String state, @RequestParam(required = false) String cursor,
+        @RequestParam(defaultValue = "20") int size) {
+        access.validate(key);
+        return ApiResponse.ok(commentReports.list(state, cursor, size));
+    }
+
+    @GetMapping("/comments/summary")
+    public ApiResponse<AdminCommentReportService.Summary> commentSummary(
+        @RequestHeader(value = "X-Admin-Api-Key", required = false) String key) {
+        access.validate(key);
+        return ApiResponse.ok(commentReports.summary());
+    }
+
+    @PostMapping("/comments/{commentId}/hide")
+    public ApiResponse<AdminCommentReportService.Resolution> hideComment(
+        @RequestHeader(value = "X-Admin-Api-Key", required = false) String key, @PathVariable long commentId,
+        HttpServletRequest request) {
+        access.validate(key);
+        return ApiResponse.ok(commentReports.hide(commentId, actor(request)));
+    }
+
+    @PostMapping("/comments/{commentId}/dismiss")
+    public ApiResponse<AdminCommentReportService.Resolution> dismissComment(
+        @RequestHeader(value = "X-Admin-Api-Key", required = false) String key, @PathVariable long commentId,
+        HttpServletRequest request) {
+        access.validate(key);
+        return ApiResponse.ok(commentReports.dismiss(commentId, actor(request)));
     }
 
     private String actor(HttpServletRequest request) {
