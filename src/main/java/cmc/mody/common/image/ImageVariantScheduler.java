@@ -4,12 +4,12 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -21,7 +21,7 @@ public class ImageVariantScheduler {
     private final ImageVariantProcessor processor;
     private final ImageVariantRequestService requestService;
     private final ImageVariantRepository imageVariantRepository;
-    private final Executor executor;
+    private final ThreadPoolTaskExecutor executor;
     private final String serverId;
 
     public ImageVariantScheduler(
@@ -30,7 +30,7 @@ public class ImageVariantScheduler {
         ImageVariantProcessor processor,
         ImageVariantRequestService requestService,
         ImageVariantRepository imageVariantRepository,
-        @Qualifier("imageVariantExecutor") Executor executor
+        @Qualifier("imageVariantExecutor") ThreadPoolTaskExecutor executor
     ) {
         this.properties = properties;
         this.claimService = claimService;
@@ -43,7 +43,11 @@ public class ImageVariantScheduler {
 
     @Scheduled(fixedDelayString = "${image.variant.fixed-delay-ms:5000}")
     public void run() {
-        List<Long> claimed = claimService.claimDue(serverId, Math.max(1, properties.getBatchSize()));
+        int available = availableSlots();
+        if (available <= 0) {
+            return;
+        }
+        List<Long> claimed = claimService.claimDue(serverId, Math.min(Math.max(1, properties.getBatchSize()), available));
         if (claimed.isEmpty()) {
             backfill();
             return;
@@ -56,6 +60,13 @@ public class ImageVariantScheduler {
                 log.warn("image variant executor full variantId={}", id);
             }
         }
+    }
+
+    /** 실행기에 바로 넣을 수 있는 만큼만 선점한다. 처리 중인 작업이 남아 있으면 다음 주기로 미룬다. */
+    int availableSlots() {
+        int capacity = Math.max(1, properties.getConcurrency());
+        int busy = executor.getActiveCount() + executor.getThreadPoolExecutor().getQueue().size();
+        return capacity - busy;
     }
 
     /** 신규 작업이 없을 때만 기존 사진의 생성 요청을 조금씩 만든다. 사용자 요청 처리와 경쟁하지 않게 하기 위해서다. */
