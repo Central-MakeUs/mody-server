@@ -70,6 +70,17 @@ error-alert:
     max-message-length: ${SLACK_ERROR_ALERT_MAX_MESSAGE_LENGTH:3500}
     stack-trace-depth: ${SLACK_ERROR_ALERT_STACK_TRACE_DEPTH:8}
 
+image:
+  variant:
+    enabled: ${IMAGE_VARIANT_ENABLED:false}
+    fixed-delay-ms: ${IMAGE_VARIANT_FIXED_DELAY_MS:5000}
+    batch-size: ${IMAGE_VARIANT_BATCH_SIZE:4}
+    max-attempts: ${IMAGE_VARIANT_MAX_ATTEMPTS:3}
+    thumbnail-max-size: ${IMAGE_VARIANT_THUMBNAIL_MAX_SIZE:480}
+    display-max-size: ${IMAGE_VARIANT_DISPLAY_MAX_SIZE:1440}
+    backfill-enabled: ${IMAGE_VARIANT_BACKFILL_ENABLED:false}
+    backfill-batch-size: ${IMAGE_VARIANT_BACKFILL_BATCH_SIZE:20}
+
 notification:
   dispatch:
     enabled: ${NOTIFICATION_DISPATCH_ENABLED:false}

@@ -1,5 +1,8 @@
 package cmc.mody.record.application;
 
+import cmc.mody.common.image.ImageVariantLookup;
+import cmc.mody.common.image.ImageVariantRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -74,6 +77,12 @@ class ActivityRecordServiceTest {
 
     @Mock
     private RecordViewHistoryRepository recordViewHistoryRepository;
+
+    @Mock
+    private ImageVariantRepository imageVariantRepository;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @Captor
     private ArgumentCaptor<ActivityRecord> activityRecordCaptor;
@@ -691,7 +700,9 @@ class ActivityRecordServiceTest {
             recordCommentRepository,
             recordViewHistoryRepository,
             new ImageUrlResolver(new UploadProperties()),
-            notificationRequestService
+            notificationRequestService,
+            new ImageVariantLookup(imageVariantRepository, new ImageUrlResolver(new UploadProperties())),
+            eventPublisher
         );
     }
 

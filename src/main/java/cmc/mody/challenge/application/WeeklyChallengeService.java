@@ -13,6 +13,7 @@ import cmc.mody.challenge.infrastructure.repository.GlobalWeeklyChallengeReposit
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.common.image.ImageVariantRequestedEvent;
 import cmc.mody.common.upload.ImageObjectStorage;
 import cmc.mody.common.upload.ImageUrlResolver;
 import cmc.mody.grouping.domain.GroupMember;
@@ -36,6 +37,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,6 +57,7 @@ public class WeeklyChallengeService {
     private final ImageUrlResolver imageUrlResolver;
     private final ImageObjectStorage imageObjectStorage;
     private final WeeklyChallengeShareImageGenerator shareImageGenerator;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public WeeklyChallengeListResult getWeeklyChallenges(Long memberId, Long groupId) {
@@ -158,6 +161,7 @@ public class WeeklyChallengeService {
             command.imageCropRegion() == null ? null : command.imageCropRegion().height(),
             LocalDateTime.now()
         ));
+        eventPublisher.publishEvent(new ImageVariantRequestedEvent(proof.getImageKey()));
         completeIfAllMembersProved(groupChallenge, group.getName());
         log.info("weekly challenge proved proofId={} groupChallengeId={} groupId={} imageKey={} crop={}",
             proof.getId(), groupChallenge.getId(), groupId, command.imageKey(), command.imageCropRegion());
