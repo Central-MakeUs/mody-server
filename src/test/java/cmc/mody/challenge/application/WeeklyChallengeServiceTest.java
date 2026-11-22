@@ -1,5 +1,9 @@
 package cmc.mody.challenge.application;
 
+import cmc.mody.common.image.ImageVariantLookup;
+import cmc.mody.common.image.ImageVariantProperties;
+import cmc.mody.common.image.PhotoUrlResolver;
+import org.springframework.context.ApplicationEventPublisher;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -51,6 +55,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class WeeklyChallengeServiceTest {
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     @Mock
     private IdGenerator idGenerator;
 
@@ -502,7 +509,13 @@ class WeeklyChallengeServiceTest {
             notificationRequestService,
             new ImageUrlResolver(uploadProperties),
             imageObjectStorage,
-            shareImageGenerator
+            shareImageGenerator,
+            eventPublisher,
+            new PhotoUrlResolver(
+                new ImageUrlResolver(uploadProperties),
+                new ImageVariantLookup(null, new ImageUrlResolver(uploadProperties)),
+                new ImageVariantProperties()
+            )
         );
     }
 

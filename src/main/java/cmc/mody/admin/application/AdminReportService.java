@@ -1,8 +1,8 @@
 package cmc.mody.admin.application;
 
+import cmc.mody.common.image.PhotoUrlResolver;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
-import cmc.mody.common.upload.ImageUrlResolver;
 import cmc.mody.record.application.AdminRecordService;
 import cmc.mody.report.domain.RecordReport;
 import cmc.mody.report.domain.RecordReportResolution;
@@ -40,7 +40,7 @@ public class AdminReportService {
     private static final String LIVE_REPORT = "rr.status = 'ACTIVE' AND rr.deleted_at IS NULL";
     private static final int REPORTER_PREVIEW = 5;
     private final NamedParameterJdbcTemplate jdbc;
-    private final ImageUrlResolver images;
+    private final PhotoUrlResolver photos;
     private final RecordReportRepository reports;
     private final AdminRecordService records;
 
@@ -148,7 +148,7 @@ public class AdminReportService {
             String type = rs.getString("record_type");
             records.put(rs.getLong("id"), new Item(Long.toString(rs.getLong("id")), type,
                 "MEAL".equals(type) ? rs.getString("menu") : rs.getString("exercise_name"),
-                images.resolve(rs.getString("image_key")), time(rs, "uploaded_at"),
+                photos.display(rs.getString("image_key")), time(rs, "uploaded_at"),
                 "ACTIVE".equals(rs.getString("status")) && rs.getTimestamp("deleted_at") == null,
                 Long.toString(rs.getLong("member_id")), memberActive ? rs.getString("nickname") : "탈퇴한 회원",
                 0, 0, null, null, null, List.of(), null));

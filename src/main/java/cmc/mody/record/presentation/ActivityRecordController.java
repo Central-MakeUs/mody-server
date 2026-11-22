@@ -206,6 +206,8 @@ public class ActivityRecordController {
         Integer exerciseDurationMinutes,
         String exerciseName,
         String imageUrl,
+        String thumbnailImageUrl,
+        String displayImageUrl,
         ImageCropRegionResponse imageCropRegion,
         int recordingStreakDays
     ) {
@@ -221,6 +223,8 @@ public class ActivityRecordController {
                 result.exerciseDurationMinutes(),
                 result.exerciseName(),
                 result.imageUrl(),
+                result.thumbnailImageUrl(),
+                result.displayImageUrl(),
                 ImageCropRegionResponse.from(result.imageCropRegion()),
                 result.recordingStreakDays()
             );
@@ -258,6 +262,8 @@ public class ActivityRecordController {
         Integer exerciseDurationMinutes,
         String exerciseName,
         String imageUrl,
+        String thumbnailImageUrl,
+        String displayImageUrl,
         ImageCropRegionResponse imageCropRegion,
         boolean isMine
     ) {
@@ -273,6 +279,8 @@ public class ActivityRecordController {
                 result.exerciseDurationMinutes(),
                 result.exerciseName(),
                 result.imageUrl(),
+                result.thumbnailImageUrl(),
+                result.displayImageUrl(),
                 ImageCropRegionResponse.from(result.imageCropRegion()),
                 result.isMine()
             );

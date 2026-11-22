@@ -1,5 +1,8 @@
 package cmc.mody.record.application;
 
+import cmc.mody.common.image.ImageVariantLookup;
+import cmc.mody.common.image.ImageVariantProperties;
+import cmc.mody.common.image.PhotoUrlResolver;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
@@ -102,7 +105,11 @@ class AdminRecordServiceTest {
             activityRecordRepository,
             activityRecordGroupRepository,
             recordCommentRepository,
-            imageUrlResolver
+            new PhotoUrlResolver(
+                imageUrlResolver,
+                new ImageVariantLookup(null, imageUrlResolver),
+                new ImageVariantProperties()
+            )
         );
     }
 }
