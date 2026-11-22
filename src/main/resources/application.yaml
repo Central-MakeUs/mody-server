@@ -75,6 +75,7 @@ image:
     enabled: ${IMAGE_VARIANT_ENABLED:false}
     fixed-delay-ms: ${IMAGE_VARIANT_FIXED_DELAY_MS:5000}
     batch-size: ${IMAGE_VARIANT_BATCH_SIZE:4}
+    concurrency: ${IMAGE_VARIANT_CONCURRENCY:2}
     max-attempts: ${IMAGE_VARIANT_MAX_ATTEMPTS:3}
     thumbnail-max-size: ${IMAGE_VARIANT_THUMBNAIL_MAX_SIZE:480}
     display-max-size: ${IMAGE_VARIANT_DISPLAY_MAX_SIZE:1440}

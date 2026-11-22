@@ -13,8 +13,9 @@ public class ImageVariantConfig {
     @Bean(name = "imageVariantExecutor")
     public Executor imageVariantExecutor(ImageVariantProperties properties) {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(2);
-        executor.setMaxPoolSize(2);
+        int concurrency = Math.max(1, properties.getConcurrency());
+        executor.setCorePoolSize(concurrency);
+        executor.setMaxPoolSize(concurrency);
         executor.setQueueCapacity(Math.max(1, properties.getBatchSize()) * 2);
         executor.setThreadNamePrefix("image-variant-");
         executor.initialize();

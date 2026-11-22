@@ -13,6 +13,8 @@ public class ImageVariantProperties {
     private long fixedDelayMs = 5_000L;
     /** 한 번에 선점할 작업 수. 사진 디코딩은 메모리를 많이 써서 작게 둔다. */
     private int batchSize = 4;
+    /** 동시에 처리할 사진 수. 힙이 작은 서버(dev 320MB)는 1로 둔다. */
+    private int concurrency = 2;
     private int maxAttempts = 3;
     private long retryDelaySeconds = 60L;
     /** PROCESSING으로 남은 작업을 다시 가져갈 기준. 처리 중 서버가 재시작된 경우를 위한 것. */

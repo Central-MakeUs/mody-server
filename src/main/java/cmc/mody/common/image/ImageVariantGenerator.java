@@ -60,7 +60,7 @@ public class ImageVariantGenerator {
     }
 
     private static BufferedImage toOpaqueRgb(BufferedImage source) {
-        if (source.getType() == BufferedImage.TYPE_INT_RGB) {
+        if (!source.getColorModel().hasAlpha()) {
             return source;
         }
         // JPEG는 투명도를 담지 못한다. PNG 투명 영역은 흰 배경으로 채운다.
