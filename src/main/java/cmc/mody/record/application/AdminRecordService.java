@@ -1,8 +1,8 @@
 package cmc.mody.record.application;
 
+import cmc.mody.common.image.PhotoUrlResolver;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
-import cmc.mody.common.upload.ImageUrlResolver;
 import cmc.mody.grouping.domain.ModyGroup;
 import cmc.mody.grouping.domain.GroupMemberStatus;
 import cmc.mody.grouping.infrastructure.repository.GroupMemberRepository;
@@ -31,7 +31,7 @@ public class AdminRecordService {
     private final ActivityRecordRepository activityRecordRepository;
     private final ActivityRecordGroupRepository activityRecordGroupRepository;
     private final RecordCommentRepository recordCommentRepository;
-    private final ImageUrlResolver imageUrlResolver;
+    private final PhotoUrlResolver photoUrlResolver;
 
     @Transactional(readOnly = true)
     public AdminRecordListResult getRecords(Long groupId) {
@@ -46,7 +46,7 @@ public class AdminRecordService {
                 (first, ignored) -> first
             ));
         return new AdminRecordListResult(activityRecordRepository.findActiveAdminRecordsByGroupId(groupId).stream()
-            .map(record -> AdminRecordResult.from(record, nicknamesByMemberId.get(record.getMemberId()), imageUrlResolver))
+            .map(record -> AdminRecordResult.from(record, nicknamesByMemberId.get(record.getMemberId()), photoUrlResolver))
             .toList());
     }
 
@@ -60,7 +60,7 @@ public class AdminRecordService {
             command.exerciseDurationMinutes(),
             command.exerciseName()
         );
-        return AdminRecordResult.from(record, null, imageUrlResolver);
+        return AdminRecordResult.from(record, null, photoUrlResolver);
     }
 
     @Transactional
@@ -135,7 +135,7 @@ public class AdminRecordService {
         private static AdminRecordResult from(
             ActivityRecord record,
             String memberNickname,
-            ImageUrlResolver imageUrlResolver
+            PhotoUrlResolver photoUrlResolver
         ) {
             return new AdminRecordResult(
                 record.getId(),
@@ -147,7 +147,7 @@ public class AdminRecordService {
                 record.getExerciseDurationMinutes(),
                 record.getExerciseName(),
                 record.getImageKey(),
-                imageUrlResolver.resolve(record.getImageKey()),
+                photoUrlResolver.display(record.getImageKey()),
                 record.getUploadedAt()
             );
         }

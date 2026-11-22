@@ -1,6 +1,8 @@
 package cmc.mody.record.application;
 
 import cmc.mody.common.image.ImageVariantLookup;
+import cmc.mody.common.image.ImageVariantProperties;
+import cmc.mody.common.image.PhotoUrlResolver;
 import cmc.mody.common.image.ImageVariantRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -702,6 +704,11 @@ class ActivityRecordServiceTest {
             new ImageUrlResolver(new UploadProperties()),
             notificationRequestService,
             new ImageVariantLookup(imageVariantRepository, new ImageUrlResolver(new UploadProperties())),
+            new PhotoUrlResolver(
+                new ImageUrlResolver(new UploadProperties()),
+                new ImageVariantLookup(imageVariantRepository, new ImageUrlResolver(new UploadProperties())),
+                new ImageVariantProperties()
+            ),
             eventPublisher
         );
     }

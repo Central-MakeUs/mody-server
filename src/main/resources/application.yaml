@@ -80,6 +80,8 @@ image:
     display-max-size: ${IMAGE_VARIANT_DISPLAY_MAX_SIZE:1440}
     backfill-enabled: ${IMAGE_VARIANT_BACKFILL_ENABLED:false}
     backfill-batch-size: ${IMAGE_VARIANT_BACKFILL_BATCH_SIZE:20}
+    serve-in-image-url: ${IMAGE_VARIANT_SERVE_IN_IMAGE_URL:false}
+    list-size: ${IMAGE_VARIANT_LIST_SIZE:DISPLAY}
 
 notification:
   dispatch:

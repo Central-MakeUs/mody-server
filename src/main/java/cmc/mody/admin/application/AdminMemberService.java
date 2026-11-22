@@ -1,5 +1,6 @@
 package cmc.mody.admin.application;
 
+import cmc.mody.common.image.PhotoUrlResolver;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.upload.ImageUrlResolver;
@@ -38,6 +39,7 @@ public class AdminMemberService {
     private static final String LIVE_RECORD = "r.member_id = m.id AND r.status = 'ACTIVE' AND r.deleted_at IS NULL";
     private final NamedParameterJdbcTemplate jdbc;
     private final ImageUrlResolver images;
+    private final PhotoUrlResolver photos;
 
     public Page list(String keyword, String state, String loginType, String cursor, int size) {
         if (size < 1 || size > 100) {
@@ -154,7 +156,7 @@ public class AdminMemberService {
             ORDER BY r.uploaded_at DESC, r.id DESC LIMIT 12
             """, id, (rs, n) -> new Record(Long.toString(rs.getLong("id")), rs.getString("record_type"),
             "MEAL".equals(rs.getString("record_type")) ? rs.getString("menu") : rs.getString("exercise_name"),
-            images.resolve(rs.getString("image_key")), time(rs, "uploaded_at")));
+            photos.display(rs.getString("image_key")), time(rs, "uploaded_at")));
         Integer sessions = jdbc.queryForObject("""
             SELECT COUNT(*) FROM refresh_token WHERE member_id = :id AND status = 'ACTIVE' AND deleted_at IS NULL
             """, id, Integer.class);

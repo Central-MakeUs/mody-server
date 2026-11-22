@@ -1,5 +1,6 @@
 package cmc.mody.challenge.application;
 
+import cmc.mody.common.image.PhotoUrlResolver;
 import cmc.mody.challenge.domain.Challenge;
 import cmc.mody.challenge.domain.ChallengeProof;
 import cmc.mody.challenge.domain.ChallengeType;
@@ -58,6 +59,7 @@ public class WeeklyChallengeService {
     private final ImageObjectStorage imageObjectStorage;
     private final WeeklyChallengeShareImageGenerator shareImageGenerator;
     private final ApplicationEventPublisher eventPublisher;
+    private final PhotoUrlResolver photoUrlResolver;
 
     @Transactional(readOnly = true)
     public WeeklyChallengeListResult getWeeklyChallenges(Long memberId, Long groupId) {
@@ -168,7 +170,7 @@ public class WeeklyChallengeService {
         return new WeeklyChallengeProofCreateResult(
             proof.getId(),
             groupChallenge.getId(),
-            imageUrlResolver.resolve(proof.getImageKey()),
+            photoUrlResolver.display(proof.getImageKey()),
             ImageCropRegionResult.from(proof)
         );
     }
@@ -364,7 +366,7 @@ public class WeeklyChallengeService {
         }
         return new WeeklyChallengeProofResult(
             proof.getId(),
-            imageUrlResolver.resolve(proof.getImageKey()),
+            photoUrlResolver.display(proof.getImageKey()),
             ImageCropRegionResult.from(proof),
             groupMember.getMemberId(),
             groupMember.getDisplayNickname(),

@@ -1,5 +1,6 @@
 package cmc.mody.record.application;
 
+import cmc.mody.common.image.PhotoUrlResolver;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
@@ -61,6 +62,7 @@ public class ActivityRecordService {
     private final ImageUrlResolver imageUrlResolver;
     private final NotificationRequestService notificationRequestService;
     private final ImageVariantLookup imageVariantLookup;
+    private final PhotoUrlResolver photoUrlResolver;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
@@ -393,7 +395,7 @@ public class ActivityRecordService {
             record.getMenu(),
             record.getExerciseDurationMinutes(),
             record.getExerciseName(),
-            imageUrlResolver.resolve(record.getImageKey()),
+            photoUrlResolver.display(record.getImageKey(), variant),
             variant.thumbnailUrl(),
             variant.displayUrl(),
             ImageCropRegionResult.from(record),
@@ -514,7 +516,7 @@ public class ActivityRecordService {
             record.getMenu(),
             record.getExerciseDurationMinutes(),
             record.getExerciseName(),
-            imageUrlResolver.resolve(record.getImageKey()),
+            photoUrlResolver.list(record.getImageKey(), variant),
             variant.thumbnailUrl(),
             variant.displayUrl(),
             ImageCropRegionResult.from(record),

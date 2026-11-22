@@ -24,4 +24,13 @@ public class ImageVariantProperties {
     private boolean backfillEnabled = false;
     private int backfillBatchSize = 20;
     private String keyPrefix = "variants";
+    /** 기존 imageUrl 자리에 축소본 URL을 넣는다. 앱 수정 없이 축소본을 쓰게 하는 스위치다. */
+    private boolean serveInImageUrl = false;
+    /** serveInImageUrl일 때 목록 카드에 줄 크기. */
+    private ListSize listSize = ListSize.DISPLAY;
+
+    public enum ListSize {
+        THUMBNAIL,
+        DISPLAY
+    }
 }

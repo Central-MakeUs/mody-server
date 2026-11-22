@@ -32,7 +32,7 @@ LLD-0036에서 썸네일 생성·대역폭 최적화를 범위 밖으로 남겨 
 ### Out of scope
 
 - 앱의 축소본 사용 전환 (iOS·Android 작업 필요).
-- 주간 챌린지 인증·관리 화면·프로필 이미지 응답의 축소본 노출. 인증 사진은 생성만 해 둔다.
+- 프로필 이미지 축소.
 - WebP 등 ImageIO가 읽지 못하는 형식의 변환 (운영 3,699장 중 webp 8장, FAILED로 남고 원본 사용).
 - 원본 삭제·재압축, CDN 도입.
 
@@ -45,7 +45,11 @@ LLD-0036에서 썸네일 생성·대역폭 최적화를 범위 밖으로 남겨 
 | `thumbnailImageUrl` | string \| null | 목록용 축소본 URL. 아직 없으면 null |
 | `displayImageUrl` | string \| null | 상세용 축소본 URL. 아직 없으면 null |
 
-기존 `imageUrl`은 그대로 원본이다. 앱은 `thumbnailImageUrl ?? imageUrl`처럼 쓴다.
+`IMAGE_VARIANT_SERVE_IN_IMAGE_URL=true`이면 기존 `imageUrl` 자리에 축소본 URL을 넣는다(앱 수정 없이 적용).
+목록은 `IMAGE_VARIANT_LIST_SIZE`(THUMBNAIL=480px, DISPLAY=1440px, 기본 DISPLAY), 상세는 1440px이다. 축소본이 없으면 원본이다.
+같은 규칙을 주간 챌린지 인증 응답과 관리 화면(인증 피드, 그룹 기록, 신고, 회원 상세)의 기록 사진에도 적용한다. 앱·관리 화면에는 원본이 필요한 기능이 없다(2026-11-22 확인).
+교체가 꺼져 있으면 `imageUrl`은 원본이고, 앱은 `thumbnailImageUrl ?? imageUrl`처럼 쓸 수 있다.
+READY 축소본은 바뀌지 않으므로 서버 메모리에 최대 2만 건 캐시한다.
 축소본은 자르지 않고 비율만 유지해 줄이므로 기존 `imageCropRegion` 비율 좌표를 그대로 적용할 수 있다.
 EXIF 방향은 축소본 픽셀에 반영하고 축소본에는 EXIF를 남기지 않는다.
 
@@ -113,7 +117,6 @@ EXIF 방향은 축소본 픽셀에 반영하고 축소본에는 EXIF를 남기�
 ## 9. 미결정 사항 (Open Questions)
 
 - [ ] 앱 전환 시점과 담당(iOS·Android).
-- [ ] 주간 챌린지 인증·관리 화면 응답에도 축소본을 노출할지.
 - [ ] 축소본 객체에 `Cache-Control`을 지정할지(현재 버킷 기본값).
 
 ## 10. 참고

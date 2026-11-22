@@ -1,5 +1,8 @@
 package cmc.mody.challenge.application;
 
+import cmc.mody.common.image.ImageVariantLookup;
+import cmc.mody.common.image.ImageVariantProperties;
+import cmc.mody.common.image.PhotoUrlResolver;
 import org.springframework.context.ApplicationEventPublisher;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -507,7 +510,12 @@ class WeeklyChallengeServiceTest {
             new ImageUrlResolver(uploadProperties),
             imageObjectStorage,
             shareImageGenerator,
-            eventPublisher
+            eventPublisher,
+            new PhotoUrlResolver(
+                new ImageUrlResolver(uploadProperties),
+                new ImageVariantLookup(null, new ImageUrlResolver(uploadProperties)),
+                new ImageVariantProperties()
+            )
         );
     }
 

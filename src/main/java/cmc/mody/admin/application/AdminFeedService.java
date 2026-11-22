@@ -1,8 +1,8 @@
 package cmc.mody.admin.application;
 
+import cmc.mody.common.image.PhotoUrlResolver;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
-import cmc.mody.common.upload.ImageUrlResolver;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -55,7 +55,7 @@ public class AdminFeedService {
         WHERE arg.record_id = r.id AND arg.status = 'ACTIVE' AND arg.deleted_at IS NULL
         """;
     private final NamedParameterJdbcTemplate jdbc;
-    private final ImageUrlResolver images;
+    private final PhotoUrlResolver photos;
 
     public Page list(LocalDate from, LocalDate to, String type, Long memberId, Long groupId,
         Long groupChallengeId, String keyword, String cursor, int size) {
@@ -198,7 +198,7 @@ public class AdminFeedService {
     private Item item(java.sql.ResultSet rs) throws java.sql.SQLException {
         return new Item(Long.toString(rs.getLong("id")), rs.getString("feed_type"),
             rs.getTimestamp("uploaded_at").toLocalDateTime(), Long.toString(rs.getLong("member_id")),
-            rs.getString("nickname"), images.resolve(rs.getString("image_key")), rs.getString("title"),
+            rs.getString("nickname"), photos.display(rs.getString("image_key")), rs.getString("title"),
             rs.getString("description"), rs.getString("meal_time"),
             (Integer) rs.getObject("exercise_duration_minutes"), stringId(rs.getObject("group_challenge_id")),
             stringId(rs.getObject("global_weekly_challenge_id")), stringId(rs.getObject("legacy_group_id")),
