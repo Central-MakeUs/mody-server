@@ -77,11 +77,11 @@ class ImageVariantGeneratorTest {
     }
 
     @Test
-    @DisplayName("최종 크기 이상 해상도는 남기고 디코딩 단계에서 건너뛴다.")
-    void subsamplingKeepsTargetResolution() {
-        assertThat(ExifOrientedImageReader.subsampling(4032, 3024, 1440)).isEqualTo(2);
-        assertThat(ExifOrientedImageReader.subsampling(1440, 1080, 1440)).isEqualTo(1);
-        assertThat(ExifOrientedImageReader.subsampling(4032, 3024, 480)).isEqualTo(8);
+    @DisplayName("최종 크기의 2배 이상 해상도는 남기고 디코딩 단계에서 건너뛴다.")
+    void subsamplingKeepsTwiceTargetResolution() {
+        assertThat(ExifOrientedImageReader.subsampling(4032, 3024, 1440)).isEqualTo(1);
+        assertThat(ExifOrientedImageReader.subsampling(6000, 4000, 1440)).isEqualTo(2);
+        assertThat(ExifOrientedImageReader.subsampling(4032, 3024, 480)).isEqualTo(4);
         assertThat(ExifOrientedImageReader.subsampling(4032, 3024, 0)).isEqualTo(1);
     }
 

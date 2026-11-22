@@ -64,8 +64,8 @@ class ImageVariantProcessorTest {
 
         processor.process(10L);
 
-        then(imageObjectStorage).should().write(eq("variants/w480/records/1/2026/11/100.jpg"), any(), eq("image/jpeg"));
-        then(imageObjectStorage).should().write(eq("variants/w1440/records/1/2026/11/100.jpg"), any(), eq("image/jpeg"));
+        then(imageObjectStorage).should().write(eq("variants/v2/w480/records/1/2026/11/100.jpg"), any(), eq("image/jpeg"));
+        then(imageObjectStorage).should().write(eq("variants/v2/w1440/records/1/2026/11/100.jpg"), any(), eq("image/jpeg"));
         assertThat(variant.isReady()).isTrue();
         assertThat(variant.getOriginalBytes()).isEqualTo(2_000);
         assertThat(variant.getThumbnailBytes()).isEqualTo(50);

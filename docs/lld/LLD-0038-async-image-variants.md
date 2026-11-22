@@ -63,7 +63,7 @@ EXIF 방향은 축소본 픽셀에 반영하고 축소본에는 EXIF를 남기�
 | `variant_status` | PENDING / PROCESSING / READY / FAILED |
 | `attempt_count`, `next_attempt_at` | 재시도 |
 | `picked_by`, `picked_at` | 선점한 서버와 시각 |
-| `thumbnail_key`, `display_key` | `variants/w480/<원본 경로>.jpg`, `variants/w1440/<원본 경로>.jpg` |
+| `thumbnail_key`, `display_key` | `variants/v2/w480/<원본 경로>.jpg`, `variants/v2/w1440/<원본 경로>.jpg` (생성 방식이 바뀌면 버전을 올려 앱 캐시와 겹치지 않게 함) |
 | `original_bytes`, `thumbnail_bytes`, `display_bytes` | 효과 측정용 크기 |
 | `processed_at`, `last_error` | 완료 시각, 마지막 오류(500자) |
 

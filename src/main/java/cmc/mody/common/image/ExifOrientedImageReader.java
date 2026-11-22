@@ -30,7 +30,7 @@ public final class ExifOrientedImageReader {
 
     /**
      * 긴 변이 targetLongEdge의 두 배 이상이면 디코딩 단계에서 픽셀을 건너뛰어(subsampling) 읽는다.
-     * 4032×3024 원본을 그대로 디코딩하면 한 장에 수십 MB를 쓴다. 최종 크기 이상만 남겨 메모리를 줄인다.
+     * 4032×3024 원본을 그대로 디코딩하면 한 장에 수십 MB를 쓴다. 최종 크기의 2배까지만 남겨 메모리를 줄인다.
      * targetLongEdge가 0 이하면 원본 크기.
      */
     public static BufferedImage read(byte[] bytes, int targetLongEdge) throws IOException {
@@ -69,8 +69,8 @@ public final class ExifOrientedImageReader {
         if (targetLongEdge <= 0) {
             return 1;
         }
-        // 최종 크기 이상의 해상도는 남겨 두고, 그 위로는 건너뛴다. 남은 축소는 보간으로 처리한다.
-        return Math.max(1, Math.max(width, height) / targetLongEdge);
+        // 최종 크기의 2배 이상 해상도는 남긴다. 건너뛰기(subsampling)는 계단 현상을 만들어서, 화질을 위해 여유를 둔다.
+        return Math.max(1, Math.max(width, height) / (targetLongEdge * 2));
     }
 
     static int readOrientation(byte[] bytes) {

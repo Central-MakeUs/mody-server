@@ -21,11 +21,12 @@ public class ImageVariantProperties {
     private long staleProcessingMinutes = 10L;
     private int thumbnailMaxSize = 480;
     private int displayMaxSize = 1440;
-    private float jpegQuality = 0.8f;
+    private float jpegQuality = 0.85f;
     /** 기존 사진 중 생성 요청이 없는 것을 조금씩 채운다. 처리할 신규 작업이 없을 때만 돈다. */
     private boolean backfillEnabled = false;
     private int backfillBatchSize = 20;
-    private String keyPrefix = "variants";
+    /** 생성 방식이 바뀌면 버전을 올린다. 앱이 같은 URL의 예전 축소본을 캐시해 두고 계속 보여 주는 것을 막는다. */
+    private String keyPrefix = "variants/v2";
     /** 기존 imageUrl 자리에 축소본 URL을 넣는다. 앱 수정 없이 축소본을 쓰게 하는 스위치다. */
     private boolean serveInImageUrl = false;
     /** serveInImageUrl일 때 목록 카드에 줄 크기. */
