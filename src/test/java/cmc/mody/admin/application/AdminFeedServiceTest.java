@@ -9,11 +9,14 @@ import cmc.mody.challenge.domain.ChallengeType;
 import cmc.mody.challenge.domain.GroupChallenge;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
+import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.ModyGroup;
 import cmc.mody.member.domain.Member;
 import cmc.mody.record.domain.ActivityRecord;
 import cmc.mody.record.domain.ActivityRecordGroup;
+import cmc.mody.record.domain.RecordComment;
 import cmc.mody.record.domain.RecordType;
+import cmc.mody.report.domain.CommentReport;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -169,6 +172,34 @@ class AdminFeedServiceTest {
     private AdminFeedService.Page list(String type, Long member, Long group, Long challenge,
         String keyword, String cursor, int size) {
         return feed.list(DAY, DAY, type, member, group, challenge, keyword, cursor, size);
+    }
+
+    @Test
+    void detailListsCommentsIncludingDeletedOnesAndListCarriesAuthorContext() {
+        em.persist(new Member(11L, "하늘", LocalDate.of(2000, 1, 1), null));
+        em.persist(new GroupMember(60L, 10L, 20L, AT));
+        em.persist(new RecordComment(70L, 100L, 20L, 11L, "멋져요 :mody-fire:"));
+        em.persist(new RecordComment(71L, 100L, 21L, 11L, "", "clap"));
+        RecordComment removed = new RecordComment(72L, 100L, 20L, 10L, "지운 댓글");
+        removed.delete();
+        em.persist(removed);
+        em.persist(new CommentReport(80L, 10L, 70L, 100L, 20L));
+        em.flush();
+
+        var detail = feed.detail("MEAL", 100L);
+        assertThat(detail.comments()).extracting(AdminFeedService.Comment::id).containsExactly("70", "71", "72");
+        var first = detail.comments().getFirst();
+        assertThat(first.nickname()).isEqualTo("하늘");
+        assertThat(first.groupName()).isEqualTo("우리 그룹");
+        assertThat(first.reportCount()).isEqualTo(1);
+        assertThat(detail.comments().get(1).emojiId()).isEqualTo("clap");
+        assertThat(detail.comments().get(2).deleted()).isTrue();
+        assertThat(feed.detail("CHALLENGE", 100L).comments()).isEmpty();
+
+        var page = list(null, null, null, null, null, null, 24);
+        var author = page.authors().get("10");
+        assertThat(author.groups()).extracting(AdminMemberProfiles.GroupName::name).containsExactly("우리 그룹");
+        assertThat(author.birthDate()).isNull();
     }
 
     private ActivityRecord activity(long id, RecordType type, LocalDateTime at) {

@@ -40,6 +40,7 @@ public class AdminMemberService {
     private final NamedParameterJdbcTemplate jdbc;
     private final ImageUrlResolver images;
     private final PhotoUrlResolver photos;
+    private final AdminMemberProfiles profiles;
 
     public Page list(String keyword, String state, String loginType, String cursor, int size) {
         if (size < 1 || size > 100) {
@@ -68,7 +69,8 @@ public class AdminMemberService {
         boolean hasMore = rows.size() > size;
         List<Item> items = withLoginTypes(hasMore ? rows.subList(0, size) : rows);
         String next = hasMore ? encode(items.getLast()) : null;
-        return new Page(items, next, hasMore);
+        var context = profiles.load(items.stream().map(item -> Long.valueOf(item.id())).toList());
+        return new Page(items, next, hasMore, context);
     }
 
     public Summary summary() {
@@ -253,7 +255,9 @@ public class AdminMemberService {
         LocalDateTime createdAt, LocalDateTime deletedAt, boolean active, long groupCount, long recordCount,
         LocalDateTime lastRecordAt) { }
 
-    public record Page(List<Item> items, String nextCursor, boolean hasMore) { }
+    /** profiles: 화면에 나온 회원의 생년월일과 참여 중인 그룹. 회원 ID 문자열로 찾는다. */
+    public record Page(List<Item> items, String nextCursor, boolean hasMore,
+        Map<String, AdminMemberProfiles.Profile> profiles) { }
 
     public record Summary(long totalCount, long activeCount, long withdrawnCount, long joinedToday,
         long joinedLast7Days, long withdrawnLast7Days) { }
