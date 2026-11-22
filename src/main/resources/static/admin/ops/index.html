@@ -22,6 +22,7 @@
         <p class="nav-caption">회원 · 운영</p>
         <nav id="ops-nav" aria-label="운영 메뉴">
           <a class="nav-item" data-view="members" href="/admin/members"><span class="nav-icon">☺</span>회원 관리</a>
+          <a class="nav-item" data-view="groups" href="/admin/groups"><span class="nav-icon">◎</span>그룹 페이지</a>
           <a class="nav-item" data-view="reports" href="/admin/reports"><span class="nav-icon">⚑</span>신고 처리</a>
           <a class="nav-item" data-view="announcements" href="/admin/announcements"><span class="nav-icon">✉</span>공지 푸시</a>
           <a class="nav-item" data-view="stats" href="/admin/stats"><span class="nav-icon">◔</span>통계</a>
@@ -81,7 +82,7 @@
             <div class="table-wrap">
               <table class="ops-table">
                 <thead>
-                  <tr><th>회원</th><th>가입 경로</th><th>가입일</th><th>그룹</th><th>기록</th><th>최근 기록</th><th>상태</th></tr>
+                  <tr><th>회원</th><th>나이</th><th>가입 경로</th><th>가입일</th><th>참여 그룹</th><th>기록</th><th>최근 기록</th><th>상태</th></tr>
                 </thead>
                 <tbody id="member-rows"></tbody>
               </table>
@@ -95,15 +96,19 @@
               <div>
                 <p class="eyebrow">REPORTS</p>
                 <h1>신고 처리 <span class="env-badge" data-env></span></h1>
-                <p>신고된 기록을 확인하고 숨기거나 기각해요. 숨기면 기록과 댓글, 그룹 공유가 함께 삭제돼요.</p>
+                <p id="report-intro">신고된 기록을 확인하고 숨기거나 기각해요. 숨기면 기록과 댓글, 그룹 공유가 함께 삭제돼요.</p>
               </div>
             </div>
             <section class="summary-grid" aria-label="신고 집계">
-              <div><span>처리 대기 기록</span><strong id="r-pending-records">—</strong></div>
+              <div><span id="r-pending-label">처리 대기 기록</span><strong id="r-pending-records">—</strong></div>
               <div><span>처리 대기 신고</span><strong id="r-pending-reports">—</strong></div>
               <div><span>최근 7일 숨김</span><strong id="r-hidden">—</strong></div>
               <div><span>최근 7일 기각</span><strong id="r-dismissed">—</strong></div>
             </section>
+            <div class="type-tabs" id="report-kinds" role="group" aria-label="신고 대상">
+              <button type="button" data-kind="records" class="active" aria-pressed="true">기록 신고</button>
+              <button type="button" data-kind="comments" aria-pressed="false">댓글 신고</button>
+            </div>
             <div class="type-tabs" id="report-tabs" role="group" aria-label="처리 상태">
               <button type="button" data-state="PENDING" class="active" aria-pressed="true">처리 대기</button>
               <button type="button" data-state="RESOLVED" aria-pressed="false">처리 완료</button>
@@ -112,6 +117,41 @@
             <p id="report-message" class="message" role="status" aria-live="polite"></p>
             <div id="report-list" class="report-list"></div>
             <div class="load-more"><button id="report-more" class="secondary-button" hidden>더 보기</button></div>
+          </section>
+
+          <!-- 그룹 페이지 -->
+          <section data-panel="groups" hidden>
+            <div class="page-heading">
+              <div>
+                <p class="eyebrow">GROUPS</p>
+                <h1>그룹 페이지 <span class="env-badge" data-env></span></h1>
+                <p>그룹 하나의 구성원, 초대 코드, 기록, 주간 챌린지, 댓글을 한 화면에서 봐요.</p>
+              </div>
+            </div>
+            <div id="group-list-view">
+              <form id="group-filters" class="filters">
+                <div class="filter-row">
+                  <label>검색
+                    <input name="keyword" maxlength="100" placeholder="그룹명, 초대 코드, 그룹 ID" />
+                  </label>
+                  <button class="primary-button" type="submit">조회</button>
+                </div>
+              </form>
+              <p id="group-message" class="message" role="status" aria-live="polite"></p>
+              <div class="table-wrap">
+                <table class="ops-table">
+                  <thead>
+                    <tr><th>그룹</th><th>초대 코드</th><th>구성원</th><th>최근 7일 기록</th><th>최근 기록</th><th>만든 날</th></tr>
+                  </thead>
+                  <tbody id="group-rows"></tbody>
+                </table>
+              </div>
+              <div class="load-more"><button id="group-more" class="secondary-button" hidden>더 보기</button></div>
+            </div>
+            <div id="group-detail-view" hidden>
+              <p><a href="/admin/groups" id="group-back">← 그룹 목록</a></p>
+              <div id="group-detail-body" class="ops-detail"></div>
+            </div>
           </section>
 
           <!-- 공지 푸시 -->

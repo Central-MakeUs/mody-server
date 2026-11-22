@@ -80,6 +80,15 @@ class AdminMemberServiceTest {
     }
 
     @Test
+    void listCarriesBirthDateAndJoinedGroupNames() {
+        var page = members.list(null, "ALL", null, null, 30);
+        var profile = page.profiles().get("10");
+        assertThat(profile.birthDate()).isEqualTo(LocalDate.of(2000, 1, 1));
+        assertThat(profile.groups()).extracting(AdminMemberProfiles.GroupName::name).containsExactly("아침 산책");
+        assertThat(page.profiles().get("11").groups()).isEmpty();
+    }
+
+    @Test
     void listPagesWithKeysetCursorWithoutDuplicates() {
         var first = members.list(null, null, null, null, 2);
         assertThat(first.items()).hasSize(2);

@@ -351,3 +351,42 @@ label.check {
     grid-template-columns: 100px 1fr 80px;
   }
 }
+/* 댓글 신고와 그룹 페이지 */
+#report-kinds {
+  margin-bottom: 8px;
+}
+.comment-report .comment-quote {
+  width: 120px;
+  margin: 0;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--canvas);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 160px;
+  overflow: auto;
+}
+.comment-feed {
+  display: grid;
+  gap: 8px;
+}
+.comment-line {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.comment-line p {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+#group-detail-body > h2 {
+  margin: 4px 0 12px;
+}
+@media (max-width: 720px) {
+  .comment-report .comment-quote {
+    width: 80px;
+  }
+}

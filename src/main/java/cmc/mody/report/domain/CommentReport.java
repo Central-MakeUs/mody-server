@@ -54,4 +54,10 @@ public class CommentReport extends BaseEntity {
         this.recordId = recordId;
         this.groupId = groupId;
     }
+
+    public void resolve(RecordReportResolution resolution, String resolvedBy, LocalDateTime resolvedAt) {
+        this.resolution = resolution;
+        this.resolvedBy = resolvedBy;
+        this.resolvedAt = resolvedAt;
+    }
 }
