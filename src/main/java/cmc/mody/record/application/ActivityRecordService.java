@@ -1,8 +1,12 @@
 package cmc.mody.record.application;
 
+import cmc.mody.common.image.PhotoUrlResolver;
 import cmc.mody.common.api.exception.GeneralException;
 import cmc.mody.common.api.status.ErrorStatus;
 import cmc.mody.common.id.IdGenerator;
+import cmc.mody.common.image.ImageVariantLookup;
+import cmc.mody.common.image.ImageVariantLookup.ImageVariantUrls;
+import cmc.mody.common.image.ImageVariantRequestedEvent;
 import cmc.mody.common.upload.ImageUrlResolver;
 import cmc.mody.grouping.domain.GroupMember;
 import cmc.mody.grouping.domain.GroupMemberStatus;
@@ -35,6 +39,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,6 +61,9 @@ public class ActivityRecordService {
     private final RecordViewHistoryRepository recordViewHistoryRepository;
     private final ImageUrlResolver imageUrlResolver;
     private final NotificationRequestService notificationRequestService;
+    private final ImageVariantLookup imageVariantLookup;
+    private final PhotoUrlResolver photoUrlResolver;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public ActivityCalendarResult getActivityCalendar(Long memberId, Long groupId, LocalDate baseDate) {
@@ -105,11 +113,13 @@ public class ActivityRecordService {
                 Function.identity(),
                 writerId -> calculateRecordingStreakDays(groupId, writerId, date)
             ));
+        Map<String, ImageVariantUrls> variants = findImageVariants(pageRecords);
         List<RecordSummaryResult> summaries = pageRecords.stream()
             .map(record -> toRecordSummary(
                 record,
                 groupMembers.get(record.getMemberId()),
-                streakDaysByMember.getOrDefault(record.getMemberId(), 0)
+                streakDaysByMember.getOrDefault(record.getMemberId(), 0),
+                ImageVariantLookup.of(variants, record.getImageKey())
             ))
             .toList();
         Long nextCursor = hasNext ? pageRecords.get(pageRecords.size() - 1).getId() : null;
@@ -231,6 +241,7 @@ public class ActivityRecordService {
                 joinedGroup.getDisplayNickname() == null ? member.getNickname() : joinedGroup.getDisplayNickname()
             );
         }
+        eventPublisher.publishEvent(new ImageVariantRequestedEvent(savedRecord.getImageKey()));
         log.info("record created recordId={} type={} groupIds={} imageKey={} crop={}",
             savedRecord.getId(), command.recordType(), groupIds, command.imageKey(), command.imageCropRegion());
         return new RecordCreateResult(savedRecord.getId(), groupIds);
@@ -332,8 +343,15 @@ public class ActivityRecordService {
         boolean hasNext = foundRecords.size() > pageSize;
         List<ActivityRecord> pageRecords = hasNext ? foundRecords.subList(0, pageSize) : foundRecords;
 
+        Map<String, ImageVariantUrls> variants = findImageVariants(pageRecords);
         List<RecordDetailResult> records = pageRecords.stream()
-            .map(found -> toRecordDetail(found, nickname, profileImageKey, isMine))
+            .map(found -> toRecordDetail(
+                found,
+                nickname,
+                profileImageKey,
+                isMine,
+                ImageVariantLookup.of(variants, found.getImageKey())
+            ))
             .toList();
 
         long totalCount = activityRecordRepository.countActiveRecordsForDetailCarousel(
@@ -364,7 +382,8 @@ public class ActivityRecordService {
         ActivityRecord record,
         String nickname,
         String profileImageKey,
-        boolean isMine
+        boolean isMine,
+        ImageVariantUrls variant
     ) {
         return new RecordDetailResult(
             record.getId(),
@@ -376,7 +395,9 @@ public class ActivityRecordService {
             record.getMenu(),
             record.getExerciseDurationMinutes(),
             record.getExerciseName(),
-            imageUrlResolver.resolve(record.getImageKey()),
+            photoUrlResolver.display(record.getImageKey(), variant),
+            variant.thumbnailUrl(),
+            variant.displayUrl(),
             ImageCropRegionResult.from(record),
             isMine
         );
@@ -482,7 +503,8 @@ public class ActivityRecordService {
     private RecordSummaryResult toRecordSummary(
         ActivityRecord record,
         GroupMember groupMember,
-        int recordingStreakDays
+        int recordingStreakDays,
+        ImageVariantUrls variant
     ) {
         return new RecordSummaryResult(
             record.getId(),
@@ -494,10 +516,16 @@ public class ActivityRecordService {
             record.getMenu(),
             record.getExerciseDurationMinutes(),
             record.getExerciseName(),
-            imageUrlResolver.resolve(record.getImageKey()),
+            photoUrlResolver.list(record.getImageKey(), variant),
+            variant.thumbnailUrl(),
+            variant.displayUrl(),
             ImageCropRegionResult.from(record),
             recordingStreakDays
         );
+    }
+
+    private Map<String, ImageVariantUrls> findImageVariants(List<ActivityRecord> records) {
+        return imageVariantLookup.findReady(records.stream().map(ActivityRecord::getImageKey).toList());
     }
 
     private LocalTime resolveRecordedTime(ActivityRecord record) {
@@ -576,6 +604,8 @@ public class ActivityRecordService {
         Integer exerciseDurationMinutes,
         String exerciseName,
         String imageUrl,
+        String thumbnailImageUrl,
+        String displayImageUrl,
         ImageCropRegionResult imageCropRegion,
         int recordingStreakDays
     ) {
@@ -601,6 +631,8 @@ public class ActivityRecordService {
         Integer exerciseDurationMinutes,
         String exerciseName,
         String imageUrl,
+        String thumbnailImageUrl,
+        String displayImageUrl,
         ImageCropRegionResult imageCropRegion,
         boolean isMine
     ) {

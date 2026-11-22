@@ -168,6 +168,8 @@ class ActivityRecordControllerDocsTest {
                     null,
                     null,
                     "https://storage.example.com/records/1/2026/07/meal.jpg",
+                    "https://storage.example.com/variants/w480/records/1/2026/07/meal.jpg",
+                    "https://storage.example.com/variants/w1440/records/1/2026/07/meal.jpg",
                     imageCropRegionResult(),
                     4
                 )),
@@ -220,6 +222,14 @@ class ActivityRecordControllerDocsTest {
                         fieldWithPath("result.records[].imageUrl")
                             .type(JsonFieldType.STRING)
                             .description("기록 이미지 URL"),
+                        fieldWithPath("result.records[].thumbnailImageUrl")
+                            .type(JsonFieldType.STRING)
+                            .optional()
+                            .description("목록용 축소 이미지 URL(긴 변 480px JPEG). 아직 만들어지지 않았으면 null이며 imageUrl을 사용한다"),
+                        fieldWithPath("result.records[].displayImageUrl")
+                            .type(JsonFieldType.STRING)
+                            .optional()
+                            .description("상세용 축소 이미지 URL(긴 변 1440px JPEG). 아직 만들어지지 않았으면 null이며 imageUrl을 사용한다"),
                         fieldWithPath("result.records[].imageCropRegion")
                             .type(JsonFieldType.OBJECT)
                             .description("원본 이미지 기준 관심 영역 정규화 좌표. 좌표가 없으면 null")
@@ -329,6 +339,8 @@ class ActivityRecordControllerDocsTest {
                         null,
                         null,
                         "https://storage.example.com/records/1/2026/07/meal.jpg",
+                        "https://storage.example.com/variants/w480/records/1/2026/07/meal.jpg",
+                        "https://storage.example.com/variants/w1440/records/1/2026/07/meal.jpg",
                         imageCropRegionResult(),
                         true
                     ),
@@ -343,6 +355,8 @@ class ActivityRecordControllerDocsTest {
                         40,
                         "러닝",
                         "https://storage.example.com/records/1/2026/07/exercise.jpg",
+                        null,
+                        null,
                         null,
                         true
                     )
@@ -398,6 +412,14 @@ class ActivityRecordControllerDocsTest {
                         fieldWithPath("result.records[].imageUrl")
                              .type(JsonFieldType.STRING)
                              .description("기록 이미지 URL"),
+                        fieldWithPath("result.records[].thumbnailImageUrl")
+                             .type(JsonFieldType.STRING)
+                             .optional()
+                             .description("목록용 축소 이미지 URL(긴 변 480px JPEG). 아직 만들어지지 않았으면 null이며 imageUrl을 사용한다"),
+                        fieldWithPath("result.records[].displayImageUrl")
+                             .type(JsonFieldType.STRING)
+                             .optional()
+                             .description("상세용 축소 이미지 URL(긴 변 1440px JPEG). 아직 만들어지지 않았으면 null이며 imageUrl을 사용한다"),
                         fieldWithPath("result.records[].imageCropRegion")
                              .type(JsonFieldType.VARIES)
                              .optional()
