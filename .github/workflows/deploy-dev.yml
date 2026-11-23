@@ -5,6 +5,15 @@ on:
   push:
     branches:
       - develop
+    # 애플리케이션과 무관한 변경은 재배포하지 않는다.
+    paths-ignore:
+      - 'docs/**'
+      - 'monitoring/**'
+      - 'scripts/**'
+      - 'deploy/**'
+      - '.github/workflows/**'
+      - '**/*.md'
+      - '.gitignore'
 
 permissions:
   contents: read
