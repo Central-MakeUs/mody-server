@@ -21,6 +21,7 @@ import json
 import os
 import subprocess
 import sys
+import urllib.parse
 import urllib.request
 from datetime import date, timedelta
 
@@ -185,7 +186,6 @@ def build_blocks(v: dict, target: date) -> list:
 
 def builder_url(blocks: list) -> str:
     """Slack Block Kit Builder 미리보기 링크."""
-    import urllib.parse
     return "https://app.slack.com/block-kit-builder/#" + urllib.parse.quote(
         json.dumps({"blocks": blocks}, ensure_ascii=False, separators=(",", ":")))
 
@@ -204,17 +204,25 @@ def slack_api(method: str, params: dict) -> dict:
 
 
 def already_posted(target: date) -> bool:
-    """최근 메시지 중 같은 날짜 리포트가 있는지 본다."""
+    return already_posted_text(report_text(target))
+
+
+def already_posted_text(text: str) -> bool:
+    """최근 메시지 중 본문이 같은 봇 리포트가 있는지 본다."""
     res = slack_api("conversations.history", {"channel": os.environ["SLACK_REPORT_CHANNEL"], "limit": 50})
     if not res.get("ok"):
         sys.exit(f"Slack 이력 조회 실패: {res.get('error')}")
-    return any(m.get("bot_id") and m.get("text", "") == report_text(target) for m in res.get("messages", []))
+    return any(m.get("bot_id") and m.get("text", "") == text for m in res.get("messages", []))
 
 
 def post(blocks: list, target: date) -> None:
+    post_text(blocks, report_text(target))
+
+
+def post_text(blocks: list, text: str) -> None:
     body = json.dumps({
         "channel": os.environ["SLACK_REPORT_CHANNEL"],
-        "text": report_text(target),
+        "text": text,
         "blocks": blocks,
         "unfurl_links": False,
     }).encode()
