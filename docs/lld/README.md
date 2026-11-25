@@ -44,3 +44,4 @@
 | [LLD-0037](LLD-0037-admin-operations-menu.md) | 관리 화면 회원 · 운영 메뉴 | Accepted | #241 |
 | [LLD-0038](LLD-0038-async-image-variants.md) | 기록 사진 축소본 비동기 생성 | Accepted | #289 |
 | [LLD-0039](LLD-0039-admin-comments-groups.md) | 관리 화면 댓글 · 댓글 신고 · 그룹 페이지 | Accepted | #292 |
+| [LLD-0040](LLD-0040-report-slack-pipeline.md) | 신고 접수 Slack 알림과 Slack에서 숨김 · 기각 | Review | #298 |
