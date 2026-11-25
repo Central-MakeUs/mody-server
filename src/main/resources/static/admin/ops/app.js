@@ -976,22 +976,27 @@ document.querySelectorAll("#report-tabs [data-state]").forEach((tab) =>
   }),
 );
 $("#report-more").addEventListener("click", () => loadReports(false));
+function selectReportKind(kind) {
+  reports.kind = kind;
+  document.querySelectorAll("#report-kinds [data-kind]").forEach((other) => {
+    const active = other.dataset.kind === kind;
+    other.classList.toggle("active", active);
+    other.setAttribute("aria-pressed", String(active));
+  });
+  $("#report-intro").textContent = reports.kind === "comments"
+    ? "신고된 댓글을 확인하고 숨기거나 기각해요. 숨기면 그 댓글만 삭제돼요."
+    : "신고된 기록을 확인하고 숨기거나 기각해요. 숨기면 기록과 댓글, 그룹 공유가 함께 삭제돼요.";
+}
 document.querySelectorAll("#report-kinds [data-kind]").forEach((tab) =>
   tab.addEventListener("click", () => {
-    reports.kind = tab.dataset.kind;
-    document.querySelectorAll("#report-kinds [data-kind]").forEach((other) => {
-      const active = other === tab;
-      other.classList.toggle("active", active);
-      other.setAttribute("aria-pressed", String(active));
-    });
-    $("#report-intro").textContent = reports.kind === "comments"
-      ? "신고된 댓글을 확인하고 숨기거나 기각해요. 숨기면 그 댓글만 삭제돼요."
-      : "신고된 기록을 확인하고 숨기거나 기각해요. 숨기면 기록과 댓글, 그룹 공유가 함께 삭제돼요.";
+    selectReportKind(tab.dataset.kind);
     message("#report-message");
     loadReportSummary();
     loadReports(true);
   }),
 );
+// Slack 신고 알림의 "콘솔에서 보기"는 /admin/reports?kind=comments 처럼 탭을 지정해 연다(LLD-0040).
+if (new URLSearchParams(location.search).get("kind") === "comments") selectReportKind("comments");
 $("#group-filters").addEventListener("submit", (event) => {
   event.preventDefault();
   loadGroups(true);

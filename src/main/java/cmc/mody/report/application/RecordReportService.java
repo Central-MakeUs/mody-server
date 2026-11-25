@@ -12,10 +12,12 @@ import cmc.mody.member.infrastructure.repository.MemberRepository;
 import cmc.mody.record.domain.ActivityRecord;
 import cmc.mody.record.infrastructure.repository.ActivityRecordGroupRepository;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
+import cmc.mody.report.application.event.ReportFiledEvent;
 import cmc.mody.report.domain.RecordReport;
 import cmc.mody.report.infrastructure.repository.RecordReportRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class RecordReportService {
     private final ActivityRecordRepository activityRecordRepository;
     private final ActivityRecordGroupRepository activityRecordGroupRepository;
     private final RecordReportRepository recordReportRepository;
+    private final ApplicationEventPublisher events;
 
     @Transactional
     public RecordReportResult reportRecord(Long memberId, Long groupId, Long recordId) {
@@ -48,6 +51,7 @@ public class RecordReportService {
             recordId
         ));
         log.info("record reported reportId={} recordId={}", savedReport.getId(), recordId);
+        events.publishEvent(ReportFiledEvent.record(recordId, savedReport.getId()));
         return RecordReportResult.from(savedReport);
     }
 

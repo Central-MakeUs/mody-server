@@ -122,7 +122,7 @@ public class AdminCommentReportService {
     }
 
     private List<CommentReport> pendingReports(long commentId) {
-        List<CommentReport> pending = reports.findByCommentIdAndResolutionIsNullAndDeletedAtIsNull(commentId);
+        List<CommentReport> pending = reports.lockPendingByCommentId(commentId);
         if (pending.isEmpty()) {
             throw new GeneralException(ErrorStatus.NOT_FOUND);
         }

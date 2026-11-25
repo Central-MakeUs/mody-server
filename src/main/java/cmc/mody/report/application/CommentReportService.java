@@ -14,10 +14,12 @@ import cmc.mody.record.domain.RecordComment;
 import cmc.mody.record.infrastructure.repository.ActivityRecordGroupRepository;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
+import cmc.mody.report.application.event.ReportFiledEvent;
 import cmc.mody.report.domain.CommentReport;
 import cmc.mody.report.infrastructure.repository.CommentReportRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +38,7 @@ public class CommentReportService {
     private final ActivityRecordGroupRepository activityRecordGroupRepository;
     private final RecordCommentRepository recordCommentRepository;
     private final CommentReportRepository commentReportRepository;
+    private final ApplicationEventPublisher events;
 
     @Transactional
     public CommentReportResult reportComment(Long memberId, Long groupId, Long recordId, Long commentId) {
@@ -59,6 +62,7 @@ public class CommentReportService {
         ));
         log.info("comment reported reportId={} commentId={} recordId={}",
             savedReport.getId(), comment.getId(), comment.getRecordId());
+        events.publishEvent(ReportFiledEvent.comment(comment.getId(), comment.getRecordId(), savedReport.getId()));
         return CommentReportResult.from(savedReport);
     }
 

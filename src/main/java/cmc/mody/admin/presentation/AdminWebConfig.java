@@ -2,6 +2,7 @@ package cmc.mody.admin.presentation;
 
 import cmc.mody.admin.application.AdminAuditService;
 import cmc.mody.admin.application.AdminSessionService;
+import cmc.mody.admin.application.SlackActionAuthenticator;
 import cmc.mody.common.admin.AdminAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
@@ -15,11 +16,13 @@ public class AdminWebConfig implements WebMvcConfigurer {
     private final ObjectProvider<AdminSessionService> sessions;
     private final ObjectProvider<AdminAccessService> access;
     private final ObjectProvider<AdminAuditService> audit;
+    private final ObjectProvider<SlackActionAuthenticator> slackActions;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         sessions.ifAvailable(service -> registry
-            .addInterceptor(new AdminRequestInterceptor(service, access.getObject(), audit.getObject()))
+            .addInterceptor(new AdminRequestInterceptor(service, access.getObject(), audit.getObject(),
+                slackActions.getObject()))
             .addPathPatterns("/api/v1/admin/**")
             .excludePathPatterns("/api/v1/admin/auth/**"));
         registry.addInterceptor(new org.springframework.web.servlet.HandlerInterceptor() {

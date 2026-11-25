@@ -18,4 +18,14 @@ public class RestClientSlackWebhookClient implements SlackWebhookClient {
             .retrieve()
             .toBodilessEntity();
     }
+
+    @Override
+    public void sendPayload(String webhookUrl, Map<String, Object> payload) {
+        restClient.post()
+            .uri(webhookUrl)
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(payload)
+            .retrieve()
+            .toBodilessEntity();
+    }
 }
