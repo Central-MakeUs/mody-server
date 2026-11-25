@@ -2,6 +2,7 @@ package cmc.mody.admin.presentation;
 
 import cmc.mody.admin.application.AdminAuditService;
 import cmc.mody.admin.application.AdminSessionService;
+import cmc.mody.admin.application.SlackActionAuthenticator;
 import cmc.mody.admin.domain.AdminAccount;
 import cmc.mody.common.admin.AdminAccessService;
 import cmc.mody.common.api.exception.GeneralException;
@@ -17,14 +18,21 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @RequiredArgsConstructor
 public class AdminRequestInterceptor implements HandlerInterceptor {
     private static final Set<String> READ_METHODS = Set.of("GET", "HEAD", "OPTIONS");
+    /** Slack 봇이 대신 보내는 신고 처리. 서명 인증만 받고, API 키·세션은 받지 않는다(LLD-0040). */
+    static final String SLACK_ACTION_PATH = "/api/v1/admin/slack/";
     private final AdminSessionService sessions;
     private final AdminAccessService access;
     private final AdminAuditService audit;
+    private final SlackActionAuthenticator slackActions;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         response.setHeader("Cache-Control", "no-store");
         response.setHeader("X-Content-Type-Options", "nosniff");
+        if (request.getRequestURI().startsWith(SLACK_ACTION_PATH)) {
+            request.setAttribute(AdminSessionService.PRINCIPAL_ATTRIBUTE, slackActions.authenticate(request));
+            return true;
+        }
         String key = request.getHeader("X-Admin-Api-Key");
         if (key != null) {
             // Machine clients retain their existing contract; a wrong key never falls back to a session.

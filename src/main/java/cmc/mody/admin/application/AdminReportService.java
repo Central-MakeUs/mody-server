@@ -118,7 +118,7 @@ public class AdminReportService {
     }
 
     private List<RecordReport> pendingReports(long recordId) {
-        List<RecordReport> pending = reports.findByRecordIdAndResolutionIsNullAndDeletedAtIsNull(recordId);
+        List<RecordReport> pending = reports.lockPendingByRecordId(recordId);
         if (pending.isEmpty()) {
             throw new GeneralException(ErrorStatus.NOT_FOUND);
         }
