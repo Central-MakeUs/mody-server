@@ -22,6 +22,7 @@ import cmc.mody.record.domain.RecordComment;
 import cmc.mody.record.infrastructure.repository.ActivityRecordGroupRepository;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
 import cmc.mody.record.infrastructure.repository.RecordCommentRepository;
+import cmc.mody.report.application.event.ReportFiledEvent;
 import cmc.mody.report.domain.CommentReport;
 import cmc.mody.report.infrastructure.repository.CommentReportRepository;
 import java.math.BigDecimal;
@@ -36,11 +37,15 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class CommentReportServiceTest {
     @Mock
     private IdGenerator idGenerator;
+
+    @Mock
+    private ApplicationEventPublisher events;
 
     @Mock
     private MemberRepository memberRepository;
@@ -88,6 +93,7 @@ class CommentReportServiceTest {
         assertThat(saved.getCommentId()).isEqualTo(200L);
         assertThat(saved.getRecordId()).isEqualTo(100L);
         assertThat(saved.getGroupId()).isEqualTo(10L);
+        then(events).should().publishEvent(ReportFiledEvent.comment(200L, 100L, 300L));
     }
 
     @Test
@@ -103,6 +109,7 @@ class CommentReportServiceTest {
 
         assertThat(result.reportId()).isEqualTo(300L);
         then(commentReportRepository).should(never()).save(any());
+        then(events).shouldHaveNoInteractions();
     }
 
     @Test
@@ -169,7 +176,8 @@ class CommentReportServiceTest {
             activityRecordRepository,
             activityRecordGroupRepository,
             recordCommentRepository,
-            commentReportRepository
+            commentReportRepository,
+            events
         );
     }
 

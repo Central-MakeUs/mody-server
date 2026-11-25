@@ -19,6 +19,7 @@ import cmc.mody.record.domain.ActivityRecord;
 import cmc.mody.record.domain.ActivityRecordGroup;
 import cmc.mody.record.infrastructure.repository.ActivityRecordGroupRepository;
 import cmc.mody.record.infrastructure.repository.ActivityRecordRepository;
+import cmc.mody.report.application.event.ReportFiledEvent;
 import cmc.mody.report.domain.RecordReport;
 import cmc.mody.report.infrastructure.repository.RecordReportRepository;
 import java.math.BigDecimal;
@@ -33,11 +34,15 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class RecordReportServiceTest {
     @Mock
     private IdGenerator idGenerator;
+
+    @Mock
+    private ApplicationEventPublisher events;
 
     @Mock
     private MemberRepository memberRepository;
@@ -92,6 +97,7 @@ class RecordReportServiceTest {
         then(recordReportRepository).should().save(recordReportCaptor.capture());
         assertThat(recordReportCaptor.getValue().getReporterMemberId()).isEqualTo(1L);
         assertThat(recordReportCaptor.getValue().getRecordId()).isEqualTo(100L);
+        then(events).should().publishEvent(ReportFiledEvent.record(100L, 300L));
     }
 
     @Test
@@ -121,6 +127,7 @@ class RecordReportServiceTest {
         assertThat(result.reportId()).isEqualTo(300L);
         assertThat(result.recordId()).isEqualTo(100L);
         then(recordReportRepository).should(org.mockito.Mockito.never()).save(any());
+        then(events).shouldHaveNoInteractions();
     }
 
     @Test
@@ -149,7 +156,8 @@ class RecordReportServiceTest {
             groupMemberRepository,
             activityRecordRepository,
             activityRecordGroupRepository,
-            recordReportRepository
+            recordReportRepository,
+            events
         );
     }
 

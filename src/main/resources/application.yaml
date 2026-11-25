@@ -51,6 +51,9 @@ admin:
   api-key: ${ADMIN_API_KEY:}
   google-client-id: ${ADMIN_GOOGLE_CLIENT_ID:}
   bootstrap-emails: ${ADMIN_BOOTSTRAP_EMAILS:kminseok5167@gmail.com}
+  slack-action:
+    # Slack 봇이 신고 처리 요청에 서명하는 전용 비밀값(LLD-0040). 비어 있으면 Slack 처리 API는 항상 401이다.
+    secret: ${ADMIN_SLACK_ACTION_SECRET:}
 
 upload:
   provider: ${UPLOAD_PROVIDER:local}
@@ -69,6 +72,14 @@ error-alert:
     webhook-url: ${SLACK_ERROR_ALERT_WEBHOOK_URL:}
     max-message-length: ${SLACK_ERROR_ALERT_MAX_MESSAGE_LENGTH:3500}
     stack-trace-depth: ${SLACK_ERROR_ALERT_STACK_TRACE_DEPTH:8}
+
+report-alert:
+  slack:
+    enabled: ${REPORT_ALERT_ENABLED:false}
+    webhook-url: ${REPORT_ALERT_WEBHOOK_URL:}
+    console-base-url: ${REPORT_ALERT_CONSOLE_BASE_URL:}
+    group-window: ${REPORT_ALERT_GROUP_WINDOW:10m}
+    buttons-enabled: ${REPORT_ALERT_BUTTONS_ENABLED:false}
 
 image:
   variant:
